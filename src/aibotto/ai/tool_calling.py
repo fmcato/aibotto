@@ -51,7 +51,7 @@ class ToolCallingManager:
             )
 
             # Handle response
-            if response.choices[0].message.tool_calls:
+            if hasattr(response.choices[0].message, 'tool_calls') and response.choices[0].message.tool_calls:
                 # LLM wants to use tools - handle multiple tool calls in parallel
                 tool_calls = response.choices[0].message.tool_calls
 
