@@ -30,7 +30,7 @@ async def test_isolated():
     
     # Create the manager and mock its dependencies
     with patch('src.aibotto.ai.tool_calling.LLMClient') as mock_llm_class:
-        with patch('src.aibotto.ai.tool_calling.EnhancedCLIExecutor') as mock_executor_class:
+        with patch('src.aibotto.ai.tool_calling.CLIExecutor') as mock_executor_class:
             manager = ToolCallingManager()
             
             # Mock the LLM client

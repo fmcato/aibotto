@@ -96,7 +96,19 @@ class TestFactualResponses:
         mock_final_response.choices = [MagicMock(message=MagicMock(
             content="Today is Monday."
         ))]
-        tool_manager.llm_client.chat_completion.return_value = mock_final_response
+        
+        # Use a simple counter to handle different calls
+        call_count = 0
+        
+        def mock_chat_completion_side_effect(*args, **kwargs):
+            nonlocal call_count
+            call_count += 1
+            if call_count == 1:
+                return mock_response
+            else:
+                return mock_final_response
+        
+        tool_manager.llm_client.chat_completion.side_effect = mock_chat_completion_side_effect
         
         # Mock command execution result
         tool_manager.cli_executor.execute_command.return_value = "Mon Feb  3 10:30:45 UTC 2026"

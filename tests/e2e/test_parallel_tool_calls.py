@@ -37,7 +37,7 @@ class TestParallelToolCalling:
     def tool_manager(self):
         """Create a ToolCallingManager with mocked dependencies."""
         with patch('src.aibotto.ai.tool_calling.LLMClient') as mock_llm:
-            with patch('src.aibotto.ai.tool_calling.EnhancedCLIExecutor') as mock_executor:
+            with patch('src.aibotto.ai.tool_calling.CLIExecutor') as mock_executor:
                 manager = ToolCallingManager()
                 
                 # Mock LLM client

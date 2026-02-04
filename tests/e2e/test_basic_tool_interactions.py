@@ -9,7 +9,7 @@ from unittest.mock import Mock, patch, AsyncMock
 from typing import Dict, Any
 
 from src.aibotto.ai.tool_calling import ToolCallingManager
-from src.aibotto.cli.enhanced_executor import EnhancedCLIExecutor
+from src.aibotto.cli.executor import CLIExecutor
 from src.aibotto.config.settings import Config
 
 
@@ -120,17 +120,17 @@ class TestBasicToolInteractions:
         return mock_client
 
     @pytest.fixture
-    def enhanced_executor(self, mock_settings):
-        """Create enhanced CLI executor with mocked dependencies."""
-        executor = EnhancedCLIExecutor()
+    def cli_executor(self, mock_settings):
+        """Create CLI executor with mocked dependencies."""
+        executor = CLIExecutor()
         return executor
 
     @pytest.fixture
-    def tool_calling_manager(self, mock_settings, mock_llm_client, enhanced_executor):
+    def tool_calling_manager(self, mock_settings, mock_llm_client, cli_executor):
         """Create tool calling manager with mocked dependencies."""
         with patch('src.aibotto.ai.tool_calling.LLMClient', return_value=mock_llm_client):
             manager = ToolCallingManager()
-            manager.cli_executor = enhanced_executor
+            manager.cli_executor = cli_executor
             return manager
 
     @pytest.fixture
@@ -353,7 +353,7 @@ class TestBasicToolInteractions:
         user_query = "I'm not sure about this, but what time is it really?"
         
         # Mock the CLI executor to simulate fact verification
-        with patch.object(tool_calling_manager.cli_executor, 'execute_with_suggestion') as mock_execute:
+        with patch.object(tool_calling_manager.cli_executor, 'execute_command') as mock_execute:
             mock_execute.return_value = "Today is Monday, February 3, 2025."
             
             # Mock the LLM client to return a response that triggers uncertainty detection

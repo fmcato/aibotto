@@ -134,85 +134,12 @@ class ToolCallingManager:
                 return final_response.choices[0].message.content
 
             else:
-                # Direct response - check if it's factual or needs tools
-                response_content = response.choices[0].message.content
-
-                # Check if the response contains uncertain language or factual claims
-                if self._needs_factual_verification(response_content, message):
-                    # The AI should have used tools but didn't - encourage tool usage
-                    enhanced_response = ResponseTemplates.UNCERTAIN_RESPONSE
-
-                    # Try to get factual information
-                    try:
-                        # Log auto-suggestion for debugging
-                        logger.info(
-                            f"Auto-suggesting command for user {user_id}: {message}"
-                        )
-
-                        # Use simple command execution instead of enhanced suggestions
-                        # Let the LLM figure out the appropriate command
-                        final_response = await self.llm_client.chat_completion(
-                            messages=messages + [
-                                {
-                                    "role": "system",
-                                    "content": "Please provide a simple CLI command to get the factual information requested by the user.",
-                                }
-                            ]
-                        )
-
-                        # Extract command from the response
-                        command_response = final_response.choices[0].message.content
-                        if command_response.startswith("```"):
-                            # Extract command from code block
-                            command_match = re.search(r"```(?:bash|sh)?\s*\n(.+?)\n```", command_response, re.DOTALL)
-                            if command_match:
-                                command = command_match.group(1).strip()
-                            else:
-                                command = command_response.strip()
-                        else:
-                            command = command_response.strip()
-
-                        # Execute the command
-                        result = await self.cli_executor.execute_command(command)
-
-                        # Log the execution result
-                        logger.info(
-                            f"Auto-suggested command result for user {user_id}: {result[:200]}..."
-                        )
-
-                        await db_ops.save_message(user_id, chat_id, 0, "system", result)
-
-                        # Get final response with tool result
-                        messages.append(
-                            {"role": "tool", "tool_call_id": "auto", "content": result}
-                        )
-
-                        final_response = await self.llm_client.chat_completion(
-                            messages=messages
-                        )
-
-                        await db_ops.save_message(
-                            user_id,
-                            chat_id,
-                            0,
-                            "assistant",
-                            final_response.choices[0].message.content,
-                        )
-                        return final_response.choices[0].message.content
-
-                    except Exception as e:
-                        logger.error(f"Error getting factual information: {e}")
-                        return enhanced_response + f"\n\nError: {str(e)}"
-
-                else:
-                    # Direct response is acceptable
-                    logger.info(
-                        f"Processing direct response for user {user_id}: {response_content}"
-                    )
-                    await db_ops.save_message(
-                        user_id, chat_id, 0, "assistant", response_content
-                    )
-                    return response_content
+                # For simplified system, use direct response without auto-suggestion
+                enhanced_response = response.choices[0].message.content
+                await db_ops.save_message(
+                    user_id, chat_id, 0, "assistant", enhanced_response
+                )
+                return enhanced_response
 
         except Exception as e:
             logger.error(f"Error in process_user_request: {e}")
