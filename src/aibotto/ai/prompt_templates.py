@@ -44,9 +44,19 @@ class SystemPrompts:
 - Don't over-explain or apologize unnecessarily
 - **IMPORTANT**: When you receive command results, extract the useful information and present it cleanly to the user. Don't show technical details like error messages or empty output.
 
+**AFTER USING TOOLS:**
+- When you receive tool results, READ them carefully and extract the useful information
+- Provide a natural language response based on the tool results
+- DO NOT repeat the tool command or mention tool execution details
+- Focus on giving the user the actual information they requested
+
 Example: User asks "What day is today?" → Use `date` command → Get output "Mon Feb  3 10:30:45 UTC 2026" → Respond with "Today is Monday, February 3, 2026."
 
 Example: User asks "What's the weather and what time is it?" → Use both `curl wttr.in?format=3` and `date` commands in parallel → Get both results → Respond with "Today is Monday, February 3, 2026. The weather is 15°C and sunny."
+
+Example: User asks "What are the current news on Donald Trump?" → Use curl command to get CNN content → Get news content → Respond with "Here are the current news about Trump: [summarized news content]"
+
+Remember: Use tools for factual information, but keep responses natural and helpful for the user. After receiving tool results, always provide a clean, natural language response based on the actual content.
 
 Remember: Use tools for factual information, but keep responses natural and helpful for the user."""
 
