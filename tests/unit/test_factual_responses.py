@@ -35,7 +35,8 @@ class TestFactualResponses:
 
         # Test tool instructions
         assert "curl" in SystemPrompts.TOOL_INSTRUCTIONS
-        assert "silent mode" in SystemPrompts.TOOL_INSTRUCTIONS
+        assert "CLI commands" in SystemPrompts.TOOL_INSTRUCTIONS
+        assert "Web search" in SystemPrompts.TOOL_INSTRUCTIONS
 
         # Test fallback response
         assert "don't have access" in SystemPrompts.FALLBACK_RESPONSE
@@ -43,10 +44,12 @@ class TestFactualResponses:
     def test_tool_descriptions(self):
         """Test that tool descriptions are properly structured."""
         tools = ToolDescriptions.get_tool_definitions()
-        assert len(tools) == 1
+        assert len(tools) == 2
 
-        tool = tools[0]
-        assert tool["function"]["name"] == "execute_cli_command"
+        # Check that both CLI and web search tools are present
+        tool_names = [tool["function"]["name"] for tool in tools]
+        assert "execute_cli_command" in tool_names
+        assert "search_web" in tool_names
         assert "safe CLI commands" in tool["function"]["description"]
 
     @pytest.mark.asyncio

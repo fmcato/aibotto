@@ -9,6 +9,7 @@ from typing import Any
 
 from ..cli.executor import CLIExecutor
 from ..db.operations import DatabaseOperations
+from ..tools.web_search import search_web
 from .llm_client import LLMClient
 from .prompt_templates import ResponseTemplates, SystemPrompts, ToolDescriptions
 
@@ -95,6 +96,55 @@ class ToolCallingManager:
                             )
                             error_result = (
                                 f"Error executing command: {str(e)}"
+                            )
+                            await db_ops.save_message(
+                                user_id, chat_id, 0, "system", error_result
+                            )
+                            return {
+                                "tool_call_id": tool_call.id,
+                                "content": error_result
+                            }
+                    elif tool_call.function.name == "search_web":
+                        try:
+                            search_params = json.loads(
+                                tool_call.function.arguments)
+                            
+                            # Log search for debugging
+                            logger.info(
+                                f"Performing web search for user {user_id}: "
+                                f"{search_params}"
+                            )
+
+                            # Execute web search
+                            result = await search_web(
+                                query=search_params.get("query", ""),
+                                num_results=search_params.get("num_results", 5),
+                                days_ago=search_params.get("days_ago")
+                            )
+
+                            # Log search result for debugging
+                            logger.info(
+                                f"Web search result for user {user_id}: "
+                                f"{result[:200]}..."
+                            )
+
+                            # Save tool call result
+                            await db_ops.save_message(
+                                user_id, chat_id, 0, "system", result
+                            )
+
+                            return {
+                                "tool_call_id": tool_call.id,
+                                "content": result
+                            }
+
+                        except Exception as e:
+                            logger.error(
+                                f"Error performing web search "
+                                f"{tool_call.function.arguments}: {e}"
+                            )
+                            error_result = (
+                                f"Error performing web search: {str(e)}"
                             )
                             await db_ops.save_message(
                                 user_id, chat_id, 0, "system", error_result
