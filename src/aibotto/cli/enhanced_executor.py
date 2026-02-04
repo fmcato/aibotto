@@ -40,10 +40,10 @@ class EnhancedCLIExecutor(CLIExecutor):
             ],
             "weather": [
                 CommandSuggestion(
-                    "curl 'https://wttr.in/?format=3'", 0.9, "Get weather from wttr.in"
+                    "curl -s 'https://wttr.in/?format=3'", 0.9, "Get weather from wttr.in"
                 ),
                 CommandSuggestion(
-                    "curl 'https://wttr.in/London?format=3'",
+                    "curl -s 'https://wttr.in/London?format=3'",
                     0.8,
                     "Get weather for specific city",
                 ),
@@ -105,26 +105,26 @@ class EnhancedCLIExecutor(CLIExecutor):
             ],
             "news": [
                 CommandSuggestion(
-                    "curl -A \"Mozilla/5.0 (Linux; Android 10; SM-G973F) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.120 Mobile Safari/537.36\" https://www.cnn.com",
+                    "curl -s -A \"Mozilla/5.0 (Linux; Android 10; SM-G973F) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.120 Mobile Safari/537.36\" https://www.cnn.com",
                     0.9,
                     "Get news from CNN",
                 ),
                 CommandSuggestion(
-                    "curl -A \"Mozilla/5.0 (Linux; Android 10; SM-G973F) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.120 Mobile Safari/537.36\" https://www.bbc.com",
+                    "curl -s -A \"Mozilla/5.0 (Linux; Android 10; SM-G973F) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.120 Mobile Safari/537.36\" https://www.bbc.com",
                     0.8,
                     "Get news from BBC",
                 ),
             ],
             "web": [
                 CommandSuggestion(
-                    "curl -A \"Mozilla/5.0 (Linux; Android 10; SM-G973F) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.120 Mobile Safari/537.36\" https://www.example.com",
+                    "curl -s -A \"Mozilla/5.0 (Linux; Android 10; SM-G973F) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.120 Mobile Safari/537.36\" https://www.example.com",
                     0.9,
                     "Get web page content",
                 ),
             ],
             "website": [
                 CommandSuggestion(
-                    "curl -A \"Mozilla/5.0 (Linux; Android 10; SM-G973F) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.120 Mobile Safari/537.36\" https://www.example.com",
+                    "curl -s -A \"Mozilla/5.0 (Linux; Android 10; SM-G973F) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.120 Mobile Safari/537.36\" https://www.example.com",
                     0.9,
                     "Fetch website content",
                 ),

@@ -56,18 +56,19 @@ Remember: Use tools for factual information, but keep responses natural and help
 - Files: `ls -la`, `pwd`
 - System: `uname -a`, `uptime`
 - Weather: `curl wttr.in/location`
-- News/Websites: `curl https://www.cnn.com`, `curl https://www.bbc.com`
+- News/Websites: `curl -s https://www.cnn.com`, `curl -s https://www.bbc.com`
 - Network: `ip addr`
 
 Keep commands simple and focused on getting the information needed.
 
 **Important for curl commands:**
-- When using curl for web requests (weather APIs, news sites, general web pages), always include an Android user agent
-- Format: `curl -A "Mozilla/5.0 (Linux; Android 10; SM-G973F) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.120 Mobile Safari/537.36" URL`
+- When using curl for web requests (weather APIs, news sites, general web pages), always include silent mode (-s) and an Android user agent
+- Format: `curl -s -A "Mozilla/5.0 (Linux; Android 10; SM-G973F) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.120 Mobile Safari/537.36" URL`
 - Examples:
-  - Weather: `curl -A "Mozilla/5.0 (Linux; Android 10; SM-G973F) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.120 Mobile Safari/537.36" wttr.in/London?format=3`
-  - News: `curl -A "Mozilla/5.0 (Linux; Android 10; SM-G973F) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.120 Mobile Safari/537.36" https://www.cnn.com`
-  - General web: `curl -A "Mozilla/5.0 (Linux; Android 10; SM-G973F) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.120 Mobile Safari/537.36" https://any-website.com`
+  - Weather: `curl -s -A "Mozilla/5.0 (Linux; Android 10; SM-G973F) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.120 Mobile Safari/537.36" wttr.in/London?format=3`
+  - News: `curl -s -A "Mozilla/5.0 (Linux; Android 10; SM-G973F) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.120 Mobile Safari/537.36" https://www.cnn.com`
+  - General web: `curl -s -A "Mozilla/5.0 (Linux; Android 10; SM-G973F) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.120 Mobile Safari/537.36" https://any-website.com`
+- The `-s` flag prevents progress meters and keeps output clean
 - This helps avoid being blocked by websites that restrict non-browser requests
 
 **Parallel Execution:**
@@ -113,7 +114,7 @@ class ToolDescriptions:
                 "properties": {
                     "command": {
                         "type": "string",
-                        "description": "The CLI command to execute. Choose the most appropriate command for the user's request. Examples: 'date', 'ls -la', 'uname -a', 'curl -A \"Mozilla/5.0 (Linux; Android 10; SM-G973F) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.120 Mobile Safari/537.36\" wttr.in/London?format=3', 'curl -A \"Mozilla/5.0 (Linux; Android 10; SM-G973F) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.120 Mobile Safari/537.36\" https://www.cnn.com'",
+                        "description": "The CLI command to execute. Choose the most appropriate command for the user's request. Examples: 'date', 'ls -la', 'uname -a', 'curl -s -A \"Mozilla/5.0 (Linux; Android 10; SM-G973F) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.120 Mobile Safari/537.36\" wttr.in/London?format=3', 'curl -s -A \"Mozilla/5.0 (Linux; Android 10; SM-G973F) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.120 Mobile Safari/537.36\" https://www.cnn.com'",
                     }
                 },
                 "required": ["command"],
