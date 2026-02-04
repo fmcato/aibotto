@@ -92,11 +92,11 @@ src/aibotto/
 - **System Information**: "Show system information" → Executes `uname -a` command
 - **Weather API**: "What's the weather in London?" → Executes curl command to weather API
 
-### Testing & Development
-- **Test Results**: 3/6 tests passing (50% success rate)
-  - Passing: Dangerous Command Blocking, Tool Calling, Conversation Flow
-  - Failing: Database Connection, CLI Command Execution, OpenAI API Connection
-- **Development Tools**: UV (package management), pytest (testing), ruff (linting), mypy (type checking)
+### Development Tools
+- **Package Management**: UV for fast dependency management
+- **Linting**: Ruff for fast Python linting
+- **Type Checking**: MyPy for static type analysis
+- **Pre-commit**: Git hooks for code quality
 
 ## Installation & Setup
 ```bash
