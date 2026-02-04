@@ -125,7 +125,7 @@ uv run python src/aibotto/main.py
 ```
 
 ## Git Commit Guidelines
-Before committing any changes, you MUST run the following code quality checks. Spin up a separate agent/task to start with a clean slate.
+Before committing any changes, you MUST run the following code quality checks:
 
 ### Code Quality Checks
 ```bash
@@ -156,8 +156,6 @@ Before running `git commit`, ensure you have completed these steps:
 - **VERIFY** with `git diff --staged` that no sensitive information is included
 
 ### Commit Format
-When completing tasks, follow this format for commits:
-
 ```bash
 git commit -m <Brief, descriptive commit message>
 
