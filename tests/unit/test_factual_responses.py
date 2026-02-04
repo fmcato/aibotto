@@ -34,9 +34,10 @@ class TestFactualResponses:
         
         # Should contain critical rules
         system_content = messages[0]["content"]
-        assert "ALWAYS use available tools" in system_content
-        assert "NEVER invent or hallucinate" in system_content
-        assert "When uncertain about any factual information" in system_content
+        assert "Use tools" in system_content
+        assert "Be accurate" in system_content
+        assert "Be helpful" in system_content
+        assert "Be honest" in system_content
     
     def test_tool_descriptions(self):
         """Test that tool descriptions are enhanced."""
@@ -148,16 +149,16 @@ class TestFactualResponses:
         """Test that prompt templates are properly structured."""
         # Test main system prompt
         main_prompt = SystemPrompts.MAIN_SYSTEM_PROMPT
-        assert "CRITICAL RULES" in main_prompt
+        assert "CORE PRINCIPLES" in main_prompt
         assert "AVAILABLE TOOLS" in main_prompt
         assert "WHEN TO USE TOOLS" in main_prompt
         assert "RESPONSE STYLE" in main_prompt
-        assert "EXAMPLES" in main_prompt
+        assert "Example:" in main_prompt
         
         # Test tool instructions
         tool_instructions = SystemPrompts.TOOL_INSTRUCTIONS
-        assert "When using CLI tools" in tool_instructions
-        assert "Common commands for different requests" in tool_instructions
+        assert "Use simple, standard commands" in tool_instructions
+        assert "Date/Time:" in tool_instructions
         
         # Test fallback response
         fallback = SystemPrompts.FALLBACK_RESPONSE
