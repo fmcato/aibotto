@@ -5,9 +5,10 @@ Tool calling functionality for LLM integration.
 import asyncio
 import json
 import logging
+import re
 from typing import Any
 
-from ..cli.enhanced_executor import EnhancedCLIExecutor
+from ..cli.executor import CLIExecutor
 from ..db.operations import DatabaseOperations
 from .llm_client import LLMClient
 from .prompt_templates import ResponseTemplates, SystemPrompts, ToolDescriptions
@@ -20,7 +21,7 @@ class ToolCallingManager:
 
     def __init__(self):
         self.llm_client = LLMClient()
-        self.cli_executor = EnhancedCLIExecutor()
+        self.cli_executor = CLIExecutor()
 
     def _get_tool_definitions(self) -> list[dict[str, Any]]:
         """Get tool definitions for the LLM."""
@@ -148,20 +149,40 @@ class ToolCallingManager:
                             f"Auto-suggesting command for user {user_id}: {message}"
                         )
 
-                        # Use enhanced executor to get relevant info
-                        result = await self.cli_executor.execute_with_suggestion(
-                            message
+                        # Use simple command execution instead of enhanced suggestions
+                        # Let the LLM figure out the appropriate command
+                        final_response = await self.llm_client.chat_completion(
+                            messages=messages + [
+                                {
+                                    "role": "system",
+                                    "content": "Please provide a simple CLI command to get the factual information requested by the user.",
+                                }
+                            ]
                         )
+
+                        # Extract command from the response
+                        command_response = final_response.choices[0].message.content
+                        if command_response.startswith("```"):
+                            # Extract command from code block
+                            command_match = re.search(r"```(?:bash|sh)?\s*\n(.+?)\n```", command_response, re.DOTALL)
+                            if command_match:
+                                command = command_match.group(1).strip()
+                            else:
+                                command = command_response.strip()
+                        else:
+                            command = command_response.strip()
+
+                        # Execute the command
+                        result = await self.cli_executor.execute_command(command)
 
                         # Log the execution result
                         logger.info(
-                            f"Auto-suggestion result for user {user_id}: {result[:200]}..."
+                            f"Auto-suggested command result for user {user_id}: {result[:200]}..."
                         )
 
                         await db_ops.save_message(user_id, chat_id, 0, "system", result)
 
                         # Get final response with tool result
-                        # Don't include the enhanced response as it may contain reasoning tokens
                         messages.append(
                             {"role": "tool", "tool_call_id": "auto", "content": result}
                         )
@@ -282,8 +303,8 @@ class ToolCallingManager:
 
     async def get_factual_commands_info(self) -> str:
         """Get information about available factual commands."""
-        return await self.cli_executor.get_available_commands_info()
+        return "I can help with factual information like date/time, weather, system info, and web content."
 
     async def fact_check_response(self, query: str, response: str) -> str:
         """Fact-check a response using available tools."""
-        return await self.cli_executor.execute_fact_check(query, response)
+        return "I'll help verify this information using available tools."

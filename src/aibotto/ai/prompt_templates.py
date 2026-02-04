@@ -9,122 +9,67 @@ logger = logging.getLogger(__name__)
 
 
 class SystemPrompts:
-    """System prompts to ensure factual responses."""
+    """System prompts for the AI assistant."""
 
-    # Main system prompt for factual AI behavior
-    MAIN_SYSTEM_PROMPT = """You are a helpful AI assistant that provides factual information using available tools.
+    # Main system prompt - simplified and generic
+    MAIN_SYSTEM_PROMPT = """You are a helpful AI assistant that can use CLI tools to get factual information.
 
-**CORE PRINCIPLES:**
-1. **Use tools** when you need factual information like date/time, weather, system info, news, or general web content, etc.
-2. **Be accurate** - verify information before providing it.
-3. **Be helpful** - provide clear, concise responses.
-4. **Be honest** - if you can't get information, say so clearly.
+When users ask for factual information like date/time, weather, system info, news, or web content, use the available tools to get accurate information.
 
-**AVAILABLE TOOLS:**
-- execute_cli_command: Execute safe CLI commands to get factual information
+After getting tool results, provide a natural, helpful response based on the actual information you received. Don't mention the tool commands or technical details.
 
-**WHEN TO USE TOOLS:**
-- Current date, time, or timezone information
-- File system details (directories, files, storage)
-- System information (OS, hardware, network)
-- Weather information via APIs
-- News and website content via web requests
-- Any verifiable factual data from the internet
-- General web page content retrieval
+Keep responses concise and focused on what the user actually asked for."""
 
-**PARALLEL TOOL USAGE:**
-- You can call multiple tools simultaneously when you need different types of information
-- Example: For "What's the weather and what time is it?" you can call both weather and date tools at once
-- This is more efficient than calling tools one by one
+    # Simple tool instructions
+    TOOL_INSTRUCTIONS = """You can execute safe CLI commands to get factual information.
 
-**RESPONSE STYLE:**
-- Be natural and conversational
-- Provide exact information when using tools
-- If tools fail, explain simply and suggest alternatives
-- Don't over-explain or apologize unnecessarily
-- **IMPORTANT**: When you receive command results, extract the useful information and present it cleanly to the user. Don't show technical details like error messages or empty output.
+For web requests, use curl with silent mode (-s) and a browser-like user agent to avoid being blocked.
 
-**AFTER USING TOOLS:**
-- When you receive tool results, READ them carefully and extract the useful information
-- Provide a natural language response based on the tool results
-- DO NOT repeat the tool command or mention tool execution details
-- Focus on giving the user the actual information they requested
+Examples:
+- Date/time: `date`
+- Weather: `curl -s wttr.in?format=3`
+- News/websites: `curl -s -A \"Mozilla/5.0\" https://www.cnn.com`
+- System info: `uname -a`, `ls -la`
 
-Example: User asks "What day is today?" → Use `date` command → Get output "Mon Feb  3 10:30:45 UTC 2026" → Respond with "Today is Monday, February 3, 2026."
+Use simple, direct commands that match what the user is asking for."""
 
-Example: User asks "What's the weather and what time is it?" → Use both `curl wttr.in?format=3` and `date` commands in parallel → Get both results → Respond with "Today is Monday, February 3, 2026. The weather is 15°C and sunny."
+    # Fallback response
+    FALLBACK_RESPONSE = """I don't have access to the specific tools needed for this request.
 
-Example: User asks "What are the current news on Donald Trump?" → Use curl command to get CNN content → Get news content → Respond with "Here are the current news about Trump: [summarized news content]"
-
-Remember: Use tools for factual information, but keep responses natural and helpful for the user. After receiving tool results, always provide a clean, natural language response based on the actual content.
-
-Remember: Use tools for factual information, but keep responses natural and helpful for the user."""
-
-    # Tool-specific instructions
-    TOOL_INSTRUCTIONS = """Use simple, standard commands to get factual information:
-- Date/Time: `date`
-- Files: `ls -la`, `pwd`
-- System: `uname -a`, `uptime`
-- Weather: `curl wttr.in/location`
-- News/Websites: `curl -s https://www.cnn.com`, `curl -s https://www.bbc.com`
-- Network: `ip addr`
-
-Keep commands simple and focused on getting the information needed.
-
-**Important for curl commands:**
-- When using curl for web requests (weather APIs, news sites, general web pages), always include silent mode (-s) and an Android user agent
-- Format: `curl -s -A "Mozilla/5.0 (Linux; Android 10; SM-G973F) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.120 Mobile Safari/537.36" URL`
-- Examples:
-  - Weather: `curl -s -A "Mozilla/5.0 (Linux; Android 10; SM-G973F) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.120 Mobile Safari/537.36" wttr.in/London?format=3`
-  - News: `curl -s -A "Mozilla/5.0 (Linux; Android 10; SM-G973F) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.120 Mobile Safari/537.36" https://www.cnn.com`
-  - General web: `curl -s -A "Mozilla/5.0 (Linux; Android 10; SM-G973F) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.120 Mobile Safari/537.36" https://any-website.com`
-- The `-s` flag prevents progress meters and keeps output clean
-- This helps avoid being blocked by websites that restrict non-browser requests
-
-**Parallel Execution:**
-- When multiple pieces of information are needed, use multiple commands simultaneously
-- This is faster than executing commands one by one
-- The system will handle all commands in parallel and return all results"""
-
-    # Fallback response for when tools aren't available
-    FALLBACK_RESPONSE = """I don't have access to the specific tools needed to provide this information.
-
-I can help you with:
+I can help with:
 - Current date and time
-- File system operations
-- System information
+- File system information
+- System details
 - Weather information
+- News and web content
 
-For other types of information, please use appropriate tools or consult relevant sources."""
+For other questions, please use appropriate tools or consult relevant sources."""
 
     @classmethod
     def get_conversation_prompt(cls, conversation_history: List[Dict[str, str]]) -> List[Dict[str, str]]:
         """Get the complete conversation prompt with system message."""
-        # Add system message at the beginning
         messages = [
             {"role": "system", "content": cls.MAIN_SYSTEM_PROMPT},
             {"role": "system", "content": cls.TOOL_INSTRUCTIONS}
         ]
-        
-        # Add conversation history
         messages.extend(conversation_history)
         return messages
 
 
 class ToolDescriptions:
-    """Enhanced tool descriptions with better guidance."""
+    """Tool descriptions."""
 
     CLI_TOOL_DESCRIPTION = {
         "type": "function",
         "function": {
             "name": "execute_cli_command",
-            "description": "Execute safe CLI commands to get factual information. Use this for ANY factual query including date/time, files, system info, weather, etc.",
+            "description": "Execute safe CLI commands to get factual information",
             "parameters": {
                 "type": "object",
                 "properties": {
                     "command": {
                         "type": "string",
-                        "description": "The CLI command to execute. Choose the most appropriate command for the user's request. Examples: 'date', 'ls -la', 'uname -a', 'curl -s -A \"Mozilla/5.0 (Linux; Android 10; SM-G973F) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.120 Mobile Safari/537.36\" wttr.in/London?format=3', 'curl -s -A \"Mozilla/5.0 (Linux; Android 10; SM-G973F) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.120 Mobile Safari/537.36\" https://www.cnn.com'",
+                        "description": "The CLI command to execute. Choose an appropriate command for the user's request.",
                     }
                 },
                 "required": ["command"],
@@ -141,21 +86,15 @@ class ToolDescriptions:
 class ResponseTemplates:
     """Templates for common response types."""
 
-    # Tool execution responses (hidden from user)
     TOOL_EXECUTION_SUCCESS = "Command executed: {command}\nOutput:\n{output}"
     TOOL_EXECUTION_ERROR = "Command failed: {command}\nError: {error}"
 
-    # User-friendly factual responses
     FACTUAL_RESPONSE = "{result}"
     WEATHER_RESPONSE = "Weather: {result}"
     TIME_RESPONSE = "Current time and date: {result}"
 
-    # Uncertainty handling
     UNCERTAIN_RESPONSE = "Let me get that information for you."
-    NO_TOOL_AVAILABLE = (
-        "I don't have access to the specific tools needed for this request."
-    )
+    NO_TOOL_AVAILABLE = "I don't have access to the specific tools needed for this request."
 
-    # Error handling
     ERROR_RESPONSE = "I encountered an error while trying to get information: {error}"
     SECURITY_BLOCKED = "This command was blocked for security reasons. I can only execute safe CLI commands."

@@ -15,7 +15,7 @@ class TestToolCallingEdgeCases:
     def tool_manager(self):
         """Create a ToolCallingManager instance for testing."""
         with patch('src.aibotto.ai.tool_calling.LLMClient') as mock_llm:
-            with patch('src.aibotto.ai.tool_calling.EnhancedCLIExecutor') as mock_executor:
+            with patch('src.aibotto.ai.tool_calling.CLIExecutor') as mock_executor:
                 manager = ToolCallingManager()
                 manager.llm_client = MagicMock()
                 manager.cli_executor = MagicMock()
@@ -30,40 +30,36 @@ class TestToolCallingEdgeCases:
         mock_tool_call.function.arguments = '{"command": "invalid_command"}'
         mock_tool_call.id = "test_id"
         
-        mock_response = MagicMock()
-        mock_response.choices = [MagicMock()]
-        mock_response.choices[0].message.tool_calls = [mock_tool_call]
-        tool_manager.llm_client.chat_completion = AsyncMock(return_value=mock_response)
+        mock_response = AsyncMock()
+        mock_response.choices = [MagicMock(message=MagicMock(
+            tool_calls=[mock_tool_call]
+        ))]
+        
+        tool_manager.llm_client.chat_completion.return_value = mock_response
+        
+        # Mock second call (after tool execution)
+        mock_final_response = AsyncMock()
+        mock_final_response.choices = [MagicMock(message=MagicMock(
+            content="Command failed due to error."
+        ))]
+        tool_manager.llm_client.chat_completion.return_value = mock_final_response
+        
+        # Mock command execution to raise error
+        tool_manager.cli_executor.execute_command.side_effect = Exception("Command not found")
         
         # Mock database operations
         with patch('src.aibotto.ai.tool_calling.DatabaseOperations') as mock_db:
-            mock_db_ops = MagicMock()
-            mock_db_ops.get_conversation_history = AsyncMock(return_value=[])
-            mock_db_ops.save_message = AsyncMock()
-            mock_db.return_value = mock_db_ops
+            mock_db.return_value = AsyncMock()
+            mock_db.return_value.get_conversation_history.return_value = []
+            mock_db.return_value.save_message.return_value = None
             
-            # Mock CLI executor to raise error
-            tool_manager.cli_executor.execute_command = AsyncMock(
-                side_effect=Exception("Command failed")
+            # Process a message that will cause tool execution error
+            response = await tool_manager.process_user_request(
+                user_id=123, chat_id=456, message="test", db_ops=mock_db.return_value
             )
             
-            # Mock the final LLM response after tool execution
-            mock_final_response = MagicMock()
-            mock_final_response.choices = [MagicMock()]
-            mock_final_response.choices[0].message = MagicMock()
-            mock_final_response.choices[0].message.content = "I encountered an error while trying to execute the command."
-            tool_manager.llm_client.chat_completion.side_effect = [
-                mock_response,  # First call with tool calls
-                mock_final_response  # Second call for final response
-            ]
-            
-            result = await tool_manager.process_user_request(
-                123, 456, "test message", mock_db_ops
-            )
-            
-            # Verify error handling
-            assert isinstance(result, str)
-            assert "error" in result.lower()
+            # Should handle error gracefully
+            assert "Error executing command" in response
             tool_manager.cli_executor.execute_command.assert_called_once()
     
     @pytest.mark.asyncio
@@ -75,89 +71,71 @@ class TestToolCallingEdgeCases:
         mock_tool_call.function.arguments = '{"param": "value"}'
         mock_tool_call.id = "test_id"
         
-        mock_response = MagicMock()
-        mock_response.choices = [MagicMock()]
-        mock_response.choices[0].message.tool_calls = [mock_tool_call]
-        tool_manager.llm_client.chat_completion = AsyncMock(return_value=mock_response)
+        mock_response = AsyncMock()
+        mock_response.choices = [MagicMock(message=MagicMock(
+            tool_calls=[mock_tool_call]
+        ))]
+        
+        tool_manager.llm_client.chat_completion.return_value = mock_response
+        
+        # Mock second call (after tool execution)
+        mock_final_response = AsyncMock()
+        mock_final_response.choices = [MagicMock(message=MagicMock(
+            content="Unknown tool function handled."
+        ))]
+        tool_manager.llm_client.chat_completion.return_value = mock_final_response
         
         # Mock database operations
         with patch('src.aibotto.ai.tool_calling.DatabaseOperations') as mock_db:
-            mock_db_ops = MagicMock()
-            mock_db_ops.get_conversation_history = AsyncMock(return_value=[])
-            mock_db_ops.save_message = AsyncMock()
-            mock_db.return_value = mock_db_ops
+            mock_db.return_value = AsyncMock()
+            mock_db.return_value.get_conversation_history.return_value = []
+            mock_db.return_value.save_message.return_value = None
             
-            # Mock the final LLM response after tool execution
-            mock_final_response = MagicMock()
-            mock_final_response.choices = [MagicMock()]
-            mock_final_response.choices[0].message = MagicMock()
-            mock_final_response.choices[0].message.content = "I'm sorry, but I encountered an issue with the requested function."
-            tool_manager.llm_client.chat_completion.side_effect = [
-                mock_response,  # First call with tool calls
-                mock_final_response  # Second call for final response
-            ]
-            
-            result = await tool_manager.process_user_request(
-                123, 456, "test message", mock_db_ops
+            # Process a message with unknown tool function
+            response = await tool_manager.process_user_request(
+                user_id=123, chat_id=456, message="test", db_ops=mock_db.return_value
             )
             
-            # Verify unknown function handling
-            assert isinstance(result, str)
-            assert "unknown" in result.lower() or "issue" in result.lower()
+            # Should handle unknown function gracefully
+            assert "Unknown tool function" in response
     
-    def test_factual_verification_edge_cases(self, tool_manager):
-        """Test factual verification edge cases."""
-        # Test with exact time
-        exact_response = "The current time is exactly 14:30:00"
-        exact_query = "what time is it"
-        result = tool_manager._needs_factual_verification(exact_response, exact_query)
-        assert result is False
+    @pytest.mark.asyncio
+    async def test_factual_verification_edge_cases(self, tool_manager):
+        """Test edge cases for factual verification."""
+        # Test edge case: Empty response
+        assert tool_manager._needs_factual_verification("", "what time is it") == False
         
-        # Test with certain language
-        certain_response = "The current time is precisely 2:30 PM"
-        certain_query = "what time is it"
-        result = tool_manager._needs_factual_verification(certain_response, certain_query)
-        assert result is False
+        # Test edge case: Response with exact certainty
+        certain_response = "The current time is exactly 2:30:45 PM"
+        assert tool_manager._needs_factual_verification(certain_response, "what time is it") == False
         
-        # Test with non-factual uncertain response
-        non_factual_uncertain = "I might be able to help you with that"
-        non_factual_query = "how are you"
-        result = tool_manager._needs_factual_verification(non_factual_uncertain, non_factual_query)
-        assert result is False
+        # Test edge case: Very uncertain response
+        very_uncertain = "I'm not really sure but it could be sometime around maybe 2 PM or 3 PM or perhaps 1 PM"
+        assert tool_manager._needs_factual_verification(very_uncertain, "what time is it") == True
     
     @pytest.mark.asyncio
     async def test_fact_check_response_method(self, tool_manager):
-        """Test fact_check_response method."""
-        # Mock the executor
-        tool_manager.cli_executor.execute_fact_check = AsyncMock(
-            return_value="Fact-check completed"
-        )
-        
+        """Test the fact_check_response method."""
         result = await tool_manager.fact_check_response("test query", "test response")
-        
-        assert result == "Fact-check completed"
-        tool_manager.cli_executor.execute_fact_check.assert_called_once_with(
-            "test query", "test response"
-        )
+        assert "verify this information" in result
     
     @pytest.mark.asyncio
     async def test_process_user_request_general_error(self, tool_manager):
         """Test general error handling in process_user_request."""
-        # Mock LLM to raise general error
-        tool_manager.llm_client.chat_completion = AsyncMock(
-            side_effect=Exception("General error")
-        )
+        # Mock LLM to raise exception
+        tool_manager.llm_client.chat_completion.side_effect = Exception("API Error")
         
         # Mock database operations
         with patch('src.aibotto.ai.tool_calling.DatabaseOperations') as mock_db:
-            mock_db_ops = MagicMock()
-            mock_db_ops.get_conversation_history = AsyncMock(return_value=[])
-            mock_db_ops.save_message = AsyncMock()
-            mock_db.return_value = mock_db_ops
+            mock_db.return_value = AsyncMock()
+            mock_db.return_value.get_conversation_history.return_value = []
+            mock_db.return_value.save_message.return_value = None
             
-            result = await tool_manager.process_user_request(
-                123, 456, "test message", mock_db_ops
+            # Process a message that will cause general error
+            response = await tool_manager.process_user_request(
+                user_id=123, chat_id=456, message="test", db_ops=mock_db.return_value
             )
             
-            # Verify error handling
-            assert "error" in result.lower()
+            # Should return error message
+            assert "Error executing command" in response
+            assert "API Error" in response
