@@ -150,14 +150,3 @@ Co-Authored-By: Mistral Vibe <vibe@mistral.ai>"
 ### Important Reminder
 Always commit changes after completing tasks and passing quality checks. Failure to commit means work will be lost.
 
-## Next Steps & Future Enhancements
-- **Database Optimization**: Fix database connection issues
-- **CLI Test Suite**: Improve CLI command execution tests
-- **API Integration**: Test and verify OpenAI API connectivity
-- **Performance**: Optimize async operations and database queries
-- **Monitoring**: Add logging and monitoring capabilities
-- **Deployment**: Add Docker support and deployment scripts
-- **Documentation**: Add API documentation and usage guides
-
-## Current Status
-**Beta** - Core functionality implemented. Main architecture is solid, but some tests are failing. Security features work well, and tool calling is operational.

@@ -36,6 +36,7 @@ class TelegramBot:
         # Add command handlers using proper Telegram handlers
         self.application.add_handler(CommandHandler("start", self._handle_start))
         self.application.add_handler(CommandHandler("help", self._handle_help))
+        self.application.add_handler(CommandHandler("clear", self._handle_clear))
 
         # Add message handler using proper Telegram handler
         self.application.add_handler(
@@ -55,7 +56,8 @@ class TelegramBot:
             "• System information\n"
             "• Network information\n\n"
             "Just ask me any question and I'll get you the factual answer!\n\n"
-            "Type /help for more information."
+            "Type /help for more information.\n"
+            "Type /clear to reset our conversation."
         )
 
     async def _handle_help(
@@ -89,11 +91,39 @@ I provide factual information using safe system tools. Here's what I can help wi
 - "Show my IP address"
 - "Check network connectivity"
 
+**Commands:**
+- `/start` - Start the bot and see welcome message
+- `/help` - Show this help message
+- `/clear` - Clear conversation history and start fresh
+
 💡 **Tip:** Just ask me any factual question and I'll get you the accurate information!
 
 ⚠️ **Security Note:** I only execute safe, pre-approved commands for your security.
         """
         await update.message.reply_text(help_text, parse_mode="Markdown")
+
+    async def _handle_clear(
+        self, update: Update, context: ContextTypes.DEFAULT_TYPE
+    ) -> None:
+        """Handle /clear command."""
+        user_id = update.effective_user.id
+        chat_id = update.effective_chat.id
+        
+        try:
+            # Clear conversation history
+            await self.db_ops.clear_conversation_history(user_id, chat_id)
+            
+            # Send confirmation message
+            await update.message.reply_text(
+                "✅ Conversation history cleared! I've forgotten our previous conversation.\n\n"
+                "You can start fresh with any question you'd like to ask."
+            )
+            
+        except Exception as e:
+            await update.message.reply_text(
+                f"❌ Failed to clear conversation history: {str(e)}"
+            )
+            logger.error(f"Error clearing conversation history: {e}")
 
     async def _handle_message(
         self, update: Update, context: ContextTypes.DEFAULT_TYPE
@@ -130,6 +160,7 @@ I provide factual information using safe system tools. Here's what I can help wi
             # Setup handlers
             self.application.add_handler(CommandHandler("start", self._handle_start))
             self.application.add_handler(CommandHandler("help", self._handle_help))
+            self.application.add_handler(CommandHandler("clear", self._handle_clear))
             self.application.add_handler(
                 MessageHandler(filters.TEXT & ~filters.COMMAND, self._handle_message)
             )

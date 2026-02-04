@@ -215,5 +215,5 @@ class TestTelegramBot:
 
         telegram_bot._setup_handlers()
 
-        # Verify handlers were added
-        assert mock_application.add_handler.call_count == 3
+        # Verify handlers were added (start, help, clear, message)
+        assert mock_application.add_handler.call_count == 4
