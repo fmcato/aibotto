@@ -20,6 +20,152 @@ An AI agent that communicates through Telegram and uses CLI tools to fulfill use
 - **IMPORTANT**: Always commit changes after completing tasks and passing all quality checks
 - **CRITICAL SECURITY**: Never commit credentials, tokens, API keys, or sensitive information
 
+## LLM Development Process
+
+### Phase 1: Requirements Analysis & Task Breakdown
+- Break down tasks into specific, well-defined requirements
+- Create clear acceptance criteria
+- Identify areas suitable for LLM assistance
+- Define scope and boundaries for implementation
+
+### Phase 2: Test-Driven Development (TDD) Implementation
+- Write comprehensive tests before implementation
+- Use LLM to help generate test cases and edge cases
+- Ensure tests cover both happy paths and error conditions
+- Verify tests fail before implementing functionality
+
+### Phase 3: LLM-Assisted Implementation
+- Structure prompts with clear context and requirements
+- Use iterative refinement for complex implementations
+- Validate AI-generated code against requirements
+- Maintain human oversight for critical components
+- Focus on one feature at a time to maintain context
+
+### Phase 4: Quality Assurance & Testing
+- Run all tests and fix any failures
+- Use LLM for code review suggestions
+- Apply linting and type checking
+- Verify security compliance
+- Test with real infrastructure when possible
+
+### Phase 5: Documentation & Deployment
+- Update relevant documentation
+- Create commit messages with LLM assistance
+- Deploy and monitor for issues
+- Document any AI-specific decisions or limitations
+- Record lessons learned for future improvements
+
+## LLM Prompt Engineering Guidelines
+
+### Effective Prompt Structure
+1. **Context**: Provide relevant background information
+2. **Requirements**: Clearly specify what needs to be implemented
+3. **Constraints**: Define any limitations or restrictions
+4. **Examples**: Include examples of expected output when helpful
+5. **Format**: Specify desired output format and structure
+
+### Best Practices
+- Be specific and detailed in requirements
+- Break complex tasks into smaller, manageable pieces
+- Provide relevant code context when asking for modifications
+- Request explanations for AI-generated code
+- Use iterative refinement for better results
+- Always include file paths and existing code context
+
+### Limitations
+- AI may not understand complex business logic
+- Always validate AI-generated code for correctness
+- Be cautious with security-related implementations
+- Review AI suggestions for potential improvements
+- Don't rely on AI for architectural decisions without human review
+
+## LLM Code Review Process
+
+### Automated Review
+- Use LLM to generate initial code review comments
+- Focus on code quality, style, and potential improvements
+- Check for common anti-patterns and best practices
+- Verify adherence to project standards
+
+### Human Review
+- Validate AI-generated suggestions
+- Ensure business logic correctness
+- Check security implications
+- Verify performance considerations
+- Confirm test coverage adequacy
+
+### Documentation
+- Document significant AI-assisted changes
+- Keep track of AI model versions used
+- Maintain a prompts library for common tasks
+- Record important decisions made with AI assistance
+
+## LLM Security Considerations
+
+### Prompt Injection Prevention
+- Validate all user inputs before processing
+- Sanitize prompts to prevent injection attacks
+- Use input validation and output encoding
+- Implement rate limiting for prompt processing
+
+### Secure Handling of AI-Generated Code
+- Review all AI-generated code for security vulnerabilities
+- Validate that generated commands are safe to execute
+- Ensure proper error handling in AI-assisted code
+- Test security-related implementations thoroughly
+
+### Privacy Concerns
+- Avoid including sensitive data in prompts
+- Use anonymized data for testing when possible
+- Consider data retention policies for AI interactions
+- Document any privacy implications of AI-assisted features
+
+## LLM Documentation Standards
+
+### Documenting AI Model Decisions
+- Record which AI model was used for specific tasks
+- Document the reasoning behind AI-assisted decisions
+- Keep track of prompt variations and their effectiveness
+- Maintain a changelog for AI-assisted features
+
+### Tracking LLM-Assisted Changes
+- Use clear commit messages indicating AI assistance
+- Maintain separate branches for major AI-assisted features
+- Document the level of AI involvement in each change
+- Review AI-generated code thoroughly before merging
+
+### Creating Prompts Library
+- Maintain a collection of effective prompts for common tasks
+- Include context, requirements, and examples for each prompt
+- Document the effectiveness of different prompt approaches
+- Share successful prompts with the team
+
+## LLM-Assisted Commit Guidelines
+
+### Documenting AI-Assisted Changes
+- Include "AI-assisted" in commit messages when appropriate
+- Specify which AI model was used (e.g., "Mistral Vibe")
+- Describe the nature of AI assistance provided
+- Note any significant AI-generated code or logic
+
+### Reviewing AI-Generated Commit Messages
+- Always review and refine AI-generated commit messages
+- Ensure they accurately reflect the changes made
+- Follow conventional commit format when possible
+- Include relevant issue numbers or references
+
+### Maintaining Change History
+- Keep detailed notes on AI-assisted development sessions
+- Record important decisions made with AI assistance
+- Document any limitations encountered during AI-assisted work
+- Track the effectiveness of different AI approaches
+
+### Co-authorship Attribution
+- Use proper attribution for AI assistance in commits
+- Follow the project's guidelines for AI-generated content
+- Ensure compliance with any organizational AI policies
+- Maintain transparency about AI involvement in development
+
 ## Implementation Status ✅ COMPLETED
 
 ### Project Structure
