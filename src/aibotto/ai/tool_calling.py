@@ -5,7 +5,6 @@ Tool calling functionality for LLM integration.
 import asyncio
 import json
 import logging
-import re
 from typing import Any
 
 from ..cli.executor import CLIExecutor
@@ -47,12 +46,13 @@ class ToolCallingManager:
             response = await self.llm_client.chat_completion(
                 messages=messages,
                 tools=self._get_tool_definitions(),
-                # tool_choice="auto",  # Removed for simplified testing
             )
 
             # Handle response
-            if hasattr(response.choices[0].message, 'tool_calls') and response.choices[0].message.tool_calls:
-                # LLM wants to use tools - handle multiple tool calls in parallel
+            if hasattr(response.choices[0].message, 'tool_calls') and \
+               response.choices[0].message.tool_calls:
+                # LLM wants to use tools - handle multiple tool calls in
+                # parallel
                 tool_calls = response.choices[0].message.tool_calls
 
                 # Execute all tool calls in parallel using asyncio.gather
@@ -60,64 +60,76 @@ class ToolCallingManager:
                     """Execute a single tool call and return the result."""
                     if tool_call.function.name == "execute_cli_command":
                         try:
-                            command = json.loads(tool_call.function.arguments)[
-                                "command"
-                            ]
+                            command = json.loads(
+                                tool_call.function.arguments)["command"]
 
                             # Execute the command
-                            result = await self.cli_executor.execute_command(command)
+                            result = await self.cli_executor.execute_command(
+                                command)
 
                             # Log command execution for debugging
                             logger.info(
-                                f"Executing command for user {user_id}: {command}"
+                                f"Executing command for user {user_id}: "
+                                f"{command}"
                             )
                             logger.info(
-                                f"Command result for user {user_id}: {result[:200]}..."
+                                f"Command result for user {user_id}: "
+                                f"{result[:200]}..."
                             )
 
-                            # Save tool call result (without showing command to user)
+                            # Save tool call result (without showing command
+                            # to user)
                             await db_ops.save_message(
                                 user_id, chat_id, 0, "system", result
                             )
 
-                            return {"tool_call_id": tool_call.id, "content": result}
+                            return {
+                                "tool_call_id": tool_call.id,
+                                "content": result
+                            }
 
                         except Exception as e:
                             logger.error(
-                                f"Error executing command {tool_call.function.arguments}: {e}"
+                                f"Error executing command "
+                                f"{tool_call.function.arguments}: {e}"
                             )
-                            error_result = f"Error executing command: {str(e)}"
+                            error_result = (
+                                f"Error executing command: {str(e)}"
+                            )
                             await db_ops.save_message(
                                 user_id, chat_id, 0, "system", error_result
                             )
                             return {
                                 "tool_call_id": tool_call.id,
-                                "content": error_result,
+                                "content": error_result
                             }
                     else:
                         # Unknown tool function
                         error_result = (
-                            f"Unknown tool function: {tool_call.function.name}"
+                            f"Unknown tool function: "
+                            f"{tool_call.function.name}"
                         )
                         await db_ops.save_message(
                             user_id, chat_id, 0, "system", error_result
                         )
-                        return {"tool_call_id": tool_call.id, "content": error_result}
+                        return {
+                            "tool_call_id": tool_call.id,
+                            "content": error_result
+                        }
 
                 # Execute all tool calls in parallel
                 tool_results = await asyncio.gather(
-                    *[execute_single_tool_call(tool_call) for tool_call in tool_calls]
+                    *[execute_single_tool_call(tool_call)
+                      for tool_call in tool_calls]
                 )
 
                 # Add all tool results to messages
                 for tool_result in tool_results:
-                    messages.append(
-                        {
-                            "role": "tool",
-                            "tool_call_id": tool_result["tool_call_id"],
-                            "content": tool_result["content"],
-                        }
-                    )
+                    messages.append({
+                        "role": "tool",
+                        "tool_call_id": tool_result["tool_call_id"],
+                        "content": tool_result["content"],
+                    })
 
                 # Get final response from LLM with all tool results
                 final_response = await self.llm_client.chat_completion(
@@ -134,7 +146,8 @@ class ToolCallingManager:
                 return final_response.choices[0].message.content
 
             else:
-                # For simplified system, use direct response without auto-suggestion
+                # For simplified system, use direct response without
+                # auto-suggestion
                 enhanced_response = response.choices[0].message.content
                 await db_ops.save_message(
                     user_id, chat_id, 0, "assistant", enhanced_response
@@ -216,8 +229,11 @@ class ToolCallingManager:
         )
 
         # For certain responses, we should not trigger fact-checking
-        # Only trigger if there's uncertainty OR if it's a factual query with unsourced claims
-        should_trigger = (has_uncertain_language and has_factual_query) or (
+        # Only trigger if there's uncertainty OR if it's a factual query with
+        # unsourced claims
+        should_trigger = (
+            has_uncertain_language and has_factual_query
+        ) or (
             has_factual_query
             and has_unsourced_claims
             and not any(
@@ -230,7 +246,10 @@ class ToolCallingManager:
 
     async def get_factual_commands_info(self) -> str:
         """Get information about available factual commands."""
-        return "I can help with factual information like date/time, weather, system info, and web content."
+        return (
+            "I can help with factual information like date/time, weather, "
+            "system info, and web content."
+        )
 
     async def fact_check_response(self, query: str, response: str) -> str:
         """Fact-check a response using available tools."""

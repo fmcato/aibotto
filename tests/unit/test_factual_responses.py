@@ -79,21 +79,19 @@ class TestFactualResponses:
         """Test execution of tool calls."""
         # Mock LLM response with tool calls
         mock_response = AsyncMock()
-        mock_response.choices = [MagicMock(message=MagicMock(
-            tool_calls=[MagicMock(
-                function=MagicMock(
-                    name="execute_cli_command",
-                    arguments='{"command": "date"}'
-                ),
-                id="test_id"
-            )]
-        ))]
+        mock_response.choices = [MagicMock()]
+        mock_response.choices[0].message = MagicMock()
+        mock_response.choices[0].message.tool_calls = [MagicMock()]
+        mock_response.choices[0].message.tool_calls[0].function = MagicMock()
+        mock_response.choices[0].message.tool_calls[0].function.name = "execute_cli_command"
+        mock_response.choices[0].message.tool_calls[0].function.arguments = '{"command": "date"}'
+        mock_response.choices[0].message.tool_calls[0].id = "test_id"
         
         # Mock second call (after tool execution)
         mock_final_response = AsyncMock()
-        mock_final_response.choices = [MagicMock(message=MagicMock(
-            content="Today is Monday."
-        ))]
+        mock_final_response.choices = [MagicMock()]
+        mock_final_response.choices[0].message = MagicMock()
+        mock_final_response.choices[0].message.content = "Today is Monday."
         
         # Set up side effect for the second call
         tool_manager.llm_client.chat_completion.side_effect = [mock_response, mock_final_response]
