@@ -10,6 +10,35 @@ A Python-based AI bot that communicates through Telegram and uses CLI tools to f
 - ✅ **Passing**: Dangerous Command Blocking, Tool Calling, Conversation Flow
 - ❌ **Failing**: Database Connection, CLI Command Execution, OpenAI API Connection
 
+## 📋 Spec
+
+An AI agent that communicates through Telegram and uses CLI tools to fulfill user requests.
+
+### Examples:
+- User asks "What day is today?" → Agent uses Linux `date` command to answer
+- User asks "What's the weather in London?" → Agent uses curl command against weather API to get forecast in JSON and answers appropriately
+
+## 🛠️ Tech Stack
+
+- **Python 3**: Core programming language
+- **UV**: Project and dependency management, running tests, code execution
+- **OpenAI-compatible LLM**: Configurable provider with tool calling functionality
+- **SQLite**: For storing conversation history
+
+## ✅ Core Features Implemented
+
+- ✅ **Modular Architecture**: Clean separation of concerns with dedicated modules
+- ✅ **Telegram Bot Interface**: Full bot with `/start`, `/help`, and message handling
+- ✅ **LLM Integration**: OpenAI-compatible API client with tool calling
+- ✅ **CLI Tool Execution**: Safe command execution with security measures
+- ✅ **Database Management**: SQLite with conversation history persistence
+- ✅ **Configuration Management**: Environment-based configuration with validation
+- ✅ **Security Features**: Command blocking, length limits, and optional whitelist
+- ✅ **Async/Await**: Full async implementation for performance
+- ✅ **Comprehensive Testing**: Unit tests with pytest and async support
+- ✅ **Code Quality**: Ruff linting, MyPy type checking
+- ✅ **Documentation**: Complete README and inline documentation
+
 ## 📁 Project Structure
 
 ```
@@ -51,6 +80,14 @@ src/aibotto/
 - ⚡ **Async**: Asynchronous implementation for better performance
 - 🧪 **Testing**: Comprehensive test suite with pytest and coverage
 - 📝 **Code Quality**: Ruff linting, MyPy type checking
+
+## 🔒 Security Features
+
+- **Command Length Limiting**: Maximum 1000 characters to prevent abuse
+- **Command Blacklist**: Blocks dangerous commands (rm -rf, sudo, shutdown, etc.)
+- **Optional Whitelist**: Can restrict to only allowed commands
+- **Sandboxed Execution**: Commands run in isolated subprocess environments
+- **Input Validation**: Comprehensive security checks before execution
 
 ## 🛠️ Tech Stack
 

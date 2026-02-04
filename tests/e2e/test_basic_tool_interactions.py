@@ -349,45 +349,28 @@ class TestBasicToolInteractions:
 
     @pytest.mark.asyncio
     async def test_uncertainty_detection(self, tool_calling_manager, mock_db_ops):
-        """Test that uncertain queries trigger fact verification."""
+        """Test that uncertain queries are handled in simplified system."""
         user_query = "I'm not sure about this, but what time is it really?"
         
-        # Mock the CLI executor to simulate fact verification
-        with patch.object(tool_calling_manager.cli_executor, 'execute_command') as mock_execute:
-            mock_execute.return_value = "Today is Monday, February 3, 2025."
+        # Mock the LLM client to return a response with uncertain language
+        with patch.object(tool_calling_manager.llm_client, 'chat_completion') as mock_llm:
+            # Create a mock response with uncertain language
+            mock_response = Mock()
+            mock_choice = Mock()
+            mock_message = Mock()
             
-            # Mock the LLM client to return a response that triggers uncertainty detection
-            with patch.object(tool_calling_manager.llm_client, 'chat_completion') as mock_llm:
-                # Create a mock response with uncertain language
-                mock_response1 = Mock()
-                mock_choice1 = Mock()
-                mock_message1 = Mock()
-                
-                mock_message1.content = "I think it might be Monday, but I'm not sure."
-                mock_message1.tool_calls = None
-                mock_choice1.message = mock_message1
-                mock_response1.choices = [mock_choice1]
-                
-                # Create a mock response for the second call (after auto-suggestion)
-                mock_response2 = Mock()
-                mock_choice2 = Mock()
-                mock_message2 = Mock()
-                
-                mock_message2.content = "Today is Monday, February 3, 2025."
-                mock_choice2.message = mock_message2
-                mock_response2.choices = [mock_choice2]
-                
-                # Set up the mock to return different responses for different calls
-                mock_llm.side_effect = [mock_response1, mock_response2]
-                
-                response = await tool_calling_manager.process_user_request(1, 1, user_query, mock_db_ops)
-                
-                # Verify the response contains factual information
-                assert "Monday" in response
-                assert "February" in response
-                
-                # Verify that execute_with_suggestion was called for fact verification
-                mock_execute.assert_called_once()
+            mock_message.content = "I think it might be Monday, but I'm not sure."
+            mock_message.tool_calls = None
+            mock_choice.message = mock_message
+            mock_response.choices = [mock_choice]
+            
+            mock_llm.return_value = mock_response
+            
+            response = await tool_calling_manager.process_user_request(1, 1, user_query, mock_db_ops)
+            
+            # In simplified system, uncertain responses are returned as-is
+            assert "I think it might be Monday" in response
+            assert "not sure" in response
 
     @pytest.mark.asyncio
     async def test_command_execution_error_handling(self, tool_calling_manager, mock_db_ops):

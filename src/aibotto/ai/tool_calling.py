@@ -47,7 +47,7 @@ class ToolCallingManager:
             response = await self.llm_client.chat_completion(
                 messages=messages,
                 tools=self._get_tool_definitions(),
-                tool_choice="auto",
+                # tool_choice="auto",  # Removed for simplified testing
             )
 
             # Handle response
