@@ -41,6 +41,22 @@ uv run pytest --cov=src
 uv run pytest tests/unit/test_cli.py
 ```
 
+### 5. Docker Deployment (Alternative)
+
+For production deployment, you can use Docker:
+
+```bash
+# Build and run with Docker Compose
+docker-compose build
+docker-compose up -d
+
+# Or run directly with Docker
+docker build -t aibot .
+docker run -d --env-file .env -v aibot_data:/app/data aibot
+```
+
+See [README-Docker.md](README-Docker.md) for detailed Docker deployment instructions.
+
 ## 💡 Usage Examples
 
 ### Date & Time

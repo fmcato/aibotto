@@ -1,0 +1,75 @@
+version: '3.8'
+
+services:
+  aibot:
+    build: .
+    container_name: aibot
+    restart: unless-stopped
+    environment:
+      # Telegram Bot Configuration
+      - TELEGRAM_TOKEN=${TELEGRAM_TOKEN}
+      
+      # OpenAI Configuration
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - OPENAI_BASE_URL=${OPENAI_BASE_URL:-https://api.openai.com/v1}
+      - OPENAI_MODEL=${OPENAI_MODEL:-gpt-3.5-turbo}
+      
+      # Database Configuration
+      - DATABASE_PATH=${DATABASE_PATH:-/app/data/conversations.db}
+      
+      # Security Configuration
+      - MAX_COMMAND_LENGTH=${MAX_COMMAND_LENGTH:-1000}
+      - ALLOWED_COMMANDS=${ALLOWED_COMMANDS}
+      - BLOCKED_COMMANDS=${BLOCKED_COMMANDS:-"rm -rf,sudo,dd,mkfs,fdisk,format,shutdown,reboot,poweroff,halt"}
+      
+      # Bot Configuration
+      - MAX_HISTORY_LENGTH=${MAX_HISTORY_LENGTH:-20}
+      - THINKING_MESSAGE=${THINKING_MESSAGE:-"🤔 Thinking..."}
+    
+    volumes:
+      # Persist database data
+      - aibot_data:/app/data
+    
+    # Health check to ensure the bot is running
+    healthcheck:
+      test: ["CMD", "python", "-c", "import sys; sys.exit(0)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    
+    # Resource limits
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.5'
+        reservations:
+          memory: 256M
+          cpus: '0.25'
+
+  # Optional: Redis for caching (if needed in the future)
+  # redis:
+  #   image: redis:7-alpine
+  #   container_name: aibot-redis
+  #   restart: unless-stopped
+  #   volumes:
+  #     - redis_data:/data
+  #   command: redis-server --appendonly yes
+
+volumes:
+  aibot_data:
+    driver: local
+
+# Optional: Add a service for running tests
+# services:
+#   test:
+#     build: .
+#     container_name: aibot-test
+#     environment:
+#       - PYTHONPATH=/app/src
+#     volumes:
+#       - .:/app
+#     command: uv run pytest tests/ -v
+#     profiles:
+#       - test

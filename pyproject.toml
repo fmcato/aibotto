@@ -6,7 +6,7 @@ build-backend = "hatchling.build"
 name = "aibotto"
 version = "0.1.0"
 description = "AI Bot that communicates through Telegram and uses CLI tools to fulfill user requests"
-readme = "README.md"
+# readme = "README.md"
 requires-python = ">=3.12"
 license = {text = "MIT"}
 authors = [

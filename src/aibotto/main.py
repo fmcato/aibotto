@@ -3,10 +3,15 @@ Main entry point for the AIBot application.
 """
 
 import logging
+import sys
+import os
 
-from .bot.telegram_bot import TelegramBot
-from .config.settings import Config
-from .utils.logging import setup_logging
+# Add the src directory to the Python path
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
+
+from aibotto.bot.telegram_bot import TelegramBot
+from aibotto.config.settings import Config
+from aibotto.utils.logging import setup_logging
 
 logger = logging.getLogger(__name__)
 
