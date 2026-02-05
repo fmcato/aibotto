@@ -19,6 +19,8 @@ class WebSearchTool:
     def __init__(self) -> None:
         self.ddgs = ddgs.DDGS()
         self.timeout = Config.DDGS_TIMEOUT
+        self._retry_count = 0
+        self._max_retries = 3
 
     async def search(
         self,
@@ -84,8 +86,30 @@ class WebSearchTool:
                 }
                 formatted_results.append(result)
 
+            # Log engine errors if they occurred (ddgs logs them at INFO level)
+            if self._retry_count > 0:
+                logger.info(f"Search completed after {self._retry_count} retry/ies")
+
             return formatted_results
 
+        except ValueError as e:
+            # Handle specific engine errors like "not enough values to unpack"
+            if "not enough values to unpack" in str(e):
+                logger.warning(f"Engine error during search: {e}")
+                if self._retry_count < self._max_retries:
+                    self._retry_count += 1
+                    logger.info(f"Retrying search (attempt {self._retry_count}/{self._max_retries})")
+                    # Wait a bit before retrying to avoid overwhelming the service
+                    await asyncio.sleep(1)
+                    return await self.search(query, num_results, days_ago, safe_search)
+                else:
+                    logger.error(f"Search failed after {self._retry_count} attempts due to engine errors")
+                    raise RuntimeError(f"Failed to perform web search due to engine errors: {str(e)}")
+            else:
+                # Other ValueError cases
+                logger.error(f"Value error during web search: {e}")
+                raise RuntimeError(f"Failed to perform web search: {str(e)}")
+                
         except Exception as e:
             logger.error(f"Error performing web search: {e}")
             raise RuntimeError(f"Failed to perform web search: {str(e)}")
@@ -131,6 +155,9 @@ class WebSearchTool:
         Returns:
             List of search results with optional extracted content
         """
+        # Reset retry count for new search
+        self._retry_count = 0
+        
         # Get basic search results
         results = await self.search(query, num_results, days_ago, safe_search)
 
