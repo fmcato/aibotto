@@ -4,7 +4,8 @@ Web search tool implementation using ddgs library.
 
 import asyncio
 import logging
-from typing import List, Dict, Optional, Any
+from typing import Any
+
 import ddgs
 
 from ..config.settings import Config
@@ -15,7 +16,7 @@ logger = logging.getLogger(__name__)
 class WebSearchTool:
     """Web search tool using ddgs library."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.ddgs = ddgs.DDGS()
         self.timeout = Config.DDGS_TIMEOUT
 
@@ -23,9 +24,9 @@ class WebSearchTool:
         self,
         query: str,
         num_results: int = 5,
-        days_ago: Optional[int] = None,
+        days_ago: int | None = None,
         safe_search: str = "moderate"
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """
         Search the web using ddgs API.
         
@@ -51,7 +52,7 @@ class WebSearchTool:
                 "region": "wt",  # Worldwide
                 "safesearch": safe_search,
             }
-            
+
             # Add time filter if specified
             if days_ago is not None:
                 if days_ago <= 1:
@@ -67,7 +68,7 @@ class WebSearchTool:
             # Note: ddgs is synchronous, so we run it in a thread pool
             loop = asyncio.get_event_loop()
             results = await loop.run_in_executor(
-                None, 
+                None,
                 lambda: list(self.ddgs.text(query, **search_params))
             )
 
@@ -113,10 +114,10 @@ class WebSearchTool:
         self,
         query: str,
         num_results: int = 5,
-        days_ago: Optional[int] = None,
+        days_ago: int | None = None,
         safe_search: str = "moderate",
         extract_content: bool = True
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """
         Perform web search and optionally extract full content from results.
         
@@ -132,25 +133,25 @@ class WebSearchTool:
         """
         # Get basic search results
         results = await self.search(query, num_results, days_ago, safe_search)
-        
+
         if extract_content and results:
             # Extract content from each result
             content_tasks = []
             for result in results:
                 content_tasks.append(self.extract_content(result["url"]))
-            
+
             contents = await asyncio.gather(*content_tasks, return_exceptions=True)
-            
+
             # Add content to results
-            for i, (result, content) in enumerate(zip(results, contents)):
+            for _, (result, content) in enumerate(zip(results, contents, strict=True)):
                 if isinstance(content, Exception):
                     result["content"] = f"Failed to extract content: {str(content)}"
                 else:
                     result["content"] = content
-        
+
         return results
 
-    async def close(self):
+    async def close(self) -> None:
         """Close any resources."""
         # ddgs doesn't require explicit closing
         pass
@@ -163,7 +164,7 @@ web_search_tool = WebSearchTool()
 async def search_web(
     query: str,
     num_results: int = 5,
-    days_ago: Optional[int] = None,
+    days_ago: int | None = None,
     safe_search: str = "moderate"
 ) -> str:
     """
@@ -186,10 +187,10 @@ async def search_web(
             safe_search=safe_search,
             extract_content=True
         )
-        
+
         if not results:
             return f"No search results found for query: {query}"
-        
+
         # Format results for LLM
         formatted_results = []
         for i, result in enumerate(results, 1):
@@ -200,9 +201,9 @@ async def search_web(
    Source: {result.get('source', 'Unknown')}
 """
             formatted_results.append(formatted_result.strip())
-        
+
         return f"Search results for '{query}':\n\n" + "\n\n".join(formatted_results)
-        
+
     except Exception as e:
         logger.error(f"Error in search_web tool: {e}")
         return f"Error performing web search: {str(e)}"
