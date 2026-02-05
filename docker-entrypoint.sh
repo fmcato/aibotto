@@ -27,23 +27,7 @@ if [ -z "$OPENAI_API_KEY" ]; then
     exit 1
 fi
 
-# Check if we're running tests
-if [ "$1" = "test" ]; then
-    echo "🧪 Running tests..."
-    exec uv run pytest tests/ -v
-fi
 
-# Check if we're running linting
-if [ "$1" = "lint" ]; then
-    echo "🔍 Running linting..."
-    exec uv run ruff check src/
-fi
-
-# Check if we're running type checking
-if [ "$1" = "type-check" ]; then
-    echo "🔍 Running type checking..."
-    exec uv run mypy src/
-fi
 
 # Default: run the bot
 echo "🚀 Starting AIBot..."

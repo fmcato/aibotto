@@ -25,7 +25,6 @@ RUN uv sync --all-extras --no-dev
 
 # Copy source code
 COPY src/ ./src/
-COPY tests/ ./tests/
 
 # Copy entrypoint script
 COPY docker-entrypoint.sh /usr/local/bin/

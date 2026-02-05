@@ -60,16 +60,3 @@ services:
 volumes:
   aibot_data:
     driver: local
-
-# Optional: Add a service for running tests
-# services:
-#   test:
-#     build: .
-#     container_name: aibot-test
-#     environment:
-#       - PYTHONPATH=/app/src
-#     volumes:
-#       - .:/app
-#     command: uv run pytest tests/ -v
-#     profiles:
-#       - test
