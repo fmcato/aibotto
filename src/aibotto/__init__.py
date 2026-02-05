@@ -1,5 +1,5 @@
 """
-AIBot - AI Bot that communicates through Telegram and uses CLI tools to
+AIBOTTO - AI Bot that communicates through Telegram and uses CLI tools to
 fulfill user requests.
 
 This package provides a modular and extensible AI bot with the following

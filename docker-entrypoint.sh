@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Docker entrypoint script for AIBot
+# Docker entrypoint script for AIBOTTO
 
 # Set default values for environment variables if not set
 export TELEGRAM_TOKEN=${TELEGRAM_TOKEN:-""}
@@ -30,7 +30,7 @@ fi
 
 
 # Default: run the bot
-echo "🚀 Starting AIBot..."
+echo "🚀 Starting AIBOTTO..."
 echo "📊 Configuration:"
 echo "   - Telegram Token: ${TELEGRAM_TOKEN:0:10}..."
 echo "   - OpenAI Base URL: $OPENAI_BASE_URL"

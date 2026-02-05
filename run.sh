@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# AIBot Run Script
-# This script starts the AIBot Telegram bot
+# AIBOTTO Run Script
+# This script starts the AIBOTTO Telegram bot
 
 set -e
 
@@ -83,7 +83,7 @@ if [ ${#missing_vars[@]} -ne 0 ]; then
 fi
 
 # Start the bot
-print_status "Starting AIBot..."
+print_status "Starting AIBOTTO..."
 print_status "Press Ctrl+C to stop the bot"
 
 # Run the bot using uv

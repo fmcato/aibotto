@@ -31,9 +31,9 @@ COPY docker-entrypoint.sh /usr/local/bin/
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
 # Create non-root user for security
-RUN useradd --create-home --shell /bin/bash aibot && \
-    chown -R aibot:aibot /app
-USER aibot
+RUN useradd --create-home --shell /bin/bash aibotto && \
+    chown -R aibotto:aibotto /app
+USER aibotto
 
 # Expose port (if needed for future web interface)
 EXPOSE 8080

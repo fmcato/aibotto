@@ -1,3 +1,3 @@
 """
-Test suite for AIBot.
+Test suite for AIBOTTO.
 """

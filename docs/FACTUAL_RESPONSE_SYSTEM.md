@@ -2,7 +2,7 @@
 
 ## Overview
 
-The AIBot now includes an enhanced factual response system that ensures the AI provides accurate, verifiable information instead of making things up when uncertain.
+The AIBOTTO now includes an enhanced factual response system that ensures the AI provides accurate, verifiable information instead of making things up when uncertain.
 
 ## Key Improvements
 
@@ -241,4 +241,4 @@ To add new factual command support:
 
 ## License
 
-This feature is part of the AIBot project and follows the same MIT License.
+This feature is part of the AIBOTTO project and follows the same MIT License.

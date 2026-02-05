@@ -1,3 +1,3 @@
 """
-Unit tests for AIBot.
+Unit tests for AIBOTTO.
 """

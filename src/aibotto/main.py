@@ -1,5 +1,5 @@
 """
-Main entry point for the AIBot application.
+Main entry point for the AIBOTTO application.
 """
 
 import logging
@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 
 
 def main() -> None:
-    """Main entry point for the AIBot application."""
+    """Main entry point for the AIBOTTO application."""
     # Setup logging
     setup_logging()
 
@@ -26,7 +26,7 @@ def main() -> None:
         logger.error("❌ Configuration validation failed")
         return
 
-    logger.info("🚀 Starting AIBot...")
+    logger.info("🚀 Starting AIBOTTO...")
 
     try:
         # Create and run the bot

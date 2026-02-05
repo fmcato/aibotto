@@ -1,9 +1,9 @@
 version: '3.8'
 
 services:
-  aibot:
+  aibotto:
     build: .
-    container_name: aibot
+    container_name: aibotto
     restart: unless-stopped
     environment:
       # Telegram Bot Configuration
@@ -28,7 +28,7 @@ services:
     
     volumes:
       # Persist database data
-      - aibot_data:/app/data
+      - aibotto_data:/app/data
     
     # Health check to ensure the bot is running
     healthcheck:
@@ -58,5 +58,5 @@ services:
   #   command: redis-server --appendonly yes
 
 volumes:
-  aibot_data:
+  aibotto_data:
     driver: local

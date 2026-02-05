@@ -10,7 +10,7 @@ description = "AI Bot that communicates through Telegram and uses CLI tools to f
 requires-python = ">=3.12"
 license = {text = "MIT"}
 authors = [
-    {name = "AIBot Team", email = "support@aibotto.com"},
+    {name = "AIBOTTO Team", email = "support@aibotto.com"},
 ]
 classifiers = [
     "Development Status :: 4 - Beta",

@@ -1,4 +1,4 @@
-# AIBot - AI Telegram Bot with CLI Integration
+# AIBOTTO - AI Telegram Bot with CLI Integration
 
 A Python-based AI bot that communicates through Telegram and uses CLI tools to fulfill user requests.
 
