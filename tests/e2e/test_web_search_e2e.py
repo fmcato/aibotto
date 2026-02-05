@@ -1,0 +1,385 @@
+"""
+End-to-end test for web search functionality.
+Tests the complete flow from user query to web search results.
+"""
+
+import pytest
+from unittest.mock import AsyncMock, patch, MagicMock
+import asyncio
+
+from src.aibotto.ai.tool_calling import ToolCallingManager
+from src.aibotto.db.operations import DatabaseOperations
+
+
+class TestWebSearchE2E:
+    """End-to-end tests for web search functionality."""
+
+    @pytest.fixture
+    def tool_calling_manager(self):
+        """Create a ToolCallingManager instance for testing."""
+        return ToolCallingManager()
+
+    @pytest.fixture
+    def mock_db_ops(self):
+        """Create a mock DatabaseOperations instance."""
+        db_ops = MagicMock(spec=DatabaseOperations)
+        db_ops.get_conversation_history = AsyncMock(return_value=[])
+        db_ops.save_message = AsyncMock()
+        return db_ops
+
+    @pytest.fixture
+    def mock_duckduckgo_response(self):
+        """Mock DuckDuckGo API response."""
+        return {
+            "AbstractText": "Python is a high-level programming language.",
+            "Heading": "Python Programming",
+            "AbstractURL": "https://python.org",
+            "RelatedTopics": [
+                {
+                    "Text": "Python tutorial - Learn Python programming basics for beginners",
+                    "FirstURL": "https://python.org/tutorial"
+                },
+                {
+                    "Text": "Python documentation - Official Python documentation and guides",
+                    "FirstURL": "https://docs.python.org"
+                },
+                {
+                    "Text": "Python packages - PyPI repository with thousands of packages",
+                    "FirstURL": "https://pypi.org"
+                }
+            ]
+        }
+
+    @pytest.fixture
+    def mock_content_responses(self):
+        """Mock content extraction responses."""
+        return [
+            "Python is a high-level, interpreted, general-purpose programming language. Created by Guido van Rossum and first released in 1991.",
+            "This Python tutorial covers the basics of Python programming including variables, data types, control structures, functions, and more.",
+            "The official Python documentation provides comprehensive guides, tutorials, and references for all Python versions and libraries.",
+            "PyPI is the Python Package Index, a repository of software for the Python programming language."
+        ]
+
+    @pytest.mark.asyncio
+    async def test_web_search_happy_path(
+        self, 
+        tool_calling_manager, 
+        mock_db_ops, 
+        mock_duckduckgo_response,
+        mock_content_responses
+    ):
+        """Test complete web search flow - happy path."""
+        user_id = 12345
+        chat_id = 67890
+        user_query = "What are the latest Python programming tutorials?"
+        
+        # Mock the LLM client to return a web search tool call
+        with patch('src.aibotto.ai.tool_calling.LLMClient') as mock_llm_client:
+            # Mock the first LLM call (with tool calling)
+            mock_response_1 = MagicMock()
+            mock_message_1 = MagicMock()
+            mock_message_1.tool_calls = [
+                MagicMock(
+                    id="tool_call_1",
+                    function=MagicMock(
+                        name="search_web",
+                        arguments='{"query": "Python programming tutorials", "num_results": 5}'
+                    )
+                )
+            ]
+            mock_response_1.choices = [MagicMock(message=mock_message_1)]
+            
+            # Mock the second LLM call (final response)
+            mock_response_2 = MagicMock()
+            mock_message_2 = MagicMock()
+            mock_message_2.tool_calls = None
+            mock_response_2.choices = [MagicMock(message=mock_message_2)]
+            mock_message_2.content = "Based on my search, here are the best Python programming tutorials:"
+            
+            mock_llm_client_instance = MagicMock()
+            mock_llm_client_instance.chat_completion.side_effect = [mock_response_1, mock_response_2]
+            mock_llm_client.return_value = mock_llm_client_instance
+            
+            # Mock aiohttp session for API calls
+            with patch('aiohttp.ClientSession') as mock_session_class:
+                mock_session = AsyncMock()
+                mock_session_class.return_value = mock_session
+                
+                # Mock API response
+                mock_api_response = AsyncMock()
+                mock_api_response.raise_for_status.return_value = None
+                mock_api_response.json.return_value = mock_duckduckgo_response
+                mock_session.get.return_value.__aenter__.return_value = mock_api_response
+                
+                # Mock content extraction responses
+                mock_content_responses_mocks = []
+                for content in mock_content_responses:
+                    mock_content_response = AsyncMock()
+                    mock_content_response.raise_for_status.return_value = None
+                    mock_content_response.text.return_value = content
+                    mock_content_responses_mocks.append(mock_content_response)
+                
+                # Configure the session to return different responses for different calls
+                # First call for API, subsequent calls for content extraction
+                mock_session.get.side_effect = [mock_api_response] + mock_content_responses_mocks
+                
+                # Execute the user request
+                result = await tool_calling_manager.process_user_request(
+                    user_id, chat_id, user_query, mock_db_ops
+                )
+                
+                # Verify the result
+                assert result is not None
+                assert isinstance(result, str)
+                assert len(result) > 0
+                
+                # Verify that LLM was called twice (once for tool calling, once for final response)
+                assert mock_llm_client_instance.chat_completion.call_count == 2
+                
+                # Verify that database operations were called
+                assert mock_db_ops.save_message.call_count >= 2  # At least user message and assistant response
+                
+                # Verify the first call was with tools
+                first_call_args = mock_llm_client_instance.chat_completion.call_args_list[0]
+                assert 'tools' in first_call_args.kwargs
+                
+                # Verify the second call was without tools
+                second_call_args = mock_llm_client_instance.chat_completion.call_args_list[1]
+                assert 'tools' not in second_call_args.kwargs
+
+    @pytest.mark.asyncio
+    async def test_web_search_with_specific_parameters(
+        self, 
+        tool_calling_manager, 
+        mock_db_ops, 
+        mock_duckduckgo_response,
+        mock_content_responses
+    ):
+        """Test web search with specific parameters like result count and date filter."""
+        user_id = 12345
+        chat_id = 67890
+        user_query = "Search for recent AI news from the last week"
+        
+        # Mock the LLM client to return a web search tool call with parameters
+        with patch('src.aibotto.ai.tool_calling.LLMClient') as mock_llm_client:
+            # Mock the first LLM call (with tool calling)
+            mock_response_1 = MagicMock()
+            mock_message_1 = MagicMock()
+            mock_message_1.tool_calls = [
+                MagicMock(
+                    id="tool_call_1",
+                    function=MagicMock(
+                        name="search_web",
+                        arguments='{"query": "AI news", "num_results": 3, "days_ago": 7}'
+                    )
+                )
+            ]
+            mock_response_1.choices = [MagicMock(message=mock_message_1)]
+            
+            # Mock the second LLM call (final response)
+            mock_response_2 = MagicMock()
+            mock_message_2 = MagicMock()
+            mock_message_2.tool_calls = None
+            mock_response_2.choices = [MagicMock(message=mock_message_2)]
+            mock_message_2.content = "Here are the latest AI news from the past week:"
+            
+            mock_llm_client_instance = MagicMock()
+            mock_llm_client_instance.chat_completion.side_effect = [mock_response_1, mock_response_2]
+            mock_llm_client.return_value = mock_llm_client_instance
+            
+            # Mock aiohttp session
+            with patch('aiohttp.ClientSession') as mock_session_class:
+                mock_session = AsyncMock()
+                mock_session_class.return_value = mock_session
+                
+                # Mock API response
+                mock_api_response = AsyncMock()
+                mock_api_response.raise_for_status.return_value = None
+                mock_api_response.json.return_value = mock_duckduckgo_response
+                mock_session.get.return_value.__aenter__.return_value = mock_api_response
+                
+                # Mock content extraction responses
+                mock_content_responses_mocks = []
+                for content in mock_content_responses[:3]:  # Only 3 results as requested
+                    mock_content_response = AsyncMock()
+                    mock_content_response.raise_for_status.return_value = None
+                    mock_content_response.text.return_value = content
+                    mock_content_responses_mocks.append(mock_content_response)
+                
+                mock_session.get.side_effect = [mock_api_response] + mock_content_responses_mocks
+                
+                # Execute the user request
+                result = await tool_calling_manager.process_user_request(
+                    user_id, chat_id, user_query, mock_db_ops
+                )
+                
+                # Verify the result
+                assert result is not None
+                assert isinstance(result, str)
+                
+                # Verify that the tool was called with the correct parameters
+                tool_call_args = mock_message_1.function.arguments
+                assert "AI news" in tool_call_args
+                assert "3" in tool_call_args  # num_results
+                assert "7" in tool_call_args  # days_ago
+
+    @pytest.mark.asyncio
+    async def test_web_search_multiple_results_content(
+        self, 
+        tool_calling_manager, 
+        mock_db_ops, 
+        mock_duckduckgo_response,
+        mock_content_responses
+    ):
+        """Test that web search returns multiple results with content."""
+        user_id = 12345
+        chat_id = 67890
+        user_query = "Tell me about Python programming"
+        
+        # Mock the LLM client
+        with patch('src.aibotto.ai.tool_calling.LLMClient') as mock_llm_client:
+            # Mock the first LLM call (with tool calling)
+            mock_response_1 = MagicMock()
+            mock_message_1 = MagicMock()
+            mock_message_1.tool_calls = [
+                MagicMock(
+                    id="tool_call_1",
+                    function=MagicMock(
+                        name="search_web",
+                        arguments='{"query": "Python programming", "num_results": 5}'
+                    )
+                )
+            ]
+            mock_response_1.choices = [MagicMock(message=mock_message_1)]
+            
+            # Mock the second LLM call with detailed response
+            mock_response_2 = MagicMock()
+            mock_message_2 = MagicMock()
+            mock_message_2.tool_calls = None
+            mock_response_2.choices = [MagicMock(message=mock_message_2)]
+            mock_message_2.content = "Python is a versatile programming language with many applications:"
+            
+            mock_llm_client_instance = MagicMock()
+            mock_llm_client_instance.chat_completion.side_effect = [mock_response_1, mock_response_2]
+            mock_llm_client.return_value = mock_llm_client_instance
+            
+            # Mock aiohttp session
+            with patch('aiohttp.ClientSession') as mock_session_class:
+                mock_session = AsyncMock()
+                mock_session_class.return_value = mock_session
+                
+                # Mock API response
+                mock_api_response = AsyncMock()
+                mock_api_response.raise_for_status.return_value = None
+                mock_api_response.json.return_value = mock_duckduckgo_response
+                mock_session.get.return_value.__aenter__.return_value = mock_api_response
+                
+                # Mock content extraction responses for all 4 results
+                mock_content_responses_mocks = []
+                for content in mock_content_responses:
+                    mock_content_response = AsyncMock()
+                    mock_content_response.raise_for_status.return_value = None
+                    mock_content_response.text.return_value = content
+                    mock_content_responses_mocks.append(mock_content_response)
+                
+                mock_session.get.side_effect = [mock_api_response] + mock_content_responses_mocks
+                
+                # Execute the user request
+                result = await tool_calling_manager.process_user_request(
+                    user_id, chat_id, user_query, mock_db_ops
+                )
+                
+                # Verify the result contains information about multiple sources
+                assert result is not None
+                assert "Python" in result
+                
+                # The result should reference multiple sources
+                assert len(result) > 100  # Should have substantial content
+
+    @pytest.mark.asyncio
+    async def test_web_search_conversation_history(
+        self, 
+        tool_calling_manager, 
+        mock_duckduckgo_response,
+        mock_content_responses
+    ):
+        """Test web search with existing conversation history."""
+        user_id = 12345
+        chat_id = 67890
+        user_query = "What about tutorials?"
+        
+        # Mock existing conversation history
+        existing_history = [
+            {"role": "user", "content": "Tell me about Python programming"},
+            {"role": "assistant", "content": "Python is a versatile language..."}
+        ]
+        
+        mock_db_ops = MagicMock(spec=DatabaseOperations)
+        mock_db_ops.get_conversation_history = AsyncMock(return_value=existing_history)
+        mock_db_ops.save_message = AsyncMock()
+        
+        # Mock the LLM client
+        with patch('src.aibotto.ai.tool_calling.LLMClient') as mock_llm_client:
+            # Mock the first LLM call (with tool calling)
+            mock_response_1 = MagicMock()
+            mock_message_1 = MagicMock()
+            mock_message_1.tool_calls = [
+                MagicMock(
+                    id="tool_call_1",
+                    function=MagicMock(
+                        name="search_web",
+                        arguments='{"query": "Python tutorials", "num_results": 5}'
+                    )
+                )
+            ]
+            mock_response_1.choices = [MagicMock(message=mock_message_1)]
+            
+            # Mock the second LLM call
+            mock_response_2 = MagicMock()
+            mock_message_2 = MagicMock()
+            mock_message_2.tool_calls = None
+            mock_response_2.choices = [MagicMock(message=mock_message_2)]
+            mock_message_2.content = "Here are some Python tutorials:"
+            
+            mock_llm_client_instance = MagicMock()
+            mock_llm_client_instance.chat_completion.side_effect = [mock_response_1, mock_response_2]
+            mock_llm_client.return_value = mock_llm_client_instance
+            
+            # Mock aiohttp session
+            with patch('aiohttp.ClientSession') as mock_session_class:
+                mock_session = AsyncMock()
+                mock_session_class.return_value = mock_session
+                
+                # Mock API response
+                mock_api_response = AsyncMock()
+                mock_api_response.raise_for_status.return_value = None
+                mock_api_response.json.return_value = mock_duckduckgo_response
+                mock_session.get.return_value.__aenter__.return_value = mock_api_response
+                
+                # Mock content extraction responses
+                mock_content_responses_mocks = []
+                for content in mock_content_responses[:2]:
+                    mock_content_response = AsyncMock()
+                    mock_content_response.raise_for_status.return_value = None
+                    mock_content_response.text.return_value = content
+                    mock_content_responses_mocks.append(mock_content_response)
+                
+                mock_session.get.side_effect = [mock_api_response] + mock_content_responses_mocks
+                
+                # Execute the user request
+                result = await tool_calling_manager.process_user_request(
+                    user_id, chat_id, user_query, mock_db_ops
+                )
+                
+                # Verify that conversation history was passed to LLM
+                first_call_args = mock_llm_client_instance.chat_completion.call_args_list[0]
+                messages = first_call_args.kwargs['messages']
+                
+                # Should have system messages, conversation history, and current user message
+                assert len(messages) >= 4  # 2 system + 2 history + 1 current
+                assert messages[-1]["role"] == "user"
+                assert messages[-1]["content"] == user_query
+                
+                # Verify history was included
+                history_messages = [msg for msg in messages if msg["role"] in ["user", "assistant"]]
+                assert len(history_messages) == 2

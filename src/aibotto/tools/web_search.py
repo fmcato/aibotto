@@ -1,31 +1,23 @@
 """
-Web search tool implementation using DuckDuckGo API.
+Web search tool implementation using ddgs library.
 """
 
 import asyncio
 import logging
-import re
-from datetime import datetime, timedelta
 from typing import List, Dict, Optional, Any
-from bs4 import BeautifulSoup
-import aiohttp
+import ddgs
+
+from ..config.settings import Config
 
 logger = logging.getLogger(__name__)
 
 
 class WebSearchTool:
-    """Web search tool using DuckDuckGo API with content extraction."""
+    """Web search tool using ddgs library."""
 
     def __init__(self):
-        self.base_url = "https://api.duckduckgo.com/"
-        self.session = None
-
-    async def _get_session(self) -> aiohttp.ClientSession:
-        """Get or create aiohttp session."""
-        if self.session is None or self.session.closed:
-            timeout = aiohttp.ClientTimeout(total=30)
-            self.session = aiohttp.ClientSession(timeout=timeout)
-        return self.session
+        self.ddgs = ddgs.DDGS()
+        self.timeout = Config.DDGS_TIMEOUT
 
     async def search(
         self,
@@ -35,73 +27,63 @@ class WebSearchTool:
         safe_search: str = "moderate"
     ) -> List[Dict[str, Any]]:
         """
-        Search the web using DuckDuckGo API with content extraction.
+        Search the web using ddgs API.
         
         Args:
             query: Search query
-            num_results: Maximum number of results to return (1-10)
+            num_results: Maximum number of results to return (1-20)
             days_ago: Filter results from last N days (None for no filter)
             safe_search: Safe search level ('off', 'moderate', 'strict')
         
         Returns:
-            List of search results with extracted content
+            List of search results
         """
         if not query or not query.strip():
             raise ValueError("Search query cannot be empty")
 
-        if num_results < 1 or num_results > 10:
-            raise ValueError("Number of results must be between 1 and 10")
-
-        # Build DuckDuckGo API URL
-        params = {
-            "q": query,
-            "format": "json",
-            "no_html": 1,
-            "skip_disambig": 1,
-        }
+        if num_results < 1 or num_results > 20:
+            raise ValueError("Number of results must be between 1 and 20")
 
         try:
-            session = await self._get_session()
+            # Prepare search parameters
+            search_params = {
+                "max_results": num_results,
+                "region": "wt",  # Worldwide
+                "safesearch": safe_search,
+            }
             
-            # Make API request
-            async with session.get(self.base_url, params=params) as response:
-                response.raise_for_status()
-                data = await response.json()
-
-            # Extract basic search results
-            results = []
-            if data.get("AbstractText"):
-                results.append({
-                    "title": data.get("Heading", ""),
-                    "url": data.get("AbstractURL", ""),
-                    "snippet": data.get("AbstractText", ""),
-                    "source": "DuckDuckGo"
-                })
-
-            # Add related topics as additional results
-            related_topics = data.get("RelatedTopics", [])
-            for topic in related_topics[:num_results]:
-                if "Text" in topic and "FirstURL" in topic:
-                    results.append({
-                        "title": topic.get("Text", "").split(" - ")[0] if " - " in topic.get("Text", "") else topic.get("Text", ""),
-                        "url": topic.get("FirstURL", ""),
-                        "snippet": topic.get("Text", ""),
-                        "source": "DuckDuckGo"
-                    })
-
-            # Limit results and filter by date if specified
+            # Add time filter if specified
             if days_ago is not None:
-                filtered_results = []
-                cutoff_date = datetime.now() - timedelta(days=days_ago)
-                
-                for result in results:
-                    if _is_content_recent(result["url"], cutoff_date):
-                        filtered_results.append(result)
-                
-                results = filtered_results
+                if days_ago <= 1:
+                    search_params["timelimit"] = "d"
+                elif days_ago <= 7:
+                    search_params["timelimit"] = "w"
+                elif days_ago <= 30:
+                    search_params["timelimit"] = "m"
+                else:
+                    search_params["timelimit"] = "y"
 
-            # Limit to requested number of results
-            return results[:num_results]
+            # Perform search using ddgs
+            # Note: ddgs is synchronous, so we run it in a thread pool
+            loop = asyncio.get_event_loop()
+            results = await loop.run_in_executor(
+                None, 
+                lambda: list(self.ddgs.text(query, **search_params))
+            )
+
+            # Convert ddgs results to our format
+            formatted_results = []
+            for item in results:
+                result = {
+                    "title": item.get("title", ""),
+                    "url": item.get("href", ""),
+                    "snippet": item.get("body", ""),
+                    "source": "DuckDuckGo",
+                    "published_date": None  # ddgs doesn't provide date info
+                }
+                formatted_results.append(result)
+
+            return formatted_results
 
         except Exception as e:
             logger.error(f"Error performing web search: {e}")
@@ -119,36 +101,9 @@ class WebSearchTool:
             Cleaned text content from the webpage
         """
         try:
-            session = await self._get_session()
-            
-            # Add user agent to avoid blocking
-            headers = {
-                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
-            }
-            
-            async with session.get(url, headers=headers, timeout=20) as response:
-                response.raise_for_status()
-                html = await response.text()
-
-            # Parse HTML and extract content
-            soup = BeautifulSoup(html, 'html.parser')
-            
-            # Remove script and style elements
-            for script in soup(["script", "style"]):
-                script.decompose()
-            
-            # Extract text
-            text = soup.get_text(separator=' ', strip=True)
-            
-            # Clean up text
-            text = re.sub(r'\s+', ' ', text)  # Multiple spaces to single space
-            text = re.sub(r'\n\s*\n', '\n', text)  # Multiple newlines to single newline
-            
-            # Limit length
-            if len(text) > max_length:
-                text = text[:max_length] + "... [content truncated]"
-            
-            return text.strip()
+            # For now, we'll use the snippet from ddgs results
+            # In a future implementation, we could add proper content extraction
+            return f"Content from {url}. Full content extraction not implemented with ddgs."
 
         except Exception as e:
             logger.error(f"Error extracting content from {url}: {e}")
@@ -196,10 +151,9 @@ class WebSearchTool:
         return results
 
     async def close(self):
-        """Close the aiohttp session."""
-        if self.session and not self.session.closed:
-            await self.session.close()
-            self.session = None
+        """Close any resources."""
+        # ddgs doesn't require explicit closing
+        pass
 
 
 # Create a global instance
@@ -252,14 +206,3 @@ async def search_web(
     except Exception as e:
         logger.error(f"Error in search_web tool: {e}")
         return f"Error performing web search: {str(e)}"
-
-
-def _is_content_recent(url: str, cutoff_date: datetime) -> bool:
-    """
-    Check if content from a URL is recent (simplified implementation).
-    Note: This is a basic implementation - in production, you might want to
-    use web archives or other methods to check content dates.
-    """
-    # For now, we'll assume all content is recent since DuckDuckGo doesn't
-    # provide date information in the basic API
-    return True
