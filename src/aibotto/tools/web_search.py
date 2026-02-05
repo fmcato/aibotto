@@ -98,13 +98,21 @@ class WebSearchTool:
                 logger.warning(f"Engine error during search: {e}")
                 if self._retry_count < self._max_retries:
                     self._retry_count += 1
-                    logger.info(f"Retrying search (attempt {self._retry_count}/{self._max_retries})")
+                    logger.info(
+                        f"Retrying search (attempt {self._retry_count}/"
+                        f"{self._max_retries})"
+                    )
                     # Wait a bit before retrying to avoid overwhelming the service
                     await asyncio.sleep(1)
                     return await self.search(query, num_results, days_ago, safe_search)
                 else:
-                    logger.error(f"Search failed after {self._retry_count} attempts due to engine errors")
-                    raise RuntimeError(f"Failed to perform web search due to engine errors: {str(e)}")
+                    logger.error(
+                        f"Search failed after {self._retry_count} attempts "
+                        f"due to engine errors"
+                    )
+                    raise RuntimeError(
+                        f"Failed to perform web search due to engine errors: {str(e)}"
+                    )
             else:
                 # Other ValueError cases
                 logger.error(f"Value error during web search: {e}")
@@ -128,7 +136,10 @@ class WebSearchTool:
         try:
             # For now, we'll use the snippet from ddgs results
             # In a future implementation, we could add proper content extraction
-            return f"Content from {url}. Full content extraction not implemented with ddgs."
+            return (
+                f"Content from {url}. Full content extraction not "
+                f"implemented with ddgs."
+            )
 
         except Exception as e:
             logger.error(f"Error extracting content from {url}: {e}")
