@@ -109,7 +109,7 @@ class WebSearchTool:
                 # Other ValueError cases
                 logger.error(f"Value error during web search: {e}")
                 raise RuntimeError(f"Failed to perform web search: {str(e)}")
-                
+
         except Exception as e:
             logger.error(f"Error performing web search: {e}")
             raise RuntimeError(f"Failed to perform web search: {str(e)}")
@@ -157,7 +157,7 @@ class WebSearchTool:
         """
         # Reset retry count for new search
         self._retry_count = 0
-        
+
         # Get basic search results
         results = await self.search(query, num_results, days_ago, safe_search)
 
