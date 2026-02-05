@@ -49,7 +49,7 @@ class ToolCallingManager:
 
             while iteration < max_iterations:
                 iteration += 1
-                
+
                 # Call LLM with tool calling capability
                 response = await self.llm_client.chat_completion(
                     messages=messages,
@@ -84,7 +84,8 @@ class ToolCallingManager:
                                     f"{result[:200]}..."
                                 )
 
-                                # Save tool call result (without showing command to user)
+                                # Save tool call result (without showing command
+                                # to user)
                                 await db_ops.save_message(
                                     user_id, chat_id, 0, "system", result
                                 )
@@ -113,7 +114,7 @@ class ToolCallingManager:
                             try:
                                 search_params = json.loads(
                                     tool_call.function.arguments)
-                                
+
                                 # Log search for debugging
                                 logger.info(
                                     f"Performing web search for user {user_id}: "
@@ -204,7 +205,10 @@ class ToolCallingManager:
                     return final_response_content
 
             # If we reach max iterations, return an error message
-            error_msg = f"Reached maximum iterations ({max_iterations}) without getting a final response."
+            error_msg = (
+                f"Reached maximum iterations ({max_iterations}) without getting "
+                f"a final response."
+            )
             logger.error(error_msg)
             await db_ops.save_message(user_id, chat_id, 0, "system", error_msg)
             return error_msg
@@ -284,7 +288,8 @@ class ToolCallingManager:
         )
 
         # For certain responses, we should not trigger fact-checking
-        # Only trigger if there's uncertainty OR if it's a factual query with unsourced claims
+        # Only trigger if there's uncertainty OR if it's a factual query
+        # with unsourced claims
         should_trigger = (
             has_uncertain_language and has_factual_query
         ) or (

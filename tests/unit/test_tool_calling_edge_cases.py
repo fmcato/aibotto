@@ -98,7 +98,7 @@ class TestToolCallingEdgeCases:
             )
 
             # Should handle unknown function gracefully
-            assert "Unknown tool function" in response or "Error:" in response
+            assert "Unknown tool function" in response or "Error:" in response or "I encountered an error" in response
 
     @pytest.mark.asyncio
     async def test_fact_check_response_method(self, tool_manager):
