@@ -16,6 +16,7 @@ from telegram.ext import (
 from ..ai.tool_calling import ToolCallingManager
 from ..config.settings import Config
 from ..db.operations import DatabaseOperations
+from ..utils import MessageSplitter
 
 logger = logging.getLogger(__name__)
 
@@ -142,8 +143,22 @@ I provide factual information using safe system tools. Here's what I can help wi
                 user_id, chat_id, message, self.db_ops
             )
 
-            # Edit thinking message with response
-            await thinking_message.edit_text(response)
+            # Split response if it's too long for rate limiting
+            chunks = MessageSplitter.split_message_for_rate_limiting(response)
+            if len(chunks) > 1:
+                # Add continuation markers for better readability
+                chunks = MessageSplitter.add_continuation_markers(chunks)
+                
+                # Delete thinking message and send chunks with rate limiting
+                await thinking_message.delete()
+                await MessageSplitter.send_chunks_with_rate_limit(
+                    chunks, 
+                    thinking_message.reply_text,
+                    delay_between_chunks=1.0
+                )
+            else:
+                # Edit thinking message with response (single chunk)
+                await thinking_message.edit_text(response)
 
         except Exception as e:
             await thinking_message.edit_text(f"❌ Error: {str(e)}")
