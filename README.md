@@ -28,18 +28,7 @@ Edit `.env` with your:
 uv run python src/aibotto/main.py
 ```
 
-### 4. Run Tests
 
-```bash
-# Run all tests
-uv run pytest
-
-# Run with coverage
-uv run pytest --cov=src
-
-# Run specific test file
-uv run pytest tests/unit/test_cli.py
-```
 
 ### 5. Docker Deployment (Alternative)
 
@@ -103,44 +92,6 @@ BLOCKED_COMMANDS="rm -rf,sudo,dd,mkfs,fdisk,format,shutdown,reboot,poweroff,halt
 # Bot Configuration
 MAX_HISTORY_LENGTH=20
 THINKING_MESSAGE="🤔 Thinking..."
-```
-
-##### Development Workflow
-
-###### Running Tests in Docker
-
-```bash
-# Run all tests
-docker-compose run --rm aibot test
-
-# Run specific test file
-docker-compose run --rm aibot uv run pytest tests/unit/test_message_splitter.py -v
-
-# Run with coverage
-docker-compose run --rm aibot uv run pytest tests/ --cov=src
-```
-
-###### Code Quality Checks
-
-```bash
-# Linting
-docker-compose run --rm aibot lint
-
-# Type checking
-docker-compose run --rm aibot type-check
-
-# All checks
-docker-compose run --rm aibot lint && docker-compose run --rm aibot type-check
-```
-
-###### Interactive Development
-
-```bash
-# Run a shell in the container
-docker-compose run --rm aibot bash
-
-# Run a specific command
-docker-compose run --rm aibot uv run python src/aibotto/main.py
 ```
 
 ##### Configuration
@@ -319,30 +270,7 @@ Bot: "The current weather in London is 15°C with light clouds..."
 - **Command Whitelist**: Optional whitelist mode for restricted environments
 - **Sandbox Execution**: Commands run in isolated subprocess environments
 
-## 🧪 Testing
 
-The project includes comprehensive tests:
-
-```bash
-# Run all tests
-uv run pytest
-
-# Run with coverage report
-uv run pytest --cov=src --cov-report=html
-
-# Run tests with verbose output
-uv run pytest -v
-
-# Run specific test categories
-uv run pytest tests/unit/
-```
-
-### Test Categories
-
-- **Unit Tests**: Individual component testing
-- **Integration Tests**: Full bot functionality testing
-- **Security Tests**: Command validation and blocking
-- **API Tests**: OpenAI integration testing
 
 ## 🐛 Troubleshooting
 
