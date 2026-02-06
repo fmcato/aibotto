@@ -6,41 +6,41 @@ set -e
 
 start() {
     echo "🚀 Building Docker image..."
-    docker-compose build
+    docker compose build
     
     echo "🚀 Starting AIBOTTO..."
-    docker-compose up -d
+    docker compose up -d
     
     echo "✅ AIBOTTO is running!"
     echo "📋 Status:"
-    docker-compose ps
+    docker compose ps
 }
 
 stop() {
     echo "🛑 Stopping AIBOTTO..."
-    docker-compose down
+    docker compose down
     echo "✅ AIBOTTO stopped"
 }
 
 restart() {
     echo "🔄 Restarting AIBOTTO..."
-    docker-compose restart
+    docker compose restart
     echo "✅ AIBOTTO restarted"
 }
 
 logs() {
     if [ "$1" = "-f" ]; then
         echo "📝 Following logs (Ctrl+C to stop)..."
-        docker-compose logs -f
+        docker compose logs -f
     else
         echo "📝 Recent logs:"
-        docker-compose logs --tail=20
+        docker compose logs --tail=20
     fi
 }
 
 status() {
     echo "📋 Container status:"
-    docker-compose ps
+    docker compose ps
 }
 
 update() {
@@ -48,10 +48,10 @@ update() {
     git pull
     
     echo "🔄 Rebuilding Docker image..."
-    docker-compose build --no-cache
+    docker compose build --no-cache
     
     echo "🔄 Restarting AIBOTTO..."
-    docker-compose up -d --force-recreate
+    docker compose up -d --force-recreate
     
     echo "✅ AIBOTTO updated and restarted!"
 }

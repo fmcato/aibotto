@@ -38,8 +38,8 @@ For production deployment, you can use Docker:
 
 ```bash
 # Build and run with Docker Compose
-docker-compose build
-docker-compose up -d
+docker compose build
+docker compose up -d
 ```
 
 #### Quick Start with Docker
@@ -148,10 +148,10 @@ deploy:
 
 ```bash
 # View real-time logs
-docker-compose logs -f
+docker compose logs -f
 
 # Check container health
-docker-compose ps
+docker compose ps
 
 # View resource usage
 docker stats aibotto
@@ -164,9 +164,9 @@ docker stats aibotto
 git pull
 
 # Rebuild and restart
-docker-compose down
-docker-compose build
-docker-compose up -d
+docker compose down
+docker compose build
+docker compose up -d
 ```
 
 ###### Backup
@@ -186,7 +186,7 @@ docker run --rm \
 
 1. **Container fails to start**:
    ```bash
-   docker-compose logs aibotto
+   docker compose logs aibotto
    ```
 
 2. **Database connection issues**:
@@ -202,7 +202,7 @@ docker run --rm \
 Run the container in interactive mode for debugging:
 
 ```bash
-docker-compose run --rm aibotto bash
+docker compose run --rm aibotto bash
 ```
 
 ###### Health Check Failures
