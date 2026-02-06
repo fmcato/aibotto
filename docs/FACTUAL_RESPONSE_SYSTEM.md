@@ -241,4 +241,4 @@ To add new factual command support:
 
 ## License
 
-This feature is part of the AIBOTTO project and follows the same MIT License.
+This feature is part of the AIBOTTO project and follows the same GNU General Public License v3.0.
