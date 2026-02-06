@@ -46,14 +46,14 @@ docker-compose up -d
 
 ```bash
 # Build the image
-docker build -t aibot .
+docker build -t aibotto .
 
 # Run the container
 docker run -d \
-  --name aibot \
+  --name aibotto \
   --env-file .env \
   -v aibot_data:/app/data \
-  aibot
+  aibotto
 ```
 
 #### Detailed Docker Setup
@@ -113,11 +113,11 @@ You can also mount a local directory for development:
 
 ```bash
 docker run -d \
-  --name aibot \
+  --name aibotto \
   --env-file .env \
   -v $(pwd)/data:/app/data \
   -v $(pwd):/app \
-  aibot
+  aibotto
 ```
 
 ###### Resource Limits
@@ -154,7 +154,7 @@ docker-compose logs -f
 docker-compose ps
 
 # View resource usage
-docker stats aibot
+docker stats aibotto
 ```
 
 ###### Updating
@@ -186,7 +186,7 @@ docker run --rm \
 
 1. **Container fails to start**:
    ```bash
-   docker-compose logs aibot
+   docker-compose logs aibotto
    ```
 
 2. **Database connection issues**:
@@ -202,7 +202,7 @@ docker run --rm \
 Run the container in interactive mode for debugging:
 
 ```bash
-docker-compose run --rm aibot bash
+docker-compose run --rm aibotto bash
 ```
 
 ###### Health Check Failures
@@ -210,10 +210,10 @@ docker-compose run --rm aibot bash
 If the health check fails:
 ```bash
 # Check health status
-docker inspect aibot --format='{{.State.Health}}'
+docker inspect aibotto --format='{{.State.Health}}'
 
 # Run health check manually
-docker exec aibot python -c "import sys; sys.exit(0)"
+docker exec aibotto python -c "import sys; sys.exit(0)"
 ```
 
 ## 💡 Usage Examples
