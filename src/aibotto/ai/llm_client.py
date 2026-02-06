@@ -3,7 +3,7 @@ LLM client for OpenAI-compatible API integration.
 """
 
 import logging
-from typing import Any
+from typing import Any, cast
 
 import openai
 
@@ -22,14 +22,14 @@ class LLMClient:
 
     async def chat_completion(
         self,
-        messages: list[dict[str, str]],
+        messages: list[dict[str, Any]],  # Changed from str to Any to match API
         tools: list[dict[str, Any]] | None = None,
         tool_choice: str | None = None,
         **kwargs: Any,
     ) -> dict[str, Any]:
         """Create chat completion with optional tool calling."""
         try:
-            response = await self.client.chat.completions.create(
+            response = await self.client.chat.completions.create(  # type: ignore[call-overload]
                 model=Config.OPENAI_MODEL,
                 messages=messages,
                 tools=tools,
@@ -37,7 +37,7 @@ class LLMClient:
                 stream=False,
                 **kwargs,
             )
-            return response
+            return cast(dict[str, Any], response.model_dump())
         except Exception as e:
             logger.error(f"LLM API error: {e}")
             raise

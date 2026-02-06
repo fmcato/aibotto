@@ -26,7 +26,7 @@ class CLIExecutor:
             security_check = await self.security_manager.validate_command(command)
             if not bool(security_check["allowed"]):
                 logger.warning(f"Command blocked for security: {command}")
-                return security_check["message"]
+                return str(security_check["message"])
 
             # Execute command in a controlled environment
             logger.info(f"Starting subprocess for command: {command}")

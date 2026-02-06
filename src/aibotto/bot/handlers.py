@@ -3,7 +3,7 @@ Bot handlers for different types of messages and commands.
 """
 
 from abc import ABC, abstractmethod
-from collections.abc import Callable
+from collections.abc import Awaitable, Callable
 
 from telegram import Update
 from telegram.ext import ContextTypes
@@ -24,7 +24,7 @@ class CommandHandler(BaseHandler):
     def __init__(
         self,
         command: str,
-        callback: Callable[[Update, ContextTypes.DEFAULT_TYPE], None],
+        callback: Callable[[Update, ContextTypes.DEFAULT_TYPE], Awaitable[None]],
     ):
         self.command = command
         self.callback = callback
@@ -39,7 +39,7 @@ class MessageHandler(BaseHandler):
 
     def __init__(
         self,
-        callback: Callable[[Update, ContextTypes.DEFAULT_TYPE], None],
+        callback: Callable[[Update, ContextTypes.DEFAULT_TYPE], Awaitable[None]],
     ):
         self.callback = callback
 

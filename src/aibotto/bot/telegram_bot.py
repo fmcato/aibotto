@@ -3,12 +3,15 @@ Telegram bot interface implementation.
 """
 
 import logging
+from typing import Any
 
 from telegram import Update
 from telegram.ext import (
     Application,
     CommandHandler,
     ContextTypes,
+    ExtBot,
+    JobQueue,
     MessageHandler,
     filters,
 )
@@ -25,7 +28,11 @@ class TelegramBot:
     """Main Telegram bot class."""
 
     def __init__(self) -> None:
-        self.application: Application | None = None
+        self.application: Application[
+            ExtBot[None], ContextTypes.DEFAULT_TYPE, dict[Any, Any],
+            dict[Any, Any], dict[Any, Any],
+            JobQueue[ContextTypes.DEFAULT_TYPE]
+        ] | None = None
         self.db_ops = DatabaseOperations()
         self.tool_manager = ToolCallingManager()
 
@@ -48,8 +55,10 @@ class TelegramBot:
         self, update: Update, context: ContextTypes.DEFAULT_TYPE
     ) -> None:
         """Handle /start command."""
-        await update.message.reply_text(
-            "🤖 Hello! I'm an AI assistant that provides factual information.\n\n"
+        if update and update.message:
+            if update and update.message:
+                await update.message.reply_text(
+                "🤖 Hello! I'm an AI assistant that provides factual information.\n\n"
             "I can help you with:\n"
             "• Current date and time\n"
             "• Weather information\n"
@@ -101,42 +110,53 @@ I provide factual information using safe system tools. Here's what I can help wi
 
 ⚠️ **Security Note:** I only execute safe, pre-approved commands for your security.
         """
-        await update.message.reply_text(help_text, parse_mode="Markdown")
+        if update and update.message:
+            await update.message.reply_text(help_text, parse_mode="Markdown")
 
     async def _handle_clear(
         self, update: Update, context: ContextTypes.DEFAULT_TYPE
     ) -> None:
         """Handle /clear command."""
-        user_id = update.effective_user.id
-        chat_id = update.effective_chat.id
+        if update and update.effective_user:
+            user_id = update.effective_user.id
+        if update and update.effective_chat:
+            chat_id = update.effective_chat.id
 
         try:
             # Clear conversation history
             await self.db_ops.clear_conversation_history(user_id, chat_id)
 
             # Send confirmation message
-            await update.message.reply_text(
+            if update and update.message:
+                await update.message.reply_text(
                 "✅ Conversation history cleared! I've forgotten our "
                 "previous conversation.\n\n"
                 "You can start fresh with any question you'd like to ask."
             )
 
         except Exception as e:
-            await update.message.reply_text(
-                f"❌ Failed to clear conversation history: {str(e)}"
-            )
+            if update and update.message:
+                await update.message.reply_text(
+                    f"❌ Failed to clear conversation history: {str(e)}"
+                )
             logger.error(f"Error clearing conversation history: {e}")
 
     async def _handle_message(
         self, update: Update, context: ContextTypes.DEFAULT_TYPE
     ) -> None:
         """Handle user messages."""
-        user_id = update.effective_user.id
-        chat_id = update.effective_chat.id
-        message = update.message.text
+        if update and update.effective_user:
+            user_id = update.effective_user.id
+        if update and update.effective_chat:
+            chat_id = update.effective_chat.id
+        if update and update.message:
+            message = update.message.text or ""
+        else:
+            message = ""
 
         # Send thinking indicator
-        thinking_message = await update.message.reply_text(Config.THINKING_MESSAGE)
+        if update and update.message:
+            thinking_message = await update.message.reply_text(Config.THINKING_MESSAGE)
 
         try:
             # Process the request

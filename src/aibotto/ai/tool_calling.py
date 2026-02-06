@@ -57,13 +57,13 @@ class ToolCallingManager:
                 )
 
                 # Handle response
-                if hasattr(response.choices[0].message, 'tool_calls') and \
-                   response.choices[0].message.tool_calls:
+                if hasattr(response['choices'][0]['message'], 'tool_calls') and \
+                   response['choices'][0]['message']['tool_calls']:
                     # LLM wants to use tools - handle multiple tool calls in parallel
-                    tool_calls = response.choices[0].message.tool_calls
+                    tool_calls = response['choices'][0]['message']['tool_calls']
 
                     # Execute all tool calls in parallel using asyncio.gather
-                    async def execute_single_tool_call(tool_call):
+                    async def execute_single_tool_call(tool_call: Any) -> Any:
                         """Execute a single tool call and return the result."""
                         if tool_call.function.name == "execute_cli_command":
                             try:
@@ -188,7 +188,9 @@ class ToolCallingManager:
                         })
 
                     # Save assistant message with tool calls to history
-                    assistant_message = response.choices[0].message.content or ""
+                    assistant_message = (
+                        response["choices"][0]["message"]["content"] or ""
+                    )
                     await db_ops.save_message(
                         user_id, chat_id, 0, "assistant", assistant_message
                     )
@@ -198,7 +200,9 @@ class ToolCallingManager:
 
                 else:
                     # No tool calls - this is the final response
-                    final_response_content = response.choices[0].message.content or ""
+                    final_response_content = (
+                        response["choices"][0]["message"]["content"] or ""
+                    )
                     await db_ops.save_message(
                         user_id, chat_id, 0, "assistant", final_response_content
                     )
