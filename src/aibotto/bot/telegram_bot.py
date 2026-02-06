@@ -109,17 +109,18 @@ I provide factual information using safe system tools. Here's what I can help wi
         """Handle /clear command."""
         user_id = update.effective_user.id
         chat_id = update.effective_chat.id
-        
+
         try:
             # Clear conversation history
             await self.db_ops.clear_conversation_history(user_id, chat_id)
-            
+
             # Send confirmation message
             await update.message.reply_text(
-                "✅ Conversation history cleared! I've forgotten our previous conversation.\n\n"
+                "✅ Conversation history cleared! I've forgotten our "
+                "previous conversation.\n\n"
                 "You can start fresh with any question you'd like to ask."
             )
-            
+
         except Exception as e:
             await update.message.reply_text(
                 f"❌ Failed to clear conversation history: {str(e)}"
@@ -148,11 +149,11 @@ I provide factual information using safe system tools. Here's what I can help wi
             if len(chunks) > 1:
                 # Add continuation markers for better readability
                 chunks = MessageSplitter.add_continuation_markers(chunks)
-                
+
                 # Delete thinking message and send chunks with rate limiting
                 await thinking_message.delete()
                 await MessageSplitter.send_chunks_with_rate_limit(
-                    chunks, 
+                    chunks,
                     thinking_message.reply_text,
                     delay_between_chunks=1.0
                 )

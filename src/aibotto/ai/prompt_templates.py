@@ -3,7 +3,6 @@ Prompt templates for the AI system.
 """
 
 import logging
-from typing import List, Dict
 
 logger = logging.getLogger(__name__)
 
@@ -20,7 +19,8 @@ class SystemPrompts:
 
     You have two types of tools available:
     1. CLI commands for system information (date, weather, files, etc.)
-    2. Web search for current information, recent news, or topics not covered by CLI tools
+    2. Web search for current information, recent news, or topics not
+       covered by CLI tools
 
     For web-related queries, current events, or when you need recent information,
     use the search_web tool. For system information, use CLI commands.
@@ -59,8 +59,8 @@ class SystemPrompts:
 
     @classmethod
     def get_conversation_prompt(
-        cls, conversation_history: List[Dict[str, str]]
-    ) -> List[Dict[str, str]]:
+        cls, conversation_history: list[dict[str, str]]
+    ) -> list[dict[str, str]]:
         """Get the complete conversation prompt with system message."""
         messages = [
             {"role": "system", "content": cls.MAIN_SYSTEM_PROMPT},
@@ -115,7 +115,10 @@ class ToolDescriptions:
                     },
                     "num_results": {
                         "type": "integer",
-                        "description": "Maximum number of results to return (1-10, default: 5)",
+                        "description": (
+                        "Maximum number of results to return "
+                        "(1-10, default: 5)"
+                    ),
                         "default": 5
                     },
                     "days_ago": {
@@ -133,7 +136,7 @@ class ToolDescriptions:
     }
 
     @classmethod
-    def get_tool_definitions(cls) -> List[Dict]:
+    def get_tool_definitions(cls) -> list[dict]:
         """Get all available tool definitions."""
         return [cls.CLI_TOOL_DESCRIPTION, cls.WEB_SEARCH_TOOL_DESCRIPTION]
         return [cls.CLI_TOOL_DESCRIPTION]

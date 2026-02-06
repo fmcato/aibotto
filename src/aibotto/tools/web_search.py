@@ -31,13 +31,13 @@ class WebSearchTool:
     ) -> list[dict[str, Any]]:
         """
         Search the web using ddgs API.
-        
+
         Args:
             query: Search query
             num_results: Maximum number of results to return (1-20)
             days_ago: Filter results from last N days (None for no filter)
             safe_search: Safe search level ('off', 'moderate', 'strict')
-        
+
         Returns:
             List of search results
         """
@@ -125,11 +125,11 @@ class WebSearchTool:
     async def extract_content(self, url: str, max_length: int = 2000) -> str:
         """
         Extract and clean content from a webpage.
-        
+
         Args:
             url: URL to extract content from
             max_length: Maximum length of extracted content
-        
+
         Returns:
             Cleaned text content from the webpage
         """
@@ -155,14 +155,14 @@ class WebSearchTool:
     ) -> list[dict[str, Any]]:
         """
         Perform web search and optionally extract full content from results.
-        
+
         Args:
             query: Search query
             num_results: Maximum number of results to return (1-10)
             days_ago: Filter results from last N days (None for no filter)
             safe_search: Safe search level ('off', 'moderate', 'strict')
             extract_content: Whether to extract full content from results
-        
+
         Returns:
             List of search results with optional extracted content
         """
@@ -207,13 +207,13 @@ async def search_web(
 ) -> str:
     """
     Tool function for web search that can be called by the LLM.
-    
+
     Args:
         query: Search query
         num_results: Maximum number of results to return (1-10)
         days_ago: Filter results from last N days (None for no filter)
         safe_search: Safe search level ('off', 'moderate', 'strict')
-    
+
     Returns:
         Formatted string with search results
     """

@@ -34,7 +34,8 @@ class MessageSplitter:
 
         # First, try to split by natural boundaries
         for paragraph in message.split('\n\n'):
-            if len(current_chunk) + len(paragraph) + 2 <= TELEGRAM_MAX_LENGTH_PER_SECOND:
+            if (len(current_chunk) + len(paragraph) + 2
+                <= TELEGRAM_MAX_LENGTH_PER_SECOND):
                 # Add paragraph to current chunk
                 if current_chunk:
                     current_chunk += '\n\n'
@@ -51,7 +52,8 @@ class MessageSplitter:
                     sentences = re.split(r'(?<=[.!?])\s+', paragraph)
 
                     for sentence in sentences:
-                        if len(current_chunk) + len(sentence) + 1 <= TELEGRAM_MAX_LENGTH_PER_SECOND:
+                        if (len(current_chunk) + len(sentence) + 1
+                            <= TELEGRAM_MAX_LENGTH_PER_SECOND):
                             if current_chunk:
                                 current_chunk += ' '
                             current_chunk += sentence
@@ -65,7 +67,8 @@ class MessageSplitter:
                                 words = sentence.split(' ')
 
                                 for word in words:
-                                    if len(current_chunk) + len(word) + 1 <= TELEGRAM_MAX_LENGTH_PER_SECOND:
+                                    if (len(current_chunk) + len(word) + 1
+                                        <= TELEGRAM_MAX_LENGTH_PER_SECOND):
                                         if current_chunk:
                                             current_chunk += ' '
                                         current_chunk += word
