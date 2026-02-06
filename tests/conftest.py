@@ -343,6 +343,10 @@ def mock_llm_client_with_responses():
                 return MockResponse([MockChoice("Linux Ubuntu 5.15.0-88-generic x86_64")])
             elif "files" in user_message.lower() or "ls" in user_message.lower():
                 return MockResponse([MockChoice("total 16\ndrwxr-xr-x 2 user user 4096 Feb  3 10:00 .\ndrwxr-xr-x 5 user user 4096 Feb  3 10:00 ..\n-rw-r--r-- 1 user user 123 Feb  3 10:00 test.txt")])
+            elif "weather" in user_message.lower() and "time" in user_message.lower():
+                return MockResponse([MockChoice("Today is Monday, February 3, 2025, and the current time is 14:30:45.")])
+            elif "username" in user_message.lower() and "directory" in user_message.lower():
+                return MockResponse([MockChoice("Today is Monday, February 3, 2025. You are user1 and your current directory is /home/user1.")])
             else:
                 return MockResponse([MockChoice("This is a response after tool execution.")])
         

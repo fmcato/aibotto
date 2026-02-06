@@ -28,9 +28,15 @@ class TestWebSearchE2E:
     @pytest.mark.asyncio
     async def test_basic_web_search_happy_path(self, web_search_tool):
         """Test basic web search functionality with real API calls."""
-        # Test a simple search query
+        # Test a simple search query with timeout
         query = "Python programming"
-        results = await web_search_tool.search(query, num_results=3)
+        try:
+            results = await asyncio.wait_for(
+                web_search_tool.search(query, num_results=3),
+                timeout=10.0
+            )
+        except asyncio.TimeoutError:
+            pytest.fail("Web search timed out after 10 seconds")
         
         # Verify results
         assert isinstance(results, list)
@@ -52,7 +58,13 @@ class TestWebSearchE2E:
     async def test_web_search_with_content_extraction(self, web_search_tool):
         """Test web search with content extraction from real pages."""
         query = "machine learning"
-        results = await web_search_tool.search_with_content(query, num_results=2)
+        try:
+            results = await asyncio.wait_for(
+                web_search_tool.search_with_content(query, num_results=2),
+                timeout=10.0
+            )
+        except asyncio.TimeoutError:
+            pytest.fail("Web search with content extraction timed out after 10 seconds")
         
         # Verify results
         assert isinstance(results, list)
@@ -73,7 +85,13 @@ class TestWebSearchE2E:
     async def test_search_web_tool_function(self):
         """Test the search_web tool function that would be called by LLM."""
         query = "artificial intelligence"
-        result = await search_web(query, num_results=2)
+        try:
+            result = await asyncio.wait_for(
+                search_web(query, num_results=2),
+                timeout=10.0
+            )
+        except asyncio.TimeoutError:
+            pytest.fail("Search web tool function timed out after 10 seconds")
         
         # Verify result
         assert isinstance(result, str)
@@ -87,15 +105,33 @@ class TestWebSearchE2E:
     async def test_multiple_searches_session_reuse(self, web_search_tool):
         """Test that session is properly reused across multiple searches."""
         # First search
-        results1 = await web_search_tool.search("web development", num_results=2)
+        try:
+            results1 = await asyncio.wait_for(
+                web_search_tool.search("web development", num_results=2),
+                timeout=10.0
+            )
+        except asyncio.TimeoutError:
+            pytest.fail("Multiple searches first search timed out after 10 seconds")
         assert len(results1) > 0
         
         # Second search (should reuse session)
-        results2 = await web_search_tool.search("database design", num_results=2)
+        try:
+            results2 = await asyncio.wait_for(
+                web_search_tool.search("database design", num_results=2),
+                timeout=10.0
+            )
+        except asyncio.TimeoutError:
+            pytest.fail("Multiple searches second search timed out after 10 seconds")
         assert len(results2) > 0
         
         # Third search with content extraction
-        results3 = await web_search_tool.search_with_content("cloud computing", num_results=1)
+        try:
+            results3 = await asyncio.wait_for(
+                web_search_tool.search_with_content("cloud computing", num_results=1),
+                timeout=10.0
+            )
+        except asyncio.TimeoutError:
+            pytest.fail("Multiple searches third search timed out after 10 seconds")
         assert len(results3) > 0
         assert "content" in results3[0]
 
@@ -121,12 +157,24 @@ class TestWebSearchE2E:
     async def test_content_extraction_error_handling(self, web_search_tool):
         """Test that content extraction handles errors gracefully."""
         # Search for results
-        results = await web_search_tool.search("technology", num_results=2)
+        try:
+            results = await asyncio.wait_for(
+                web_search_tool.search("technology", num_results=2),
+                timeout=10.0
+            )
+        except asyncio.TimeoutError:
+            pytest.fail("Content extraction error handling search timed out after 10 seconds")
         assert len(results) > 0
         
         # Try to extract content from a URL that might fail
         for result in results:
-            content = await web_search_tool.extract_content(result["url"])
+            try:
+                content = await asyncio.wait_for(
+                    web_search_tool.extract_content(result["url"]),
+                    timeout=5.0
+                )
+            except asyncio.TimeoutError:
+                pytest.fail(f"Content extraction for {result['url']} timed out after 5 seconds")
             assert isinstance(content, str)
             # Should either have content or an error message
             assert len(content) > 0
@@ -135,7 +183,13 @@ class TestWebSearchE2E:
     async def test_real_api_response_format(self, web_search_tool):
         """Test that real API responses match expected format."""
         query = "python programming"  # Changed to a more reliable query
-        results = await web_search_tool.search(query, num_results=1)
+        try:
+            results = await asyncio.wait_for(
+                web_search_tool.search(query, num_results=1),
+                timeout=10.0
+            )
+        except asyncio.TimeoutError:
+            pytest.fail("Real API response format test timed out after 10 seconds")
         
         assert len(results) == 1
         result = results[0]

@@ -36,20 +36,18 @@ class TestToolCallingVisibility:
     @pytest.fixture
     def tool_manager(self):
         """Create a ToolCallingManager with mocked dependencies."""
-        with patch('src.aibotto.ai.tool_calling.LLMClient') as mock_llm:
-            with patch('src.aibotto.ai.tool_calling.CLIExecutor') as mock_executor:
-                manager = ToolCallingManager()
+        manager = ToolCallingManager()
 
-                # Mock LLM client
-                manager.llm_client = MagicMock()
+        # Mock LLM client
+        manager.llm_client = MagicMock()
 
-                # Mock CLI executor
-                manager.cli_executor = MagicMock()
-                manager.cli_executor.execute_command = AsyncMock(
-                    return_value="Mon Feb  3 10:30:45 UTC 2026"
-                )
+        # Mock CLI executor
+        manager.cli_executor = MagicMock()
+        manager.cli_executor.execute_command = AsyncMock(
+            return_value="Mon Feb  3 10:30:45 UTC 2026"
+        )
 
-                return manager
+        yield manager
 
     @pytest.fixture
     async def db_ops(self):
@@ -79,6 +77,7 @@ class TestToolCallingVisibility:
         mock_second_response.choices = [MagicMock()]
         mock_second_response.choices[0].message = MagicMock()
         mock_second_response.choices[0].message.content = "Today is Monday, February 3, 2026."
+        mock_second_response.choices[0].message.tool_calls = []
 
         # Set up the LLM client to return different responses
         tool_manager.llm_client.chat_completion = AsyncMock(
@@ -155,6 +154,7 @@ class TestToolCallingVisibility:
         mock_second_response.choices = [MagicMock()]
         mock_second_response.choices[0].message = MagicMock()
         mock_second_response.choices[0].message.content = "I encountered an issue getting that information. Let me try a different approach."
+        mock_second_response.choices[0].message.tool_calls = []
 
         # Set up the LLM client to return different responses
         tool_manager.llm_client.chat_completion = AsyncMock(
@@ -205,6 +205,7 @@ class TestToolCallingVisibility:
         mock_second_response.choices = [MagicMock()]
         mock_second_response.choices[0].message = MagicMock()
         mock_second_response.choices[0].message.content = "Today is Monday, February 3, 2026."
+        mock_second_response.choices[0].message.tool_calls = []
 
         # Set up the LLM client to return different responses
         tool_manager.llm_client.chat_completion = AsyncMock(
@@ -251,6 +252,7 @@ class TestToolCallingVisibility:
         mock_second_response.choices = [MagicMock()]
         mock_second_response.choices[0].message = MagicMock()
         mock_second_response.choices[0].message.content = "Today is Monday, February 3, 2026."
+        mock_second_response.choices[0].message.tool_calls = []
 
         # Set up the LLM client to return different responses
         tool_manager.llm_client.chat_completion = AsyncMock(
