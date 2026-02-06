@@ -5,6 +5,8 @@ services:
     build: .
     container_name: aibotto
     restart: unless-stopped
+    env_file:
+      - .env
     environment:
       # Telegram Bot Configuration
       - TELEGRAM_TOKEN=${TELEGRAM_TOKEN}
