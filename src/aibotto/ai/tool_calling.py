@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 class ToolCallingManager:
     """Manager for LLM tool calling functionality."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.llm_client = LLMClient()
         self.cli_executor = CLIExecutor()
 

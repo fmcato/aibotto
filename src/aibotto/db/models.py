@@ -16,8 +16,8 @@ class Conversation:
     message_id: int = 0
     role: str = ""
     content: str = ""
-    timestamp: datetime = None
+    timestamp: datetime | None = None
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if self.timestamp is None:
             self.timestamp = datetime.now()

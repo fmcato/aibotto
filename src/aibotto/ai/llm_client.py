@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 class LLMClient:
     """Client for OpenAI-compatible API."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.client = openai.AsyncOpenAI(
             api_key=Config.OPENAI_API_KEY, base_url=Config.OPENAI_BASE_URL
         )
@@ -25,7 +25,7 @@ class LLMClient:
         messages: list[dict[str, str]],
         tools: list[dict[str, Any]] | None = None,
         tool_choice: str | None = None,
-        **kwargs,
+        **kwargs: Any,
     ) -> dict[str, Any]:
         """Create chat completion with optional tool calling."""
         try:
@@ -34,6 +34,7 @@ class LLMClient:
                 messages=messages,
                 tools=tools,
                 tool_choice=tool_choice,
+                stream=False,
                 **kwargs,
             )
             return response
@@ -44,4 +45,4 @@ class LLMClient:
     async def simple_chat(self, messages: list[dict[str, str]]) -> str:
         """Simple chat completion without tool calling."""
         response = await self.chat_completion(messages)
-        return response.choices[0].message.content
+        return response.choices[0].message.content  # type: ignore

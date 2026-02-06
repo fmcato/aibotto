@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 class TelegramBot:
     """Main Telegram bot class."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.application: Application | None = None
         self.db_ops = DatabaseOperations()
         self.tool_manager = ToolCallingManager()

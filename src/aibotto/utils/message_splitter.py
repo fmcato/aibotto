@@ -5,6 +5,8 @@ Smart message splitting utilities for Telegram's rate limiting.
 import asyncio
 import logging
 import re
+from collections.abc import Callable
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -110,7 +112,7 @@ class MessageSplitter:
     @staticmethod
     async def send_chunks_with_rate_limit(
         chunks: list[str],
-        send_func,
+        send_func: Callable[[str], Any],
         delay_between_chunks: float = 1.0
     ) -> None:
         """

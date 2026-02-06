@@ -12,11 +12,11 @@ logger = logging.getLogger(__name__)
 class SecurityManager:
     """Manager for security-related operations."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.blocked_commands = Config.BLOCKED_COMMANDS
         self.allowed_commands = Config.ALLOWED_COMMANDS
 
-    async def validate_command(self, command: str) -> dict[str, bool]:
+    async def validate_command(self, command: str) -> dict[str, object]:
         """Validate command for security."""
         result = {"allowed": False, "message": ""}
 

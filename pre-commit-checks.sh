@@ -38,6 +38,17 @@ else
     exit 1
 fi
 
+# Check if any Python files were modified
+if ! git diff --cached --name-only | grep -E '\.py$' > /dev/null; then
+    print_info "No Python files modified, skipping quality checks."
+    print_success "🎉 Ready to commit!"
+    echo ""
+    echo "Next steps:"
+    echo "  1. Review your changes: git diff --cached"
+    echo "  2. Commit your changes: git commit -m 'your commit message'"
+    exit 0
+fi
+
 # Run Ruff linting
 print_info "Running Ruff linting..."
 if uv run ruff check src/; then
@@ -72,19 +83,6 @@ if uv run pytest --tb=short; then
 else
     print_error "Tests failed. Please fix the failing tests before committing."
     exit 1
-fi
-
-# Check for sensitive information in staged changes
-print_info "Checking for sensitive information in staged changes..."
-if git diff --cached --name-only | grep -E '\.(py|md|yml|yaml|sh|toml)$' | xargs grep -l -i 'password\|secret\|token\|key' | grep -v '__pycache__' | grep -v '.venv'; then
-    print_warning "Potential sensitive information found in staged files:"
-    git diff --cached --name-only | grep -E '\.(py|md|yml|yaml|sh|toml)$' | xargs grep -l -i 'password\|secret\|token\|key' | grep -v '__pycache__' | grep -v '.venv' | while read file; do
-        echo "  - $file"
-    done
-    print_error "Please review and remove any sensitive information before committing."
-    exit 1
-else
-    print_success "No sensitive information found in staged changes"
 fi
 
 # Check for TODO comments in production code

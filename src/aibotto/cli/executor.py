@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 class CLIExecutor:
     """Executor for CLI commands with safety features."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.security_manager = SecurityManager()
 
     async def execute_command(self, command: str) -> str:
@@ -24,7 +24,7 @@ class CLIExecutor:
 
             # Security checks
             security_check = await self.security_manager.validate_command(command)
-            if not security_check["allowed"]:
+            if not bool(security_check["allowed"]):
                 logger.warning(f"Command blocked for security: {command}")
                 return security_check["message"]
 

@@ -21,7 +21,11 @@ class BaseHandler(ABC):
 class CommandHandler(BaseHandler):
     """Handler for bot commands."""
 
-    def __init__(self, command: str, callback: Callable):
+    def __init__(
+        self,
+        command: str,
+        callback: Callable[[Update, ContextTypes.DEFAULT_TYPE], None],
+    ):
         self.command = command
         self.callback = callback
 
@@ -33,7 +37,10 @@ class CommandHandler(BaseHandler):
 class MessageHandler(BaseHandler):
     """Handler for text messages."""
 
-    def __init__(self, callback: Callable):
+    def __init__(
+        self,
+        callback: Callable[[Update, ContextTypes.DEFAULT_TYPE], None],
+    ):
         self.callback = callback
 
     async def handle(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:

@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 class DatabaseOperations:
     """Operations for database management."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.db_path = Config.DATABASE_PATH
         self.init_database()
 
@@ -62,7 +62,7 @@ class DatabaseOperations:
 
     async def get_conversation_history(
         self, user_id: int, chat_id: int, limit: int = Config.MAX_HISTORY_LENGTH
-    ) -> list[dict]:
+    ) -> list[dict[str, str]]:
         """Get conversation history from database."""
         try:
             conn = sqlite3.connect(self.db_path)
