@@ -44,7 +44,7 @@ class ToolCallingManager:
 
         try:
             # Enhanced iterative tool calling with loop
-            max_iterations = 10  # Prevent infinite loops
+            max_iterations = 20  # Prevent infinite loops
             iteration = 0
 
             while iteration < max_iterations:
