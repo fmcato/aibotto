@@ -62,11 +62,23 @@ class TestFactualResponses:
     @pytest.mark.asyncio
     async def test_direct_response_handling(self, tool_manager):
         """Test handling of direct responses without tool calls."""
-        # Mock LLM response without tool calls
-        tool_manager.llm_client.chat_completion.return_value = AsyncMock()
-        tool_manager.llm_client.chat_completion.return_value.choices = [
-            MagicMock(message=MagicMock(content="Today is Monday.", tool_calls=None))
-        ]
+        # Mock LLM response without tool calls - return a dictionary like the real API
+        mock_response = {
+            "choices": [
+                {
+                    "message": {
+                        "content": "Today is Monday.",
+                        "tool_calls": None
+                    }
+                }
+            ]
+        }
+        
+        # Mock the chat_completion method to return our mock response
+        async def mock_chat_completion(*args, **kwargs):
+            return mock_response
+        
+        tool_manager.llm_client.chat_completion = mock_chat_completion
 
         # Mock database operations
         with patch('src.aibotto.ai.tool_calling.DatabaseOperations') as mock_db:

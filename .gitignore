@@ -35,6 +35,7 @@ __pycache__/
 *.log
 aibotto.log
 test_e2e.log
+bandit-report.json
 
 # Ignore database files
 *.db

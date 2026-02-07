@@ -140,7 +140,6 @@ class ToolDescriptions:
     def get_tool_definitions(cls) -> list[dict[str, Any]]:
         """Get all available tool definitions."""
         return [cls.CLI_TOOL_DESCRIPTION, cls.WEB_SEARCH_TOOL_DESCRIPTION]
-        return [cls.CLI_TOOL_DESCRIPTION]
 
 
 class ResponseTemplates:

@@ -56,11 +56,11 @@ class ToolCallingManager:
                     tools=self._get_tool_definitions(),
                 )
 
-                # Handle response - check if response is a MockResponse object
-                if hasattr(response, 'choices') and len(response.choices) > 0:
-                    choice = response.choices[0]
-                    if hasattr(choice, 'message') and choice.message:
-                        message_obj = choice.message
+                # Handle response - response is now a dict from model_dump()
+                if "choices" in response and len(response["choices"]) > 0:
+                    choice = response["choices"][0]
+                    if "message" in choice and choice["message"]:
+                        message_obj = choice["message"]
 
                         # Check if there are tool calls
                         tool_calls = None
@@ -73,12 +73,6 @@ class ToolCallingManager:
                                 # Ensure tool_calls is a list
                                 if isinstance(tool_calls, dict):
                                     tool_calls = [tool_calls]
-                        else:
-                            # Object format
-                            if (hasattr(message_obj, 'tool_calls') and
-                                message_obj.tool_calls is not None and
-                                len(message_obj.tool_calls) > 0):
-                                tool_calls = message_obj.tool_calls
 
                         if tool_calls:
                             # LLM wants to use tools - handle multiple tool calls
@@ -104,13 +98,19 @@ class ToolCallingManager:
                                         "function", {}
                                     ).get("arguments")
                                 else:
-                                    # Object format
-                                    tool_call_id = tool_call.id
-                                    function_name = tool_call.function.name
-                                    arguments = tool_call.function.arguments
+                                    # Object format (fallback)
+                                    tool_call_id = getattr(tool_call, "id", None)
+                                    function_name = getattr(
+                                        tool_call.function, "name", None
+                                    ) if hasattr(tool_call, "function") else None
+                                    arguments = getattr(
+                                        tool_call.function, "arguments", None
+                                    ) if hasattr(tool_call, "function") else None
 
                                 if function_name == "execute_cli_command":
                                     try:
+                                        if arguments is None:
+                                            raise ValueError("No arguments provided")
                                         command = json.loads(arguments)["command"]
 
                                         # Execute the command
@@ -157,6 +157,8 @@ class ToolCallingManager:
                                         }
                                 elif function_name == "search_web":
                                     try:
+                                        if arguments is None:
+                                            raise ValueError("No arguments provided")
                                         search_params = json.loads(arguments)
 
                                         # Log search for debugging
@@ -238,7 +240,7 @@ class ToolCallingManager:
                             assistant_message = (
                                 message_obj.get("content", "")
                                 if isinstance(message_obj, dict)
-                                else (message_obj.content or "")
+                                else (getattr(message_obj, "content", "") or "")
                             )
                             await db_ops.save_message(
                                 user_id, chat_id, 0, "assistant", assistant_message
@@ -253,7 +255,7 @@ class ToolCallingManager:
                             final_response_content = (
                                 message_obj.get("content", "")
                                 if isinstance(message_obj, dict)
-                                else (message_obj.content or "")
+                                else (getattr(message_obj, "content", "") or "")
                             )
                             await db_ops.save_message(
                                 user_id, chat_id, 0, "assistant", final_response_content

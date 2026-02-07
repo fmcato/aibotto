@@ -241,40 +241,6 @@ def security_test_data():
     }
 
 
-class MockToolCall:
-    """Mock tool call object."""
-    def __init__(self, function_name, arguments):
-        self.function = MockFunction(function_name, arguments)
-        self.id = "test_tool_call"
-        self.type = "function"
-
-
-class MockFunction:
-    """Mock function object."""
-    def __init__(self, name, arguments):
-        self.name = name
-        self.arguments = arguments
-
-
-class MockMessage:
-    """Mock message object."""
-    def __init__(self, content, tool_calls=None):
-        self.content = content
-        self.tool_calls = tool_calls or []
-
-
-class MockChoice:
-    """Mock choice object."""
-    def __init__(self, message_content, tool_calls=None):
-        self.message = MockMessage(message_content, tool_calls or [])
-
-
-class MockResponse:
-    """Mock response object."""
-    def __init__(self, choices):
-        self.choices = choices
-
-
 @pytest.fixture
 def mock_llm_client_with_responses():
     """Mock LLM client with predictable responses for tool calling tests."""
@@ -301,65 +267,221 @@ def mock_llm_client_with_responses():
         if tools and not tool_results:
             # First call with tools - return tool calls
             if "day" in user_message.lower() or "date" in user_message.lower():
-                return MockResponse([MockChoice(
-                    "I need to get the current date.",
-                    [MockToolCall("execute_cli_command", '{"command": "date"}')]
-                )])
+                return {
+                    "choices": [{
+                        "message": {
+                            "content": "I need to get the current date.",
+                            "tool_calls": [{
+                                "id": "test_tool_call",
+                                "type": "function",
+                                "function": {
+                                    "name": "execute_cli_command",
+                                    "arguments": '{"command": "date"}'
+                                }
+                            }]
+                        }
+                    }]
+                }
             elif "weather" in user_message.lower():
-                return MockResponse([MockChoice(
-                    "I need to get the weather information.",
-                    [MockToolCall("execute_cli_command", '{"command": "curl wttr.in/London?format=3"}')]
-                )])
+                return {
+                    "choices": [{
+                        "message": {
+                            "content": "I need to get the weather information.",
+                            "tool_calls": [{
+                                "id": "test_tool_call",
+                                "type": "function",
+                                "function": {
+                                    "name": "execute_cli_command",
+                                    "arguments": '{"command": "curl wttr.in/London?format=3"}'
+                                }
+                            }]
+                        }
+                    }]
+                }
             elif "system" in user_message.lower() or "uname" in user_message.lower():
-                return MockResponse([MockChoice(
-                    "I need to get system information.",
-                    [MockToolCall("execute_cli_command", '{"command": "uname -a"}')]
-                )])
+                return {
+                    "choices": [{
+                        "message": {
+                            "content": "I need to get system information.",
+                            "tool_calls": [{
+                                "id": "test_tool_call",
+                                "type": "function",
+                                "function": {
+                                    "name": "execute_cli_command",
+                                    "arguments": '{"command": "uname -a"}'
+                                }
+                            }]
+                        }
+                    }]
+                }
             elif "files" in user_message.lower() or "ls" in user_message.lower():
-                return MockResponse([MockChoice(
-                    "I need to list the files in the current directory.",
-                    [MockToolCall("execute_cli_command", '{"command": "ls -la"}')]
-                )])
+                return {
+                    "choices": [{
+                        "message": {
+                            "content": "I need to list the files in the current directory.",
+                            "tool_calls": [{
+                                "id": "test_tool_call",
+                                "type": "function",
+                                "function": {
+                                    "name": "execute_cli_command",
+                                    "arguments": '{"command": "ls -la"}'
+                                }
+                            }]
+                        }
+                    }]
+                }
             elif "capital" in user_message.lower() and "france" in user_message.lower():
-                return MockResponse([MockChoice("Paris is the capital of France.", [])])
+                return {
+                    "choices": [{
+                        "message": {
+                            "content": "Paris is the capital of France.",
+                            "tool_calls": []
+                        }
+                    }]
+                }
             elif "stock price" in user_message.lower():
-                return MockResponse([MockChoice("I don't have access to real-time stock data to predict future prices.", [])])
+                return {
+                    "choices": [{
+                        "message": {
+                            "content": "I don't have access to real-time stock data to predict future prices.",
+                            "tool_calls": []
+                        }
+                    }]
+                }
             else:
-                return MockResponse([MockChoice("This is a direct response without tool calls.", [])])
+                return {
+                    "choices": [{
+                        "message": {
+                            "content": "This is a direct response without tool calls.",
+                            "tool_calls": []
+                        }
+                    }]
+                }
         
         elif tools and error_results:
             # Handle error case - return error response
-            return MockResponse([MockChoice("Error executing command: Command not found", [])])
+            return {
+                "choices": [{
+                    "message": {
+                        "content": "Error executing command: Command not found",
+                        "tool_calls": []
+                    }
+                }]
+            }
         
         elif tools and tool_results:
             # Second call with tools and tool results - return final response
             if "date" in user_message.lower() and "time" in user_message.lower():
-                return MockResponse([MockChoice("Today is Monday, February 3, 2025, and the current time is 14:30:45.", [])])
+                return {
+                    "choices": [{
+                        "message": {
+                            "content": "Today is Monday, February 3, 2025, and the current time is 14:30:45.",
+                            "tool_calls": []
+                        }
+                    }]
+                }
             elif "day" in user_message.lower() or "date" in user_message.lower():
-                return MockResponse([MockChoice("Today is Monday, February 3, 2025.", [])])
+                return {
+                    "choices": [{
+                        "message": {
+                            "content": "Today is Monday, February 3, 2025.",
+                            "tool_calls": []
+                        }
+                    }]
+                }
             elif "weather" in user_message.lower():
-                return MockResponse([MockChoice("The weather in London is partly cloudy with a temperature of 15°C.", [])])
+                return {
+                    "choices": [{
+                        "message": {
+                            "content": "The weather in London is partly cloudy with a temperature of 15°C.",
+                            "tool_calls": []
+                        }
+                    }]
+                }
             elif "system" in user_message.lower() or "uname" in user_message.lower():
-                return MockResponse([MockChoice("Linux Ubuntu 5.15.0-88-generic x86_64", [])])
+                return {
+                    "choices": [{
+                        "message": {
+                            "content": "Linux Ubuntu 5.15.0-88-generic x86_64",
+                            "tool_calls": []
+                        }
+                    }]
+                }
             elif "files" in user_message.lower() or "ls" in user_message.lower():
-                return MockResponse([MockChoice("total 16\ndrwxr-xr-x 2 user user 4096 Feb  3 10:00 .\ndrwxr-xr-x 5 user user 4096 Feb  3 10:00 ..\n-rw-r--r-- 1 user user 123 Feb  3 10:00 test.txt", [])])
+                return {
+                    "choices": [{
+                        "message": {
+                            "content": "total 16\ndrwxr-xr-x 2 user user 4096 Feb  3 10:00 .\ndrwxr-xr-x 5 user user 4096 Feb  3 10:00 ..\n-rw-r--r-- 1 user user 123 Feb  3 10:00 test.txt",
+                            "tool_calls": []
+                        }
+                    }]
+                }
             elif "weather" in user_message.lower() and "time" in user_message.lower():
-                return MockResponse([MockChoice("Today is Monday, February 3, 2025, and the current time is 14:30:45.", [])])
+                return {
+                    "choices": [{
+                        "message": {
+                            "content": "Today is Monday, February 3, 2025, and the current time is 14:30:45.",
+                            "tool_calls": []
+                        }
+                    }]
+                }
             elif "username" in user_message.lower() and "directory" in user_message.lower():
-                return MockResponse([MockChoice("Today is Monday, February 3, 2025. You are user1 and your current directory is /home/user1.", [])])
+                return {
+                    "choices": [{
+                        "message": {
+                            "content": "Today is Monday, February 3, 2025. You are user1 and your current directory is /home/user1.",
+                            "tool_calls": []
+                        }
+                    }]
+                }
             else:
-                return MockResponse([MockChoice("This is a response after tool execution.", [])])
+                return {
+                    "choices": [{
+                        "message": {
+                            "content": "This is a response after tool execution.",
+                            "tool_calls": []
+                        }
+                    }]
+                }
         
         else:
             # Non-tool calling mode - return direct responses
             if "hello" in user_message.lower():
-                return MockResponse([MockChoice("Hello! How can I help you today?", [])])
+                return {
+                    "choices": [{
+                        "message": {
+                            "content": "Hello! How can I help you today?",
+                            "tool_calls": []
+                        }
+                    }]
+                }
             elif "capital" in user_message.lower() and "france" in user_message.lower():
-                return MockResponse([MockChoice("Paris is the capital of France.", [])])
+                return {
+                    "choices": [{
+                        "message": {
+                            "content": "Paris is the capital of France.",
+                            "tool_calls": []
+                        }
+                    }]
+                }
             elif "stock price" in user_message.lower():
-                return MockResponse([MockChoice("I don't have access to real-time stock data to predict future prices.", [])])
+                return {
+                    "choices": [{
+                        "message": {
+                            "content": "I don't have access to real-time stock data to predict future prices.",
+                            "tool_calls": []
+                        }
+                    }]
+                }
             else:
-                return MockResponse([MockChoice("This is a direct response without tool calls.", [])])
+                return {
+                    "choices": [{
+                        "message": {
+                            "content": "This is a direct response without tool calls.",
+                            "tool_calls": []
+                        }
+                    }]
+                }
     
     client.chat_completion = mock_chat_completion
     return client
@@ -374,9 +496,23 @@ def mock_llm_client_direct_response():
         user_message = messages[-1]["content"] if messages else ""
         
         if "hello" in user_message.lower():
-            return MockResponse([MockChoice("Hello! How can I help you today?", [])])
+            return {
+                "choices": [{
+                    "message": {
+                        "content": "Hello! How can I help you today?",
+                        "tool_calls": []
+                    }
+                }]
+            }
         else:
-            return MockResponse([MockChoice("I don't have access to real-time data for that question.", [])])
+            return {
+                "choices": [{
+                    "message": {
+                        "content": "I don't have access to real-time data for that question.",
+                        "tool_calls": []
+                    }
+                }]
+            }
     
     client.chat_completion = mock_chat_completion
     return client
@@ -393,7 +529,14 @@ def mock_llm_client_with_error():
         if "error" in user_message.lower():
             raise Exception("Test error from LLM client")
         
-        return MockResponse([MockChoice("This is a normal response.", [])])
+        return {
+            "choices": [{
+                "message": {
+                    "content": "This is a normal response.",
+                    "tool_calls": []
+                }
+            }]
+        }
     
     client.chat_completion = mock_chat_completion
     return client

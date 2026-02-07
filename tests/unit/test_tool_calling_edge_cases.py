@@ -25,22 +25,31 @@ class TestToolCallingEdgeCases:
     @pytest.mark.asyncio
     async def test_tool_call_execution_error(self, tool_manager):
         """Test tool call execution with error."""
-        # Create proper mock objects
-        mock_tool_call = MagicMock()
-        mock_tool_call.function.name = "execute_cli_command"
-        mock_tool_call.function.arguments = '{"command": "invalid_command"}'
-        mock_tool_call.id = "test_id"
+        # Create proper mock objects - now using dict format since llm_client returns dict
+        mock_tool_call = {
+            "id": "test_id",
+            "function": {
+                "name": "execute_cli_command",
+                "arguments": '{"command": "invalid_command"}'
+            }
+        }
 
-        mock_response = AsyncMock()
-        mock_response.choices = [MagicMock()]
-        mock_response.choices[0].message = MagicMock()
-        mock_response.choices[0].message.tool_calls = [mock_tool_call]
+        mock_response = {
+            "choices": [{
+                "message": {
+                    "tool_calls": [mock_tool_call]
+                }
+            }]
+        }
 
         # Mock second call (after tool execution)
-        mock_final_response = AsyncMock()
-        mock_final_response.choices = [MagicMock()]
-        mock_final_response.choices[0].message = MagicMock()
-        mock_final_response.choices[0].message.content = "Command failed due to error."
+        mock_final_response = {
+            "choices": [{
+                "message": {
+                    "content": "Command failed due to error."
+                }
+            }]
+        }
 
         tool_manager.llm_client.chat_completion.side_effect = [mock_response, mock_final_response]
 
@@ -66,22 +75,31 @@ class TestToolCallingEdgeCases:
     @pytest.mark.asyncio
     async def test_unknown_tool_function(self, tool_manager):
         """Test handling of unknown tool functions."""
-        # Create proper mock objects
-        mock_tool_call = MagicMock()
-        mock_tool_call.function.name = "unknown_function"
-        mock_tool_call.function.arguments = '{"param": "value"}'
-        mock_tool_call.id = "test_id"
+        # Create proper mock objects - now using dict format
+        mock_tool_call = {
+            "id": "test_id",
+            "function": {
+                "name": "unknown_function",
+                "arguments": '{"param": "value"}'
+            }
+        }
 
-        mock_response = AsyncMock()
-        mock_response.choices = [MagicMock()]
-        mock_response.choices[0].message = MagicMock()
-        mock_response.choices[0].message.tool_calls = [mock_tool_call]
+        mock_response = {
+            "choices": [{
+                "message": {
+                    "tool_calls": [mock_tool_call]
+                }
+            }]
+        }
 
         # Mock second call (after tool execution)
-        mock_final_response = AsyncMock()
-        mock_final_response.choices = [MagicMock()]
-        mock_final_response.choices[0].message = MagicMock()
-        mock_final_response.choices[0].message.content = "Unknown tool function handled."
+        mock_final_response = {
+            "choices": [{
+                "message": {
+                    "content": "Unknown tool function handled."
+                }
+            }]
+        }
 
         tool_manager.llm_client.chat_completion.side_effect = [mock_response, mock_final_response]
 
