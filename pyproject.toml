@@ -49,8 +49,8 @@ dev = [
 ]
 
 [project.scripts]
-aibotto = "src.aibotto.main:main"
-aibotto-cli = "src.aibotto.cli_interface:main"
+aibotto = "aibotto.main:main"
+aibotto-cli = "aibotto.cli_interface:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/aibotto"]
