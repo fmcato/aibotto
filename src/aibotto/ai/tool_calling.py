@@ -66,47 +66,54 @@ class ToolCallingManager:
                         tool_calls = None
                         if isinstance(message_obj, dict):
                             # Dictionary format
-                            if "tool_calls" in message_obj and message_obj.get("tool_calls") is not None and len(message_obj.get("tool_calls", [])) > 0:
+                            if ("tool_calls" in message_obj and
+                                message_obj.get("tool_calls") is not None and
+                                len(message_obj.get("tool_calls", [])) > 0):
                                 tool_calls = message_obj.get("tool_calls")
                                 # Ensure tool_calls is a list
                                 if isinstance(tool_calls, dict):
                                     tool_calls = [tool_calls]
                         else:
                             # Object format
-                            if hasattr(message_obj, 'tool_calls') and message_obj.tool_calls is not None and len(message_obj.tool_calls) > 0:
+                            if (hasattr(message_obj, 'tool_calls') and
+                                message_obj.tool_calls is not None and
+                                len(message_obj.tool_calls) > 0):
                                 tool_calls = message_obj.tool_calls
-                        
+
                         if tool_calls:
-                            # LLM wants to use tools - handle multiple tool calls in
-                            # parallel
+                            # LLM wants to use tools - handle multiple tool calls
+                            # in parallel
 
                             # Execute all tool calls in parallel using asyncio.gather
-                            async def execute_single_tool_call(tool_call: Any) -> Any:
+                            async def execute_single_tool_call(
+                                tool_call: Any
+                            ) -> Any:
                                 """Execute a single tool call and return the result."""
                                 # Handle both dictionary and object formats
                                 tool_call_id = None
                                 function_name = None
                                 arguments = None
-                                
+
                                 if isinstance(tool_call, dict):
                                     # Dictionary format
                                     tool_call_id = tool_call.get("id")
-                                    function_name = tool_call.get("function", {}).get("name")
-                                    arguments = tool_call.get("function", {}).get("arguments")
+                                    function_name = tool_call.get(
+                                        "function", {}
+                                    ).get("name")
+                                    arguments = tool_call.get(
+                                        "function", {}
+                                    ).get("arguments")
                                 else:
                                     # Object format
                                     tool_call_id = tool_call.id
                                     function_name = tool_call.function.name
                                     arguments = tool_call.function.arguments
-                                
+
                                 if function_name == "execute_cli_command":
                                     try:
                                         command = json.loads(arguments)["command"]
 
                                         # Execute the command
-                                        # Execute the command
-                                        # Execute the command
-                                        # Execute command
                                         res = await self.cli_executor.execute_command(
                                             command
                                         )
@@ -122,8 +129,8 @@ class ToolCallingManager:
                                             f"{result[:200]}..."
                                         )
 
-                                        # Save tool call result (without showing command
-                                        # to user)
+                                        # Save tool call result (without showing
+                                        # command to user)
                                         await db_ops.save_message(
                                             user_id, chat_id, 0, "system", result
                                         )
@@ -229,7 +236,9 @@ class ToolCallingManager:
 
                             # Save assistant message with tool calls to history
                             assistant_message = (
-                                message_obj.get("content", "") if isinstance(message_obj, dict) else (message_obj.content or "")
+                                message_obj.get("content", "")
+                                if isinstance(message_obj, dict)
+                                else (message_obj.content or "")
                             )
                             await db_ops.save_message(
                                 user_id, chat_id, 0, "assistant", assistant_message
@@ -242,7 +251,9 @@ class ToolCallingManager:
                         else:
                             # No tool calls - this is the final response
                             final_response_content = (
-                                message_obj.get("content", "") if isinstance(message_obj, dict) else (message_obj.content or "")
+                                message_obj.get("content", "")
+                                if isinstance(message_obj, dict)
+                                else (message_obj.content or "")
                             )
                             await db_ops.save_message(
                                 user_id, chat_id, 0, "assistant", final_response_content
@@ -260,13 +271,15 @@ class ToolCallingManager:
                     # No choices in response - return error
                     error_msg = "Invalid response format: no choices found"
                     logger.error(error_msg)
-                    await db_ops.save_message(user_id, chat_id, 0, "system", error_msg)
+                    await db_ops.save_message(
+                        user_id, chat_id, 0, "system", error_msg
+                    )
                     return error_msg
 
             # If we reach max iterations, return an error message
             error_msg = (
-                f"Reached maximum iterations ({max_iterations}) without getting "
-                f"a final response."
+                f"Reached maximum iterations ({max_iterations}) without "
+                f"getting a final response."
             )
             logger.error(error_msg)
             await db_ops.save_message(user_id, chat_id, 0, "system", error_msg)
@@ -274,7 +287,9 @@ class ToolCallingManager:
 
         except Exception as e:
             logger.error(f"Error in process_user_request: {e}")
-            error_msg = ResponseTemplates.ERROR_RESPONSE.format(error=str(e) if hasattr(e, "__str__") else str(type(e)))
+            error_msg = ResponseTemplates.ERROR_RESPONSE.format(
+                error=str(e) if hasattr(e, "__str__") else str(type(e))
+            )
             await db_ops.save_message(user_id, chat_id, 0, "system", error_msg)
             return error_msg
 
