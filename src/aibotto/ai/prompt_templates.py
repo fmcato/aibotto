@@ -59,14 +59,19 @@ class SystemPrompts:
     - News and information gathering"""
 
     @classmethod
+    def get_base_prompt(cls) -> list[dict[str, str]]:
+        """Get the base system prompt without conversation history."""
+        return [
+            {"role": "system", "content": cls.MAIN_SYSTEM_PROMPT},
+            {"role": "system", "content": cls.TOOL_INSTRUCTIONS},
+        ]
+
+    @classmethod
     def get_conversation_prompt(
         cls, conversation_history: list[dict[str, str]]
     ) -> list[dict[str, str]]:
         """Get the complete conversation prompt with system message."""
-        messages = [
-            {"role": "system", "content": cls.MAIN_SYSTEM_PROMPT},
-            {"role": "system", "content": cls.TOOL_INSTRUCTIONS},
-        ]
+        messages = cls.get_base_prompt()
 
         # Add conversation history if available
         if conversation_history:

@@ -389,3 +389,159 @@ class ToolCallingManager:
     async def fact_check_response(self, query: str, response: str) -> str:
         """Fact-check a response using available tools."""
         return "I'll help verify this information using available tools."
+
+    async def process_prompt_stateless(self, message: str) -> str:
+        """Process a single prompt without database persistence.
+
+        Args:
+            message: The user's prompt/message
+
+        Returns:
+            The assistant's response
+        """
+        # Prepare messages with system prompt (no history for stateless)
+        messages = SystemPrompts.get_base_prompt()
+        messages.append({"role": "user", "content": message})
+
+        try:
+            max_iterations = 20
+            iteration = 0
+
+            while iteration < max_iterations:
+                iteration += 1
+
+                response = await self.llm_client.chat_completion(
+                    messages=messages,
+                    tools=self._get_tool_definitions(),
+                )
+
+                if "choices" in response and len(response["choices"]) > 0:
+                    choice = response["choices"][0]
+                    if "message" in choice and choice["message"]:
+                        message_obj = choice["message"]
+
+                        tool_calls = None
+                        if isinstance(message_obj, dict):
+                            if (
+                                "tool_calls" in message_obj
+                                and message_obj.get("tool_calls") is not None
+                                and len(message_obj.get("tool_calls", [])) > 0
+                            ):
+                                tool_calls = message_obj.get("tool_calls")
+                                if isinstance(tool_calls, dict):
+                                    tool_calls = [tool_calls]
+
+                        if tool_calls:
+                            # Execute tool calls in parallel
+                            async def execute_single_tool_call(
+                                tool_call: Any,
+                            ) -> Any:
+                                tool_call_id = None
+                                function_name = None
+                                arguments = None
+
+                                if isinstance(tool_call, dict):
+                                    tool_call_id = tool_call.get("id")
+                                    function_name = tool_call.get(
+                                        "function", {}
+                                    ).get("name")
+                                    arguments = tool_call.get(
+                                        "function", {}
+                                    ).get("arguments")
+                                else:
+                                    tool_call_id = getattr(tool_call, "id", None)
+                                    function_name = (
+                                        getattr(tool_call.function, "name", None)
+                                        if hasattr(tool_call, "function")
+                                        else None
+                                    )
+                                    arguments = (
+                                        getattr(tool_call.function, "arguments", None)
+                                        if hasattr(tool_call, "function")
+                                        else None
+                                    )
+
+                                if function_name == "execute_cli_command":
+                                    try:
+                                        if arguments is None:
+                                            raise ValueError("No arguments provided")
+                                        command = json.loads(arguments)["command"]
+                                        result = (
+                                            await self.cli_executor.execute_command(
+                                                command
+                                            )
+                                        )
+                                        logger.info(f"CLI: {command}")
+                                        return {
+                                            "tool_call_id": tool_call_id,
+                                            "content": result,
+                                        }
+                                    except Exception as e:
+                                        logger.error(f"Command error: {e}")
+                                        return {
+                                            "tool_call_id": tool_call_id,
+                                            "content": f"Error: {e}",
+                                        }
+                                elif function_name == "search_web":
+                                    try:
+                                        if arguments is None:
+                                            raise ValueError("No arguments provided")
+                                        params = json.loads(arguments)
+                                        result = await search_web(
+                                            query=params.get("query", ""),
+                                            num_results=params.get("num_results", 5),
+                                            days_ago=params.get("days_ago"),
+                                        )
+                                        logger.info(f"Search: {params.get('query')}")
+                                        return {
+                                            "tool_call_id": tool_call_id,
+                                            "content": result,
+                                        }
+                                    except Exception as e:
+                                        logger.error(f"Search error: {e}")
+                                        return {
+                                            "tool_call_id": tool_call_id,
+                                            "content": f"Error: {e}",
+                                        }
+                                else:
+                                    return {
+                                        "tool_call_id": tool_call_id,
+                                        "content": f"Unknown tool: {function_name}",
+                                    }
+
+                            tool_results = await asyncio.gather(
+                                *[
+                                    execute_single_tool_call(tc)
+                                    for tc in tool_calls
+                                ]
+                            )
+
+                            for tool_result in tool_results:
+                                messages.append(
+                                    {
+                                        "role": "tool",
+                                        "tool_call_id": tool_result["tool_call_id"],
+                                        "content": tool_result["content"],
+                                    }
+                                )
+
+                            continue
+
+                        else:
+                            # Final response
+                            final_content = (
+                                message_obj.get("content", "")
+                                if isinstance(message_obj, dict)
+                                else (getattr(message_obj, "content", "") or "")
+                            )
+                            return final_content
+                    else:
+                        return "Error: Invalid response format"
+                else:
+                    return "Error: No response from LLM"
+
+            return f"Error: Reached max iterations ({max_iterations})"
+
+        except Exception as e:
+            logger.error(f"Error in process_prompt_stateless: {e}")
+            return f"Error: {e}"
