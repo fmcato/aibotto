@@ -45,4 +45,4 @@ class LLMClient:
     async def simple_chat(self, messages: list[dict[str, str]]) -> str:
         """Simple chat completion without tool calling."""
         response = await self.chat_completion(messages)
-        return response.choices[0].message.content  # type: ignore
+        return cast(str, response["choices"][0]["message"]["content"])

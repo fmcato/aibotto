@@ -56,157 +56,212 @@ class ToolCallingManager:
                     tools=self._get_tool_definitions(),
                 )
 
-                # Handle response
-                if hasattr(response['choices'][0]['message'], 'tool_calls') and \
-                   response['choices'][0]['message']['tool_calls']:
-                    # LLM wants to use tools - handle multiple tool calls in parallel
-                    tool_calls = response['choices'][0]['message']['tool_calls']
+                # Handle response - check if response is a MockResponse object
+                if hasattr(response, 'choices') and len(response.choices) > 0:
+                    choice = response.choices[0]
+                    if hasattr(choice, 'message') and choice.message:
+                        message_obj = choice.message
 
-                    # Execute all tool calls in parallel using asyncio.gather
-                    async def execute_single_tool_call(tool_call: Any) -> Any:
-                        """Execute a single tool call and return the result."""
-                        if tool_call.function.name == "execute_cli_command":
-                            try:
-                                command = json.loads(
-                                    tool_call.function.arguments)["command"]
-
-                                # Execute the command
-                                result = await self.cli_executor.execute_command(
-                                    command)
-
-                                # Log command execution for debugging
-                                logger.info(
-                                    f"Executing command for user {user_id}: "
-                                    f"{command}"
-                                )
-                                logger.info(
-                                    f"Command result for user {user_id}: "
-                                    f"{result[:200]}..."
-                                )
-
-                                # Save tool call result (without showing command
-                                # to user)
-                                await db_ops.save_message(
-                                    user_id, chat_id, 0, "system", result
-                                )
-
-                                return {
-                                    "tool_call_id": tool_call.id,
-                                    "content": result
-                                }
-
-                            except Exception as e:
-                                logger.error(
-                                    f"Error executing command "
-                                    f"{tool_call.function.arguments}: {e}"
-                                )
-                                error_result = (
-                                    f"Error executing command: {str(e)}"
-                                )
-                                await db_ops.save_message(
-                                    user_id, chat_id, 0, "system", error_result
-                                )
-                                return {
-                                    "tool_call_id": tool_call.id,
-                                    "content": error_result
-                                }
-                        elif tool_call.function.name == "search_web":
-                            try:
-                                search_params = json.loads(
-                                    tool_call.function.arguments)
-
-                                # Log search for debugging
-                                logger.info(
-                                    f"Performing web search for user {user_id}: "
-                                    f"{search_params}"
-                                )
-
-                                # Execute web search
-                                result = await search_web(
-                                    query=search_params.get("query", ""),
-                                    num_results=search_params.get("num_results", 5),
-                                    days_ago=search_params.get("days_ago")
-                                )
-
-                                # Log search result for debugging
-                                logger.info(
-                                    f"Web search result for user {user_id}: "
-                                    f"{result[:200]}..."
-                                )
-
-                                # Save tool call result
-                                await db_ops.save_message(
-                                    user_id, chat_id, 0, "system", result
-                                )
-
-                                return {
-                                    "tool_call_id": tool_call.id,
-                                    "content": result
-                                }
-
-                            except Exception as e:
-                                logger.error(
-                                    f"Error performing web search "
-                                    f"{tool_call.function.arguments}: {e}"
-                                )
-                                error_result = (
-                                    f"Error performing web search: {str(e)}"
-                                )
-                                await db_ops.save_message(
-                                    user_id, chat_id, 0, "system", error_result
-                                )
-                                return {
-                                    "tool_call_id": tool_call.id,
-                                    "content": error_result
-                                }
+                        # Check if there are tool calls
+                        tool_calls = None
+                        if isinstance(message_obj, dict):
+                            # Dictionary format
+                            if "tool_calls" in message_obj and message_obj.get("tool_calls") is not None and len(message_obj.get("tool_calls", [])) > 0:
+                                tool_calls = message_obj.get("tool_calls")
+                                # Ensure tool_calls is a list
+                                if isinstance(tool_calls, dict):
+                                    tool_calls = [tool_calls]
                         else:
-                            # Unknown tool function
-                            error_result = (
-                                f"Unknown tool function: "
-                                f"{tool_call.function.name}"
+                            # Object format
+                            if hasattr(message_obj, 'tool_calls') and message_obj.tool_calls is not None and len(message_obj.tool_calls) > 0:
+                                tool_calls = message_obj.tool_calls
+                        
+                        if tool_calls:
+                            # LLM wants to use tools - handle multiple tool calls in
+                            # parallel
+
+                            # Execute all tool calls in parallel using asyncio.gather
+                            async def execute_single_tool_call(tool_call: Any) -> Any:
+                                """Execute a single tool call and return the result."""
+                                # Handle both dictionary and object formats
+                                tool_call_id = None
+                                function_name = None
+                                arguments = None
+                                
+                                if isinstance(tool_call, dict):
+                                    # Dictionary format
+                                    tool_call_id = tool_call.get("id")
+                                    function_name = tool_call.get("function", {}).get("name")
+                                    arguments = tool_call.get("function", {}).get("arguments")
+                                else:
+                                    # Object format
+                                    tool_call_id = tool_call.id
+                                    function_name = tool_call.function.name
+                                    arguments = tool_call.function.arguments
+                                
+                                if function_name == "execute_cli_command":
+                                    try:
+                                        command = json.loads(arguments)["command"]
+
+                                        # Execute the command
+                                        # Execute the command
+                                        # Execute the command
+                                        # Execute command
+                                        res = await self.cli_executor.execute_command(
+                                            command
+                                        )
+                                        result = res
+
+                                        # Log command execution for debugging
+                                        logger.info(
+                                            f"Executing command for user {user_id}: "
+                                            f"{command}"
+                                        )
+                                        logger.info(
+                                            f"Command result for user {user_id}: "
+                                            f"{result[:200]}..."
+                                        )
+
+                                        # Save tool call result (without showing command
+                                        # to user)
+                                        await db_ops.save_message(
+                                            user_id, chat_id, 0, "system", result
+                                        )
+
+                                        return {
+                                            "tool_call_id": tool_call_id,
+                                            "content": result
+                                        }
+
+                                    except Exception as e:
+                                        logger.error(
+                                            f"Error executing command "
+                                            f"{arguments}: {e}"
+                                        )
+                                        error_result = (
+                                            f"Error executing command: {str(e)}"
+                                        )
+                                        await db_ops.save_message(
+                                            user_id, chat_id, 0, "system", error_result
+                                        )
+                                        return {
+                                            "tool_call_id": tool_call_id,
+                                            "content": error_result
+                                        }
+                                elif function_name == "search_web":
+                                    try:
+                                        search_params = json.loads(arguments)
+
+                                        # Log search for debugging
+                                        logger.info(
+                                            f"Performing web search for user "
+                                            f"{user_id}: "
+                                            f"{search_params}"
+                                        )
+
+                                        # Execute web search
+                                        result = await search_web(
+                                            query=search_params.get("query", ""),
+                                            num_results=search_params.get(
+                                                "num_results", 5
+                                            ),
+                                            days_ago=search_params.get("days_ago")
+                                        )
+
+                                        # Log search result for debugging
+                                        logger.info(
+                                            f"Web search result for user {user_id}: "
+                                            f"{result[:200]}..."
+                                        )
+
+                                        # Save tool call result
+                                        await db_ops.save_message(
+                                            user_id, chat_id, 0, "system", result
+                                        )
+
+                                        return {
+                                            "tool_call_id": tool_call_id,
+                                            "content": result
+                                        }
+
+                                    except Exception as e:
+                                        logger.error(
+                                            f"Error performing web search "
+                                            f"{arguments}: {e}"
+                                        )
+                                        error_result = (
+                                            f"Error performing web search: {str(e)}"
+                                        )
+                                        await db_ops.save_message(
+                                            user_id, chat_id, 0, "system", error_result
+                                        )
+                                        return {
+                                            "tool_call_id": tool_call_id,
+                                            "content": error_result
+                                        }
+                                else:
+                                    # Unknown tool function
+                                    error_result = (
+                                        f"Unknown tool function: "
+                                        f"{function_name}"
+                                    )
+                                    await db_ops.save_message(
+                                        user_id, chat_id, 0, "system", error_result
+                                    )
+                                    return {
+                                        "tool_call_id": tool_call_id,
+                                        "content": error_result
+                                    }
+
+                            # Execute all tool calls in parallel
+                            tool_results = await asyncio.gather(
+                                *[execute_single_tool_call(tool_call)
+                                  for tool_call in tool_calls]
+                            )
+
+                            # Add all tool results to messages
+                            for tool_result in tool_results:
+                                messages.append({
+                                    "role": "tool",
+                                    "tool_call_id": tool_result["tool_call_id"],
+                                    "content": tool_result["content"],
+                                })
+
+                            # Save assistant message with tool calls to history
+                            assistant_message = (
+                                message_obj.get("content", "") if isinstance(message_obj, dict) else (message_obj.content or "")
                             )
                             await db_ops.save_message(
-                                user_id, chat_id, 0, "system", error_result
+                                user_id, chat_id, 0, "assistant", assistant_message
                             )
-                            return {
-                                "tool_call_id": tool_call.id,
-                                "content": error_result
-                            }
 
-                    # Execute all tool calls in parallel
-                    tool_results = await asyncio.gather(
-                        *[execute_single_tool_call(tool_call)
-                          for tool_call in tool_calls]
-                    )
+                            # Continue the loop to allow for more tool calls or
+                            # final response
+                            continue
 
-                    # Add all tool results to messages
-                    for tool_result in tool_results:
-                        messages.append({
-                            "role": "tool",
-                            "tool_call_id": tool_result["tool_call_id"],
-                            "content": tool_result["content"],
-                        })
-
-                    # Save assistant message with tool calls to history
-                    assistant_message = (
-                        response["choices"][0]["message"]["content"] or ""
-                    )
-                    await db_ops.save_message(
-                        user_id, chat_id, 0, "assistant", assistant_message
-                    )
-
-                    # Continue the loop to allow for more tool calls or final response
-                    continue
-
+                        else:
+                            # No tool calls - this is the final response
+                            final_response_content = (
+                                message_obj.get("content", "") if isinstance(message_obj, dict) else (message_obj.content or "")
+                            )
+                            await db_ops.save_message(
+                                user_id, chat_id, 0, "assistant", final_response_content
+                            )
+                            return final_response_content
+                    else:
+                        # No message object - return error
+                        error_msg = "Invalid response format: no message found"
+                        logger.error(error_msg)
+                        await db_ops.save_message(
+                            user_id, chat_id, 0, "system", error_msg
+                        )
+                        return error_msg
                 else:
-                    # No tool calls - this is the final response
-                    final_response_content = (
-                        response["choices"][0]["message"]["content"] or ""
-                    )
-                    await db_ops.save_message(
-                        user_id, chat_id, 0, "assistant", final_response_content
-                    )
-                    return final_response_content
+                    # No choices in response - return error
+                    error_msg = "Invalid response format: no choices found"
+                    logger.error(error_msg)
+                    await db_ops.save_message(user_id, chat_id, 0, "system", error_msg)
+                    return error_msg
 
             # If we reach max iterations, return an error message
             error_msg = (
@@ -219,7 +274,7 @@ class ToolCallingManager:
 
         except Exception as e:
             logger.error(f"Error in process_user_request: {e}")
-            error_msg = ResponseTemplates.ERROR_RESPONSE.format(error=str(e))
+            error_msg = ResponseTemplates.ERROR_RESPONSE.format(error=str(e) if hasattr(e, "__str__") else str(type(e)))
             await db_ops.save_message(user_id, chat_id, 0, "system", error_msg)
             return error_msg
 

@@ -266,7 +266,7 @@ class MockMessage:
 class MockChoice:
     """Mock choice object."""
     def __init__(self, message_content, tool_calls=None):
-        self.message = MockMessage(message_content, tool_calls)
+        self.message = MockMessage(message_content, tool_calls or [])
 
 
 class MockResponse:
@@ -321,45 +321,45 @@ def mock_llm_client_with_responses():
                     [MockToolCall("execute_cli_command", '{"command": "ls -la"}')]
                 )])
             elif "capital" in user_message.lower() and "france" in user_message.lower():
-                return MockResponse([MockChoice("Paris is the capital of France.")])
+                return MockResponse([MockChoice("Paris is the capital of France.", [])])
             elif "stock price" in user_message.lower():
-                return MockResponse([MockChoice("I don't have access to real-time stock data to predict future prices.")])
+                return MockResponse([MockChoice("I don't have access to real-time stock data to predict future prices.", [])])
             else:
-                return MockResponse([MockChoice("This is a direct response without tool calls.")])
+                return MockResponse([MockChoice("This is a direct response without tool calls.", [])])
         
         elif tools and error_results:
             # Handle error case - return error response
-            return MockResponse([MockChoice("Error executing command: Command not found")])
+            return MockResponse([MockChoice("Error executing command: Command not found", [])])
         
         elif tools and tool_results:
             # Second call with tools and tool results - return final response
             if "date" in user_message.lower() and "time" in user_message.lower():
-                return MockResponse([MockChoice("Today is Monday, February 3, 2025, and the current time is 14:30:45.")])
+                return MockResponse([MockChoice("Today is Monday, February 3, 2025, and the current time is 14:30:45.", [])])
             elif "day" in user_message.lower() or "date" in user_message.lower():
-                return MockResponse([MockChoice("Today is Monday, February 3, 2025.")])
+                return MockResponse([MockChoice("Today is Monday, February 3, 2025.", [])])
             elif "weather" in user_message.lower():
-                return MockResponse([MockChoice("The weather in London is partly cloudy with a temperature of 15°C.")])
+                return MockResponse([MockChoice("The weather in London is partly cloudy with a temperature of 15°C.", [])])
             elif "system" in user_message.lower() or "uname" in user_message.lower():
-                return MockResponse([MockChoice("Linux Ubuntu 5.15.0-88-generic x86_64")])
+                return MockResponse([MockChoice("Linux Ubuntu 5.15.0-88-generic x86_64", [])])
             elif "files" in user_message.lower() or "ls" in user_message.lower():
-                return MockResponse([MockChoice("total 16\ndrwxr-xr-x 2 user user 4096 Feb  3 10:00 .\ndrwxr-xr-x 5 user user 4096 Feb  3 10:00 ..\n-rw-r--r-- 1 user user 123 Feb  3 10:00 test.txt")])
+                return MockResponse([MockChoice("total 16\ndrwxr-xr-x 2 user user 4096 Feb  3 10:00 .\ndrwxr-xr-x 5 user user 4096 Feb  3 10:00 ..\n-rw-r--r-- 1 user user 123 Feb  3 10:00 test.txt", [])])
             elif "weather" in user_message.lower() and "time" in user_message.lower():
-                return MockResponse([MockChoice("Today is Monday, February 3, 2025, and the current time is 14:30:45.")])
+                return MockResponse([MockChoice("Today is Monday, February 3, 2025, and the current time is 14:30:45.", [])])
             elif "username" in user_message.lower() and "directory" in user_message.lower():
-                return MockResponse([MockChoice("Today is Monday, February 3, 2025. You are user1 and your current directory is /home/user1.")])
+                return MockResponse([MockChoice("Today is Monday, February 3, 2025. You are user1 and your current directory is /home/user1.", [])])
             else:
-                return MockResponse([MockChoice("This is a response after tool execution.")])
+                return MockResponse([MockChoice("This is a response after tool execution.", [])])
         
         else:
             # Non-tool calling mode - return direct responses
             if "hello" in user_message.lower():
-                return MockResponse([MockChoice("Hello! How can I help you today?")])
+                return MockResponse([MockChoice("Hello! How can I help you today?", [])])
             elif "capital" in user_message.lower() and "france" in user_message.lower():
-                return MockResponse([MockChoice("Paris is the capital of France.")])
+                return MockResponse([MockChoice("Paris is the capital of France.", [])])
             elif "stock price" in user_message.lower():
-                return MockResponse([MockChoice("I don't have access to real-time stock data to predict future prices.")])
+                return MockResponse([MockChoice("I don't have access to real-time stock data to predict future prices.", [])])
             else:
-                return MockResponse([MockChoice("This is a direct response without tool calls.")])
+                return MockResponse([MockChoice("This is a direct response without tool calls.", [])])
     
     client.chat_completion = mock_chat_completion
     return client
@@ -374,9 +374,9 @@ def mock_llm_client_direct_response():
         user_message = messages[-1]["content"] if messages else ""
         
         if "hello" in user_message.lower():
-            return MockResponse([MockChoice("Hello! How can I help you today?")])
+            return MockResponse([MockChoice("Hello! How can I help you today?", [])])
         else:
-            return MockResponse([MockChoice("I don't have access to real-time data for that question.")])
+            return MockResponse([MockChoice("I don't have access to real-time data for that question.", [])])
     
     client.chat_completion = mock_chat_completion
     return client
@@ -393,7 +393,7 @@ def mock_llm_client_with_error():
         if "error" in user_message.lower():
             raise Exception("Test error from LLM client")
         
-        return MockResponse([MockChoice("This is a normal response.")])
+        return MockResponse([MockChoice("This is a normal response.", [])])
     
     client.chat_completion = mock_chat_completion
     return client

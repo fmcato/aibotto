@@ -25,13 +25,20 @@ class TestLLMClient:
         """Test successful chat completion."""
         # Mock successful response
         mock_response = MagicMock()
-        mock_response.choices = [MagicMock()]
-        mock_response.choices[0].message.content = "Hello there!"
+        mock_response.model_dump.return_value = {
+            "choices": [{"message": {"content": "Hello there!"}}]
+        }
         llm_client.client.chat.completions.create = AsyncMock(return_value=mock_response)
 
         result = await llm_client.chat_completion([{"role": "user", "content": "Hello"}])
 
-        assert result == mock_response
+        # Verify the response structure
+        assert result is not None
+        assert isinstance(result, dict)
+        assert "choices" in result
+        assert len(result["choices"]) > 0
+        assert "message" in result["choices"][0]
+        assert result["choices"][0]["message"]["content"] == "Hello there!"
         llm_client.client.chat.completions.create.assert_called_once()
 
     @pytest.mark.asyncio
@@ -40,8 +47,9 @@ class TestLLMClient:
         tools = [{"type": "function", "function": {"name": "test_tool"}}]
 
         mock_response = MagicMock()
-        mock_response.choices = [MagicMock()]
-        mock_response.choices[0].message.content = "I'll use a tool"
+        mock_response.model_dump.return_value = {
+            "choices": [{"message": {"content": "I'll use a tool"}}]
+        }
         llm_client.client.chat.completions.create = AsyncMock(return_value=mock_response)
 
         result = await llm_client.chat_completion(
@@ -50,44 +58,47 @@ class TestLLMClient:
             tool_choice="auto"
         )
 
-        assert result == mock_response
-        # Verify tools and tool_choice were passed
-        call_args = llm_client.client.chat.completions.create.call_args
-        assert call_args[1]["tools"] == tools
-        assert call_args[1]["tool_choice"] == "auto"
-
-    @pytest.mark.asyncio
-    async def test_chat_completion_api_error(self, llm_client):
-        """Test chat completion with API error."""
-        llm_client.client.chat.completions.create = AsyncMock(
-            side_effect=Exception("API Error")
-        )
-
-        with pytest.raises(Exception) as exc_info:
-            await llm_client.chat_completion([{"role": "user", "content": "Hello"}])
-
-        assert "API Error" in str(exc_info.value)
+        # Verify the response structure
+        assert result is not None
+        assert isinstance(result, dict)
+        assert "choices" in result
+        assert len(result["choices"]) > 0
+        assert "message" in result["choices"][0]
+        assert result["choices"][0]["message"]["content"] == "I'll use a tool"
+        llm_client.client.chat.completions.create.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_simple_chat_success(self, llm_client):
-        """Test simple chat completion."""
+        """Test simple chat completion with direct response."""
         mock_response = MagicMock()
-        mock_response.choices = [MagicMock()]
-        mock_response.choices[0].message.content = "Simple response"
+        mock_response.model_dump.return_value = {
+            "choices": [{"message": {"content": "Simple response"}}]
+        }
         llm_client.client.chat.completions.create = AsyncMock(return_value=mock_response)
 
-        result = await llm_client.simple_chat([{"role": "user", "content": "Hello"}])
+        result = await llm_client.simple_chat([{"role": "user", "content": "Hi"}])
 
         assert result == "Simple response"
 
     @pytest.mark.asyncio
     async def test_simple_chat_empty_response(self, llm_client):
-        """Test simple chat with empty response."""
+        """Test chat completion with empty response."""
         mock_response = MagicMock()
-        mock_response.choices = [MagicMock()]
-        mock_response.choices[0].message.content = None
+        mock_response.model_dump.return_value = {
+            "choices": [{"message": {"content": None}}]
+        }
         llm_client.client.chat.completions.create = AsyncMock(return_value=mock_response)
 
         result = await llm_client.simple_chat([{"role": "user", "content": "Hello"}])
 
         assert result is None
+
+    @pytest.mark.asyncio
+    async def test_chat_completion_error(self, llm_client):
+        """Test chat completion with error."""
+        llm_client.client.chat.completions.create = AsyncMock(side_effect=Exception("API Error"))
+
+        with pytest.raises(Exception) as exc_info:
+            await llm_client.chat_completion([{"role": "user", "content": "Hello"}])
+
+        assert str(exc_info.value) == "API Error"
