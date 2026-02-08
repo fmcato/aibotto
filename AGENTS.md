@@ -92,6 +92,44 @@ from aibotto.bot.telegram_bot import TelegramBot
 
 ## Development Workflow
 
+### Test-Driven Development (TDD)
+
+**ALWAYS write tests before implementation.** This is required for:
+- New features
+- Bug fixes
+- Refactoring with behavior changes
+
+#### TDD Cycle
+1. **Write failing test** - Define expected behavior in a test
+2. **Run test** - Confirm it fails (validates test works)
+3. **Implement** - Write minimal code to pass the test
+4. **Run tests** - All tests must pass
+5. **Refactor** - Clean up while keeping tests green
+6. **Commit** - Only after all tests pass
+
+#### Example: Adding a New Tool
+```bash
+# 1. Write test first
+vim tests/unit/test_my_tool.py
+
+# 2. Run test (should fail)
+uv run pytest tests/unit/test_my_tool.py -v
+
+# 3. Implement tool
+vim src/aibotto/tools/my_tool.py
+
+# 4. Update tool definitions
+vim src/aibotto/ai/prompt_templates.py  # Add tool description
+vim src/aibotto/ai/tool_calling.py      # Add tool handler
+vim src/aibotto/tools/__init__.py       # Export tool
+
+# 5. Run all tests
+uv run pytest
+
+# 6. Commit
+git add -A && git commit
+```
+
 ### Quality Checks
 Pre-commit hooks run automatically via `pre-commit-checks.sh`:
 - Ruff linting
@@ -112,8 +150,14 @@ uv run python src/aibotto/main.py
 # Run CLI interface
 uv run aibotto-cli "what day is today"
 
-# Run tests (see tests/AGENTS.md for details)
+# Run all tests
 uv run pytest
+
+# Run specific test file
+uv run pytest tests/unit/test_web_fetch.py -v
+
+# Run tests matching pattern
+uv run pytest -k "web_fetch" -v
 
 # Manual quality checks
 uv run ruff check src/
