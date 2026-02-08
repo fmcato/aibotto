@@ -26,11 +26,315 @@ class ToolCallingManager:
         """Get tool definitions for the LLM."""
         return ToolDescriptions.get_tool_definitions()
 
+    def _extract_tool_call_info(
+        self, tool_call: Any
+    ) -> tuple[str | None, str | None, str | None]:
+        """Extract tool call ID, function name, and arguments from a tool call.
+
+        Args:
+            tool_call: Tool call object (dict or object format)
+
+        Returns:
+            Tuple of (tool_call_id, function_name, arguments)
+        """
+        if isinstance(tool_call, dict):
+            return (
+                tool_call.get("id"),
+                tool_call.get("function", {}).get("name"),
+                tool_call.get("function", {}).get("arguments"),
+            )
+        else:
+            has_func = hasattr(tool_call, "function")
+            return (
+                getattr(tool_call, "id", None),
+                getattr(tool_call.function, "name", None) if has_func else None,
+                getattr(tool_call.function, "arguments", None) if has_func else None,
+            )
+
+    async def _execute_single_tool(
+        self,
+        function_name: str | None,
+        arguments: str | None,
+        user_id: int = 0,
+        db_ops: DatabaseOperations | None = None,
+        chat_id: int = 0,
+    ) -> str:
+        """Execute a single tool and return the result.
+
+        Args:
+            function_name: Name of the tool function to execute
+            arguments: JSON string of arguments
+            user_id: User ID for logging (optional)
+            db_ops: Database operations for saving results (optional)
+            chat_id: Chat ID for database operations (optional)
+
+        Returns:
+            Tool execution result as string
+        """
+        if function_name == "execute_cli_command":
+            try:
+                if arguments is None:
+                    raise ValueError("No arguments provided")
+                command = json.loads(arguments)["command"]
+                result = await self.cli_executor.execute_command(command)
+
+                logger.info(f"Executing command for user {user_id}: {command}")
+                logger.info(
+                    f"Command result for user {user_id}: {result[:200]}..."
+                )
+
+                if db_ops:
+                    await db_ops.save_message(
+                        user_id, chat_id, 0, "system", result
+                    )
+
+                return result
+
+            except Exception as e:
+                logger.error(f"Error executing command {arguments}: {e}")
+                error_result = f"Error executing command: {str(e)}"
+                if db_ops:
+                    await db_ops.save_message(
+                        user_id, chat_id, 0, "system", error_result
+                    )
+                return error_result
+
+        elif function_name == "search_web":
+            try:
+                if arguments is None:
+                    raise ValueError("No arguments provided")
+                params = json.loads(arguments)
+
+                logger.info(
+                    f"Performing web search for user {user_id}: {params}"
+                )
+
+                result = await search_web(
+                    query=params.get("query", ""),
+                    num_results=params.get("num_results", 5),
+                    days_ago=params.get("days_ago"),
+                )
+
+                logger.info(
+                    f"Web search result for user {user_id}: {result[:200]}..."
+                )
+
+                if db_ops:
+                    await db_ops.save_message(
+                        user_id, chat_id, 0, "system", result
+                    )
+
+                return result
+
+            except Exception as e:
+                logger.error(f"Error performing web search {arguments}: {e}")
+                error_result = f"Error performing web search: {str(e)}"
+                if db_ops:
+                    await db_ops.save_message(
+                        user_id, chat_id, 0, "system", error_result
+                    )
+                return error_result
+
+        elif function_name == "fetch_webpage":
+            try:
+                if arguments is None:
+                    raise ValueError("No arguments provided")
+                params = json.loads(arguments)
+
+                logger.info(
+                    f"Fetching webpage for user {user_id}: {params.get('url')}"
+                )
+
+                result = await fetch_webpage(
+                    url=params.get("url", ""),
+                    max_length=params.get("max_length"),
+                    include_links=params.get("include_links", False),
+                )
+
+                logger.info(
+                    f"Web fetch result for user {user_id}: {result[:200]}..."
+                )
+
+                if db_ops:
+                    await db_ops.save_message(
+                        user_id, chat_id, 0, "system", result
+                    )
+
+                return result
+
+            except Exception as e:
+                logger.error(f"Error fetching webpage {arguments}: {e}")
+                error_result = f"Error fetching webpage: {str(e)}"
+                if db_ops:
+                    await db_ops.save_message(
+                        user_id, chat_id, 0, "system", error_result
+                    )
+                return error_result
+
+        else:
+            error_result = f"Unknown tool function: {function_name}"
+            if db_ops:
+                await db_ops.save_message(
+                    user_id, chat_id, 0, "system", error_result
+                )
+            return error_result
+
+    async def _execute_tool_calls(
+        self,
+        tool_calls: list[Any],
+        user_id: int = 0,
+        chat_id: int = 0,
+        db_ops: DatabaseOperations | None = None,
+    ) -> list[dict[str, Any]]:
+        """Execute all tool calls in parallel and return results.
+
+        Args:
+            tool_calls: List of tool call objects
+            user_id: User ID for logging and database
+            chat_id: Chat ID for database operations
+            db_ops: Database operations for saving results (optional)
+
+        Returns:
+            List of tool results with tool_call_id and content
+        """
+
+        async def execute_single(tool_call: Any) -> dict[str, Any]:
+            tool_call_id, function_name, arguments = (
+                self._extract_tool_call_info(tool_call)
+            )
+            content = await self._execute_single_tool(
+                function_name, arguments, user_id, db_ops, chat_id
+            )
+            return {
+                "tool_call_id": tool_call_id,
+                "content": content,
+            }
+
+        return await asyncio.gather(
+            *[execute_single(tc) for tc in tool_calls]
+        )
+
+    def _extract_response_content(self, message_obj: Any) -> str:
+        """Extract content from a message object.
+
+        Args:
+            message_obj: Message object (dict or object format)
+
+        Returns:
+            Message content as string
+        """
+        if isinstance(message_obj, dict):
+            return message_obj.get("content", "") or ""
+        else:
+            return getattr(message_obj, "content", "") or ""
+
+    def _extract_tool_calls_from_response(
+        self, message_obj: Any
+    ) -> list[Any] | None:
+        """Extract tool calls from a message object.
+
+        Args:
+            message_obj: Message object (dict or object format)
+
+        Returns:
+            List of tool calls or None
+        """
+        if not isinstance(message_obj, dict):
+            return None
+
+        tool_calls = message_obj.get("tool_calls")
+        if tool_calls is None or len(tool_calls) == 0:
+            return None
+
+        # Ensure tool_calls is a list
+        if isinstance(tool_calls, dict):
+            return [tool_calls]
+        return list(tool_calls) if tool_calls else None
+
+    async def _process_llm_iteration(
+        self,
+        messages: list[dict[str, Any]],
+        user_id: int = 0,
+        chat_id: int = 0,
+        db_ops: DatabaseOperations | None = None,
+    ) -> tuple[str | None, list[dict[str, Any]] | None]:
+        """Process a single LLM iteration.
+
+        Args:
+            messages: Conversation messages
+            user_id: User ID for logging and database
+            chat_id: Chat ID for database operations
+            db_ops: Database operations for saving results (optional)
+
+        Returns:
+            Tuple of (final_response, tool_results)
+            - If final_response is not None, it's the final response
+            - If tool_results is not None, they should be added to messages
+        """
+        response = await self.llm_client.chat_completion(
+            messages=messages,
+            tools=self._get_tool_definitions(),
+        )
+
+        if "choices" not in response or len(response["choices"]) == 0:
+            error_msg = "Invalid response format: no choices found"
+            logger.error(error_msg)
+            if db_ops:
+                await db_ops.save_message(
+                    user_id, chat_id, 0, "system", error_msg
+                )
+            return error_msg, None
+
+        choice = response["choices"][0]
+        if "message" not in choice or not choice["message"]:
+            error_msg = "Invalid response format: no message found"
+            logger.error(error_msg)
+            if db_ops:
+                await db_ops.save_message(
+                    user_id, chat_id, 0, "system", error_msg
+                )
+            return error_msg, None
+
+        message_obj = choice["message"]
+        tool_calls = self._extract_tool_calls_from_response(message_obj)
+
+        if tool_calls:
+            # Execute tool calls
+            tool_results = await self._execute_tool_calls(
+                tool_calls, user_id, chat_id, db_ops
+            )
+
+            # Save assistant message with tool calls to history
+            assistant_message = self._extract_response_content(message_obj)
+            if db_ops:
+                await db_ops.save_message(
+                    user_id, chat_id, 0, "assistant", assistant_message
+                )
+
+            return None, tool_results
+        else:
+            # Final response
+            final_content = self._extract_response_content(message_obj)
+            if db_ops:
+                await db_ops.save_message(
+                    user_id, chat_id, 0, "assistant", final_content
+                )
+            return final_content, None
+
     async def process_user_request(
         self, user_id: int, chat_id: int, message: str, db_ops: DatabaseOperations
     ) -> str:
-        """Process user request using LLM with tool calling."""
+        """Process user request with LLM tool calling (stateful with db).
 
+        Args:
+            user_id: User ID
+            chat_id: Chat ID
+            message: User message
+            db_ops: Database operations instance
+
+        Returns:
+            Assistant's response
+        """
         # Get conversation history
         history = await db_ops.get_conversation_history(user_id, chat_id)
 
@@ -42,298 +346,33 @@ class ToolCallingManager:
         messages.append({"role": "user", "content": message})
 
         try:
-            # Enhanced iterative tool calling with loop
-            max_iterations = 20  # Prevent infinite loops
+            max_iterations = 20
             iteration = 0
 
             while iteration < max_iterations:
                 iteration += 1
 
-                # Call LLM with tool calling capability
-                response = await self.llm_client.chat_completion(
-                    messages=messages,
-                    tools=self._get_tool_definitions(),
+                final_response, tool_results = await self._process_llm_iteration(
+                    messages, user_id, chat_id, db_ops
                 )
 
-                # Handle response - response is now a dict from model_dump()
-                if "choices" in response and len(response["choices"]) > 0:
-                    choice = response["choices"][0]
-                    if "message" in choice and choice["message"]:
-                        message_obj = choice["message"]
+                if final_response is not None:
+                    return final_response
 
-                        # Check if there are tool calls
-                        tool_calls = None
-                        if isinstance(message_obj, dict):
-                            # Dictionary format
-                            if ("tool_calls" in message_obj and
-                                message_obj.get("tool_calls") is not None and
-                                len(message_obj.get("tool_calls", [])) > 0):
-                                tool_calls = message_obj.get("tool_calls")
-                                # Ensure tool_calls is a list
-                                if isinstance(tool_calls, dict):
-                                    tool_calls = [tool_calls]
+                if tool_results is not None:
+                    # Add tool results to messages
+                    for tool_result in tool_results:
+                        messages.append({
+                            "role": "tool",
+                            "tool_call_id": tool_result["tool_call_id"],
+                            "content": tool_result["content"],
+                        })
+                    continue
 
-                        if tool_calls:
-                            # LLM wants to use tools - handle multiple tool calls
-                            # in parallel
-
-                            # Execute all tool calls in parallel using asyncio.gather
-                            async def execute_single_tool_call(
-                                tool_call: Any
-                            ) -> Any:
-                                """Execute a single tool call and return the result."""
-                                # Handle both dictionary and object formats
-                                tool_call_id = None
-                                function_name = None
-                                arguments = None
-
-                                if isinstance(tool_call, dict):
-                                    # Dictionary format
-                                    tool_call_id = tool_call.get("id")
-                                    function_name = tool_call.get(
-                                        "function", {}
-                                    ).get("name")
-                                    arguments = tool_call.get(
-                                        "function", {}
-                                    ).get("arguments")
-                                else:
-                                    # Object format (fallback)
-                                    tool_call_id = getattr(tool_call, "id", None)
-                                    function_name = getattr(
-                                        tool_call.function, "name", None
-                                    ) if hasattr(tool_call, "function") else None
-                                    arguments = getattr(
-                                        tool_call.function, "arguments", None
-                                    ) if hasattr(tool_call, "function") else None
-
-                                if function_name == "execute_cli_command":
-                                    try:
-                                        if arguments is None:
-                                            raise ValueError("No arguments provided")
-                                        command = json.loads(arguments)["command"]
-
-                                        # Execute the command
-                                        res = await self.cli_executor.execute_command(
-                                            command
-                                        )
-                                        result = res
-
-                                        # Log command execution for debugging
-                                        logger.info(
-                                            f"Executing command for user {user_id}: "
-                                            f"{command}"
-                                        )
-                                        logger.info(
-                                            f"Command result for user {user_id}: "
-                                            f"{result[:200]}..."
-                                        )
-
-                                        # Save tool call result (without showing
-                                        # command to user)
-                                        await db_ops.save_message(
-                                            user_id, chat_id, 0, "system", result
-                                        )
-
-                                        return {
-                                            "tool_call_id": tool_call_id,
-                                            "content": result
-                                        }
-
-                                    except Exception as e:
-                                        logger.error(
-                                            f"Error executing command "
-                                            f"{arguments}: {e}"
-                                        )
-                                        error_result = (
-                                            f"Error executing command: {str(e)}"
-                                        )
-                                        await db_ops.save_message(
-                                            user_id, chat_id, 0, "system", error_result
-                                        )
-                                        return {
-                                            "tool_call_id": tool_call_id,
-                                            "content": error_result
-                                        }
-                                elif function_name == "search_web":
-                                    try:
-                                        if arguments is None:
-                                            raise ValueError("No arguments provided")
-                                        search_params = json.loads(arguments)
-
-                                        # Log search for debugging
-                                        logger.info(
-                                            f"Performing web search for user "
-                                            f"{user_id}: "
-                                            f"{search_params}"
-                                        )
-
-                                        # Execute web search
-                                        result = await search_web(
-                                            query=search_params.get("query", ""),
-                                            num_results=search_params.get(
-                                                "num_results", 5
-                                            ),
-                                            days_ago=search_params.get("days_ago")
-                                        )
-
-                                        # Log search result for debugging
-                                        logger.info(
-                                            f"Web search result for user {user_id}: "
-                                            f"{result[:200]}..."
-                                        )
-
-                                        # Save tool call result
-                                        await db_ops.save_message(
-                                            user_id, chat_id, 0, "system", result
-                                        )
-
-                                        return {
-                                            "tool_call_id": tool_call_id,
-                                            "content": result
-                                        }
-
-                                    except Exception as e:
-                                        logger.error(
-                                            f"Error performing web search "
-                                            f"{arguments}: {e}"
-                                        )
-                                        error_result = (
-                                            f"Error performing web search: {str(e)}"
-                                        )
-                                        await db_ops.save_message(
-                                            user_id, chat_id, 0, "system", error_result
-                                        )
-                                        return {
-                                            "tool_call_id": tool_call_id,
-                                            "content": error_result
-                                        }
-                                elif function_name == "fetch_webpage":
-                                    try:
-                                        if arguments is None:
-                                            raise ValueError("No arguments provided")
-                                        fetch_params = json.loads(arguments)
-
-                                        # Log fetch for debugging
-                                        logger.info(
-                                            f"Fetching webpage for user "
-                                            f"{user_id}: "
-                                            f"{fetch_params.get('url')}"
-                                        )
-
-                                        # Execute web fetch
-                                        result = await fetch_webpage(
-                                            url=fetch_params.get("url", ""),
-                                            max_length=fetch_params.get("max_length"),
-                                            include_links=fetch_params.get(
-                                                "include_links", False
-                                            ),
-                                        )
-
-                                        # Log fetch result for debugging
-                                        logger.info(
-                                            f"Web fetch result for user {user_id}: "
-                                            f"{result[:200]}..."
-                                        )
-
-                                        # Save tool call result
-                                        await db_ops.save_message(
-                                            user_id, chat_id, 0, "system", result
-                                        )
-
-                                        return {
-                                            "tool_call_id": tool_call_id,
-                                            "content": result
-                                        }
-
-                                    except Exception as e:
-                                        logger.error(
-                                            f"Error fetching webpage "
-                                            f"{arguments}: {e}"
-                                        )
-                                        error_result = (
-                                            f"Error fetching webpage: {str(e)}"
-                                        )
-                                        await db_ops.save_message(
-                                            user_id, chat_id, 0, "system", error_result
-                                        )
-                                        return {
-                                            "tool_call_id": tool_call_id,
-                                            "content": error_result
-                                        }
-                                else:
-                                    # Unknown tool function
-                                    error_result = (
-                                        f"Unknown tool function: "
-                                        f"{function_name}"
-                                    )
-                                    await db_ops.save_message(
-                                        user_id, chat_id, 0, "system", error_result
-                                    )
-                                    return {
-                                        "tool_call_id": tool_call_id,
-                                        "content": error_result
-                                    }
-
-                            # Execute all tool calls in parallel
-                            tool_results = await asyncio.gather(
-                                *[execute_single_tool_call(tool_call)
-                                  for tool_call in tool_calls]
-                            )
-
-                            # Add all tool results to messages
-                            for tool_result in tool_results:
-                                messages.append({
-                                    "role": "tool",
-                                    "tool_call_id": tool_result["tool_call_id"],
-                                    "content": tool_result["content"],
-                                })
-
-                            # Save assistant message with tool calls to history
-                            assistant_message = (
-                                message_obj.get("content", "")
-                                if isinstance(message_obj, dict)
-                                else (getattr(message_obj, "content", "") or "")
-                            )
-                            await db_ops.save_message(
-                                user_id, chat_id, 0, "assistant", assistant_message
-                            )
-
-                            # Continue the loop to allow for more tool calls or
-                            # final response
-                            continue
-
-                        else:
-                            # No tool calls - this is the final response
-                            final_response_content = (
-                                message_obj.get("content", "")
-                                if isinstance(message_obj, dict)
-                                else (getattr(message_obj, "content", "") or "")
-                            )
-                            await db_ops.save_message(
-                                user_id, chat_id, 0, "assistant", final_response_content
-                            )
-                            return final_response_content
-                    else:
-                        # No message object - return error
-                        error_msg = "Invalid response format: no message found"
-                        logger.error(error_msg)
-                        await db_ops.save_message(
-                            user_id, chat_id, 0, "system", error_msg
-                        )
-                        return error_msg
-                else:
-                    # No choices in response - return error
-                    error_msg = "Invalid response format: no choices found"
-                    logger.error(error_msg)
-                    await db_ops.save_message(
-                        user_id, chat_id, 0, "system", error_msg
-                    )
-                    return error_msg
-
-            # If we reach max iterations, return an error message
+            # Max iterations reached
             error_msg = (
-                f"Reached maximum iterations ({max_iterations}) without "
-                f"getting a final response."
+                f"Reached maximum iterations ({max_iterations}) "
+                f"without getting a final response."
             )
             logger.error(error_msg)
             await db_ops.save_message(user_id, chat_id, 0, "system", error_msg)
@@ -346,6 +385,49 @@ class ToolCallingManager:
             )
             await db_ops.save_message(user_id, chat_id, 0, "system", error_msg)
             return error_msg
+
+    async def process_prompt_stateless(self, message: str) -> str:
+        """Process a single prompt without database persistence (stateless).
+
+        Args:
+            message: The user's prompt/message
+
+        Returns:
+            The assistant's response
+        """
+        # Prepare messages with system prompt (no history for stateless)
+        messages = SystemPrompts.get_base_prompt()
+        messages.append({"role": "user", "content": message})
+
+        try:
+            max_iterations = 20
+            iteration = 0
+
+            while iteration < max_iterations:
+                iteration += 1
+
+                final_response, tool_results = await self._process_llm_iteration(
+                    messages, 0, 0, None
+                )
+
+                if final_response is not None:
+                    return final_response
+
+                if tool_results is not None:
+                    # Add tool results to messages
+                    for tool_result in tool_results:
+                        messages.append({
+                            "role": "tool",
+                            "tool_call_id": tool_result["tool_call_id"],
+                            "content": tool_result["content"],
+                        })
+                    continue
+
+            return f"Error: Reached max iterations ({max_iterations})"
+
+        except Exception as e:
+            logger.error(f"Error in process_prompt_stateless: {e}")
+            return f"Error: {e}"
 
     def _needs_factual_verification(
         self, response_content: str, original_message: str
@@ -441,182 +523,3 @@ class ToolCallingManager:
     async def fact_check_response(self, query: str, response: str) -> str:
         """Fact-check a response using available tools."""
         return "I'll help verify this information using available tools."
-
-    async def process_prompt_stateless(self, message: str) -> str:
-        """Process a single prompt without database persistence.
-
-        Args:
-            message: The user's prompt/message
-
-        Returns:
-            The assistant's response
-        """
-        # Prepare messages with system prompt (no history for stateless)
-        messages = SystemPrompts.get_base_prompt()
-        messages.append({"role": "user", "content": message})
-
-        try:
-            max_iterations = 20
-            iteration = 0
-
-            while iteration < max_iterations:
-                iteration += 1
-
-                response = await self.llm_client.chat_completion(
-                    messages=messages,
-                    tools=self._get_tool_definitions(),
-                )
-
-                if "choices" in response and len(response["choices"]) > 0:
-                    choice = response["choices"][0]
-                    if "message" in choice and choice["message"]:
-                        message_obj = choice["message"]
-
-                        tool_calls = None
-                        if isinstance(message_obj, dict):
-                            if (
-                                "tool_calls" in message_obj
-                                and message_obj.get("tool_calls") is not None
-                                and len(message_obj.get("tool_calls", [])) > 0
-                            ):
-                                tool_calls = message_obj.get("tool_calls")
-                                if isinstance(tool_calls, dict):
-                                    tool_calls = [tool_calls]
-
-                        if tool_calls:
-                            # Execute tool calls in parallel
-                            async def execute_single_tool_call(
-                                tool_call: Any,
-                            ) -> Any:
-                                tool_call_id = None
-                                function_name = None
-                                arguments = None
-
-                                if isinstance(tool_call, dict):
-                                    tool_call_id = tool_call.get("id")
-                                    function_name = tool_call.get(
-                                        "function", {}
-                                    ).get("name")
-                                    arguments = tool_call.get(
-                                        "function", {}
-                                    ).get("arguments")
-                                else:
-                                    tool_call_id = getattr(tool_call, "id", None)
-                                    function_name = (
-                                        getattr(tool_call.function, "name", None)
-                                        if hasattr(tool_call, "function")
-                                        else None
-                                    )
-                                    arguments = (
-                                        getattr(tool_call.function, "arguments", None)
-                                        if hasattr(tool_call, "function")
-                                        else None
-                                    )
-
-                                if function_name == "execute_cli_command":
-                                    try:
-                                        if arguments is None:
-                                            raise ValueError("No arguments provided")
-                                        command = json.loads(arguments)["command"]
-                                        result = (
-                                            await self.cli_executor.execute_command(
-                                                command
-                                            )
-                                        )
-                                        logger.info(f"CLI: {command}")
-                                        return {
-                                            "tool_call_id": tool_call_id,
-                                            "content": result,
-                                        }
-                                    except Exception as e:
-                                        logger.error(f"Command error: {e}")
-                                        return {
-                                            "tool_call_id": tool_call_id,
-                                            "content": f"Error: {e}",
-                                        }
-                                elif function_name == "search_web":
-                                    try:
-                                        if arguments is None:
-                                            raise ValueError("No arguments provided")
-                                        params = json.loads(arguments)
-                                        result = await search_web(
-                                            query=params.get("query", ""),
-                                            num_results=params.get("num_results", 5),
-                                            days_ago=params.get("days_ago"),
-                                        )
-                                        logger.info(f"Search: {params.get('query')}")
-                                        return {
-                                            "tool_call_id": tool_call_id,
-                                            "content": result,
-                                        }
-                                    except Exception as e:
-                                        logger.error(f"Search error: {e}")
-                                        return {
-                                            "tool_call_id": tool_call_id,
-                                            "content": f"Error: {e}",
-                                        }
-                                elif function_name == "fetch_webpage":
-                                    try:
-                                        if arguments is None:
-                                            raise ValueError("No arguments provided")
-                                        params = json.loads(arguments)
-                                        result = await fetch_webpage(
-                                            url=params.get("url", ""),
-                                            max_length=params.get("max_length"),
-                                            include_links=params.get(
-                                                "include_links", False
-                                            ),
-                                        )
-                                        logger.info(f"Fetch: {params.get('url')}")
-                                        return {
-                                            "tool_call_id": tool_call_id,
-                                            "content": result,
-                                        }
-                                    except Exception as e:
-                                        logger.error(f"Fetch error: {e}")
-                                        return {
-                                            "tool_call_id": tool_call_id,
-                                            "content": f"Error: {e}",
-                                        }
-                                else:
-                                    return {
-                                        "tool_call_id": tool_call_id,
-                                        "content": f"Unknown tool: {function_name}",
-                                    }
-
-                            tool_results = await asyncio.gather(
-                                *[
-                                    execute_single_tool_call(tc)
-                                    for tc in tool_calls
-                                ]
-                            )
-
-                            for tool_result in tool_results:
-                                messages.append(
-                                    {
-                                        "role": "tool",
-                                        "tool_call_id": tool_result["tool_call_id"],
-                                        "content": tool_result["content"],
-                                    }
-                                )
-
-                            continue
-
-                        else:
-                            # Final response
-                            final_content = (
-                                message_obj.get("content", "")
-                                if isinstance(message_obj, dict)
-                                else (getattr(message_obj, "content", "") or "")
-                            )
-                            return final_content
-                    else:
-                        return "Error: Invalid response format"
-                else:
-                    return "Error: No response from LLM"
-
-            return f"Error: Reached max iterations ({max_iterations})"
-
-        except Exception as e:
-            logger.error(f"Error in process_prompt_stateless: {e}")
-            return f"Error: {e}"
