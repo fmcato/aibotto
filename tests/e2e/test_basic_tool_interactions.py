@@ -7,7 +7,7 @@ import pytest
 from unittest.mock import AsyncMock, Mock, patch
 
 from src.aibotto.ai.tool_calling import ToolCallingManager
-from src.aibotto.cli.executor import CLIExecutor
+from src.aibotto.tools.cli_executor import CLIExecutor
 from src.aibotto.config.settings import Config
 
 

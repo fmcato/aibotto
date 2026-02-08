@@ -6,8 +6,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from src.aibotto.cli.executor import CLIExecutor
-from src.aibotto.cli.security import SecurityManager
+from src.aibotto.tools.cli_executor import CLIExecutor
+from src.aibotto.tools.security import SecurityManager
 from src.aibotto.config.settings import Config
 
 
@@ -17,7 +17,7 @@ class TestCLIExecutor:
     @pytest.fixture
     def executor(self):
         """Create a CLIExecutor instance for testing."""
-        with patch('src.aibotto.cli.executor.SecurityManager') as mock_security:
+        with patch('src.aibotto.tools.cli_executor.SecurityManager') as mock_security:
             executor = CLIExecutor()
             executor.security_manager = MagicMock()
             return executor

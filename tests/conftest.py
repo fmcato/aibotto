@@ -10,7 +10,7 @@ from unittest.mock import AsyncMock, Mock
 import pytest
 
 from src.aibotto.ai.llm_client import LLMClient
-from src.aibotto.cli.executor import CLIExecutor
+from src.aibotto.tools.cli_executor import CLIExecutor
 from src.aibotto.config.settings import Config
 from src.aibotto.db.operations import DatabaseOperations
 

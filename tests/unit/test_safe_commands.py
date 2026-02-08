@@ -5,7 +5,7 @@ Tests only safe, read-only commands to prevent any security risks.
 
 import pytest
 
-from src.aibotto.cli.security import SecurityManager
+from src.aibotto.tools.security import SecurityManager
 
 
 class TestSafeCommands:

@@ -1,7 +1,18 @@
 """
-Tools module - External tool integrations.
+Tools module - All external tool integrations for the AI assistant.
+
+This module contains all tools that the LLM can call:
+- CLI command execution with security
+- Web search functionality
 """
 
+from .cli_executor import CLIExecutor
+from .security import SecurityManager
 from .web_search import WebSearchTool, search_web
 
-__all__ = ["WebSearchTool", "search_web"]
+__all__ = [
+    "CLIExecutor",
+    "SecurityManager",
+    "WebSearchTool",
+    "search_web",
+]

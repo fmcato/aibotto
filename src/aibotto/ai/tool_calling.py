@@ -7,9 +7,8 @@ import json
 import logging
 from typing import Any
 
-from ..cli.executor import CLIExecutor
 from ..db.operations import DatabaseOperations
-from ..tools.web_search import search_web
+from ..tools import CLIExecutor, search_web
 from .llm_client import LLMClient
 from .prompt_templates import ResponseTemplates, SystemPrompts, ToolDescriptions
 
