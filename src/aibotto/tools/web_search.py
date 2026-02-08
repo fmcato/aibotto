@@ -16,8 +16,8 @@ logger = logging.getLogger(__name__)
 class WebSearchTool:
     """Web search tool using ddgs library."""
 
-    # Engines to use (excluding mojeek, google, brave)
-    ENGINES = ["duckduckgo", "wikipedia", "yahoo", "yandex", "grokipedia"]
+    # Engines to use as comma-separated string (excluding mojeek, google, brave)
+    ENGINES = "duckduckgo,wikipedia,yahoo,yandex,grokipedia"
 
     def __init__(self) -> None:
         self.ddgs = ddgs.DDGS()
@@ -75,7 +75,7 @@ class WebSearchTool:
             results = await loop.run_in_executor(
                 None,
                 lambda: list(
-                    self.ddgs.text(query, engines=self.ENGINES, **search_params)
+                    self.ddgs.text(query, backend=self.ENGINES, **search_params)
                 )
             )
 
