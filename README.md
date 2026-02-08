@@ -86,7 +86,7 @@ DATABASE_PATH=/app/data/conversations.db
 
 # Security Configuration
 MAX_COMMAND_LENGTH=1000
-# ALLOWED_COMMANDS=date,ls,pwd,whoami,uname,df,free,ps,curl
+# ALLOWED_COMMANDS=date,ls,pwd,whoami,uname,df,cat,head,tail,python3
 BLOCKED_COMMANDS="rm -rf,sudo,dd,mkfs,fdisk,format,shutdown,reboot,poweroff,halt"
 
 # Bot Configuration
@@ -239,11 +239,18 @@ Bot: 🤔 Thinking...
 Bot: "System Information:\n- OS: Linux Ubuntu 24.04\n- Kernel: 6.14.0\n- User: ubuntu\n..."
 ```
 
-### Weather (with API)
+### Web Search
 ```
 User: "What's the weather in London?"
 Bot: 🤔 Thinking...
 Bot: "The current weather in London is 15°C with light clouds..."
+```
+
+### Python Calculations
+```
+User: "Calculate 2 to the power of 20"
+Bot: 🤔 Thinking...
+Bot: "2^20 = 1,048,576"
 ```
 
 ## ⚙️ Configuration

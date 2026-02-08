@@ -5,7 +5,8 @@ An AI agent that communicates through Telegram and uses CLI tools to fulfill use
 
 ### Examples:
 - User asks "What day is today?" → Agent uses Linux `date` command to answer
-- User asks "What's the weather in London?" → Agent uses curl command against weather API to get forecast in JSON and answers appropriately
+- User asks "What's the weather in London?" → Agent uses web_search tool to find current conditions
+- User asks "Calculate 2^20" → Agent runs `python3 -c "print(2**20)"`
 
 ## Tech Stack
 - **Python 3.12**: Core programming language
@@ -110,18 +111,18 @@ from aibotto.bot.telegram_bot import TelegramBot
 #### Example: Adding a New Tool
 ```bash
 # 1. Write test first
-vim tests/unit/test_my_tool.py
+# Edit tests/unit/test_my_tool.py
 
 # 2. Run test (should fail)
 uv run pytest tests/unit/test_my_tool.py -v
 
 # 3. Implement tool
-vim src/aibotto/tools/my_tool.py
+# Edit src/aibotto/tools/my_tool.py
 
 # 4. Update tool definitions
-vim src/aibotto/ai/prompt_templates.py  # Add tool description
-vim src/aibotto/ai/tool_calling.py      # Add tool handler
-vim src/aibotto/tools/__init__.py       # Export tool
+# Edit src/aibotto/ai/prompt_templates.py  # Add tool description
+# Edit src/aibotto/ai/tool_calling.py      # Add tool handler
+# Edit src/aibotto/tools/__init__.py       # Export tool
 
 # 5. Run all tests
 uv run pytest
@@ -194,7 +195,8 @@ See [tests/AGENTS.md](tests/AGENTS.md) for:
 - **Date & Time**: "What day is today?" → Executes `date` command
 - **File Operations**: "List files in current directory" → Executes `ls -la` command
 - **System Information**: "Show system information" → Executes `uname -a` command
-- **Weather API**: "What's the weather in London?" → Executes curl command to weather API
+- **Calculations**: "Calculate 2^20" → Executes `python3 -c "print(2**20)"`
+- **Web Search**: "What's the weather in London?" → Uses web_search tool to find current conditions
 - **Web Search**: "Search for latest AI news" → Uses DuckDuckGo search tool
 
 ### CLI Interface
