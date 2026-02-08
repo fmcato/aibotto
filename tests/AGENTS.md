@@ -49,17 +49,25 @@ Testing guidance for the AIBOTTO project, including test infrastructure and best
 tests/
 ├── conftest.py                    # Comprehensive fixtures
 ├── unit/                          # Unit tests (isolated components)
-│   ├── test_cli.py               # CLI module tests
+│   ├── test_bot.py               # Telegram bot tests
+│   ├── test_clear_command.py     # /clear command tests
+│   ├── test_cli.py               # CLI executor tests
 │   ├── test_config.py            # Config module tests
 │   ├── test_db.py                # Database module tests
-│   ├── test_factual_responses.py  # Factual response system tests
-│   └── test_safe_commands.py     # Security validation tests
+│   ├── test_factual_responses.py # Factual response system tests
+│   ├── test_llm_client.py        # LLM client tests
+│   ├── test_main.py              # Main entry point tests
+│   ├── test_message_splitter.py  # Message splitting tests
+│   ├── test_prompt_cli.py        # CLI prompt interface tests
+│   ├── test_safe_commands.py     # Security validation tests
+│   ├── test_tool_calling_edge_cases.py  # Tool calling edge cases
+│   └── test_web_search.py        # Web search unit tests
 ├── e2e/                          # End-to-end tests with real infrastructure
 │   ├── test_basic_tool_interactions.py
 │   ├── test_complete_flow.py
-│   ├── test_security_fix.py
+│   ├── test_parallel_tool_calls.py
 │   ├── test_tool_calling_visibility.py
-│   └── test_parallel_tool_calls.py
+│   └── test_web_search_real.py  # Real web search tests
 └── fixtures/                      # Test fixtures and data
 ```
 
@@ -85,8 +93,8 @@ tests/
 4. **Error Scenarios**: Test both happy paths and error conditions
 
 ### Quality Assurance Metrics
-- **Test Pass Rate**: 100% (45/45 tests)
-- **Code Coverage**: 71% with good coverage of core functionality
+- **Test Pass Rate**: 100% (121 tests)
+- **Code Coverage**: 83% with good coverage of core functionality
 - **Production-Ready Infrastructure**: Ready for real-world testing
 
 ## Running Tests
