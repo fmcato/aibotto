@@ -5,7 +5,7 @@ Unit tests for CLI interface.
 import pytest
 from unittest.mock import AsyncMock, patch
 
-from aibotto.cli_interface import parse_args, run_prompt, main
+from aibotto.prompt_cli import parse_args, run_prompt, main
 from aibotto.ai.tool_calling import ToolCallingManager
 
 
@@ -84,7 +84,7 @@ class TestCLIInterface:
         with (
             patch("sys.argv", ["aibotto-cli", "test"]),
             patch(
-                "aibotto.cli_interface.Config.validate_config",
+                "aibotto.prompt_cli.Config.validate_config",
                 return_value=False,
             ),
             pytest.raises(SystemExit) as exc_info,
@@ -104,11 +104,11 @@ class TestCLIInterface:
         with (
             patch("sys.argv", ["aibotto-cli", "hello"]),
             patch(
-                "aibotto.cli_interface.Config.validate_config",
+                "aibotto.prompt_cli.Config.validate_config",
                 return_value=True,
             ),
             patch(
-                "aibotto.cli_interface.run_prompt",
+                "aibotto.prompt_cli.run_prompt",
                 new_callable=AsyncMock,
                 return_value=mock_response,
             ),
@@ -125,11 +125,11 @@ class TestCLIInterface:
         with (
             patch("sys.argv", ["aibotto-cli", "-v", "test", "prompt"]),
             patch(
-                "aibotto.cli_interface.Config.validate_config",
+                "aibotto.prompt_cli.Config.validate_config",
                 return_value=True,
             ),
             patch(
-                "aibotto.cli_interface.run_prompt",
+                "aibotto.prompt_cli.run_prompt",
                 new_callable=AsyncMock,
                 return_value=mock_response,
             ),
@@ -146,11 +146,11 @@ class TestCLIInterface:
         with (
             patch("sys.argv", ["aibotto-cli", "test"]),
             patch(
-                "aibotto.cli_interface.Config.validate_config",
+                "aibotto.prompt_cli.Config.validate_config",
                 return_value=True,
             ),
             patch(
-                "aibotto.cli_interface.run_prompt",
+                "aibotto.prompt_cli.run_prompt",
                 side_effect=KeyboardInterrupt(),
             ),
             pytest.raises(SystemExit) as exc_info,
@@ -168,11 +168,11 @@ class TestCLIInterface:
         with (
             patch("sys.argv", ["aibotto-cli", "test"]),
             patch(
-                "aibotto.cli_interface.Config.validate_config",
+                "aibotto.prompt_cli.Config.validate_config",
                 return_value=True,
             ),
             patch(
-                "aibotto.cli_interface.run_prompt",
+                "aibotto.prompt_cli.run_prompt",
                 side_effect=RuntimeError("Something went wrong"),
             ),
             pytest.raises(SystemExit) as exc_info,
