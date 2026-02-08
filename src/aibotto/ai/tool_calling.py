@@ -8,7 +8,7 @@ import logging
 from typing import Any
 
 from ..db.operations import DatabaseOperations
-from ..tools import CLIExecutor, search_web
+from ..tools import CLIExecutor, fetch_webpage, search_web
 from .llm_client import LLMClient
 from .prompt_templates import ResponseTemplates, SystemPrompts, ToolDescriptions
 
@@ -199,6 +199,59 @@ class ToolCallingManager:
                                         )
                                         error_result = (
                                             f"Error performing web search: {str(e)}"
+                                        )
+                                        await db_ops.save_message(
+                                            user_id, chat_id, 0, "system", error_result
+                                        )
+                                        return {
+                                            "tool_call_id": tool_call_id,
+                                            "content": error_result
+                                        }
+                                elif function_name == "fetch_webpage":
+                                    try:
+                                        if arguments is None:
+                                            raise ValueError("No arguments provided")
+                                        fetch_params = json.loads(arguments)
+
+                                        # Log fetch for debugging
+                                        logger.info(
+                                            f"Fetching webpage for user "
+                                            f"{user_id}: "
+                                            f"{fetch_params.get('url')}"
+                                        )
+
+                                        # Execute web fetch
+                                        result = await fetch_webpage(
+                                            url=fetch_params.get("url", ""),
+                                            max_length=fetch_params.get("max_length"),
+                                            include_links=fetch_params.get(
+                                                "include_links", False
+                                            ),
+                                        )
+
+                                        # Log fetch result for debugging
+                                        logger.info(
+                                            f"Web fetch result for user {user_id}: "
+                                            f"{result[:200]}..."
+                                        )
+
+                                        # Save tool call result
+                                        await db_ops.save_message(
+                                            user_id, chat_id, 0, "system", result
+                                        )
+
+                                        return {
+                                            "tool_call_id": tool_call_id,
+                                            "content": result
+                                        }
+
+                                    except Exception as e:
+                                        logger.error(
+                                            f"Error fetching webpage "
+                                            f"{arguments}: {e}"
+                                        )
+                                        error_result = (
+                                            f"Error fetching webpage: {str(e)}"
                                         )
                                         await db_ops.save_message(
                                             user_id, chat_id, 0, "system", error_result
@@ -498,6 +551,29 @@ class ToolCallingManager:
                                         }
                                     except Exception as e:
                                         logger.error(f"Search error: {e}")
+                                        return {
+                                            "tool_call_id": tool_call_id,
+                                            "content": f"Error: {e}",
+                                        }
+                                elif function_name == "fetch_webpage":
+                                    try:
+                                        if arguments is None:
+                                            raise ValueError("No arguments provided")
+                                        params = json.loads(arguments)
+                                        result = await fetch_webpage(
+                                            url=params.get("url", ""),
+                                            max_length=params.get("max_length"),
+                                            include_links=params.get(
+                                                "include_links", False
+                                            ),
+                                        )
+                                        logger.info(f"Fetch: {params.get('url')}")
+                                        return {
+                                            "tool_call_id": tool_call_id,
+                                            "content": result,
+                                        }
+                                    except Exception as e:
+                                        logger.error(f"Fetch error: {e}")
                                         return {
                                             "tool_call_id": tool_call_id,
                                             "content": f"Error: {e}",

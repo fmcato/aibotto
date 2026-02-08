@@ -46,17 +46,24 @@ class TestFactualResponses:
     def test_tool_descriptions(self):
         """Test that tool descriptions are properly structured."""
         tools = ToolDescriptions.get_tool_definitions()
-        assert len(tools) == 2
+        assert len(tools) == 3
 
-        # Check that both CLI and web search tools are present
+        # Check that all tools are present
         tool_names = [tool["function"]["name"] for tool in tools]
         assert "execute_cli_command" in tool_names
         assert "search_web" in tool_names
-        
+        assert "fetch_webpage" in tool_names
+
         # Check that CLI tool description mentions safe commands
         for tool in tools:
             if tool["function"]["name"] == "execute_cli_command":
                 assert "safe CLI commands" in tool["function"]["description"]
+                break
+
+        # Check that fetch_webpage tool has required parameters
+        for tool in tools:
+            if tool["function"]["name"] == "fetch_webpage":
+                assert "url" in tool["function"]["parameters"]["required"]
                 break
 
     @pytest.mark.asyncio

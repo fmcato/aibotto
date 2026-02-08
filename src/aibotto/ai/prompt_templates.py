@@ -13,38 +13,41 @@ class SystemPrompts:
 
     # Main system prompt - simplified and generic
     MAIN_SYSTEM_PROMPT = """You are a helpful AI assistant that can use CLI tools
-    and web search to get factual information.
+    and web tools to get factual information.
 
     When users ask for factual information like date/time, weather, system info,
     news, or web content, use the available tools to get accurate information.
 
-    You have two types of tools available:
+    You have three types of tools available:
     1. CLI commands for system information (date, weather, files, etc.)
-    2. Web search for current information, recent news, or topics not
-       covered by CLI tools
+    2. Web search for finding information on the web
+    3. Web fetch for reading the full content of a specific URL
 
     For web-related queries, current events, or when you need recent information,
-    use the search_web tool. For system information, use CLI commands.
+    use the search_web tool. When you have a specific URL and want to read its
+    content, use the fetch_webpage tool. For system information, use CLI commands.
 
     Provide a helpful response based on the actual information you received.
     Don't mention the tool commands or technical details."""
 
     # Tool instructions
-    TOOL_INSTRUCTIONS = """You have two types of tools available:
+    TOOL_INSTRUCTIONS = """You have three types of tools available:
 
     1. CLI commands for system information:
        - Use for date/time, weather, system info, file operations
        - Examples: date, uname -a, ls -la, curl wttr.in/London?format=3
 
-    2. Web search for current information:
+    2. Web search for finding information:
        - Use for recent news, current events, or topics not covered by CLI tools
-       - The search_web tool will extract content from web pages
+       - Returns search results with snippets
        - You can specify number of results and time range (e.g., last 7 days)
 
-    Choose the appropriate tool based on the user's request.
-    For web-related queries, current events, or when you need recent information,
-    use search_web. For system information, use CLI commands.
-    - curl -A "Mozilla/5.0" https://example.com (for websites)"""
+    3. Web fetch for reading specific URLs:
+       - Use when you have a specific URL and want to read its full content
+       - Extracts readable text from web pages (not HTML code)
+       - Useful for reading articles, blog posts, documentation pages
+
+    Choose the appropriate tool based on the user's request."""
 
     # Fallback response
     FALLBACK_RESPONSE = """I don't have access to the specific tools needed
@@ -141,10 +144,54 @@ class ToolDescriptions:
         },
     }
 
+    WEB_FETCH_TOOL_DESCRIPTION = {
+        "type": "function",
+        "function": {
+            "name": "fetch_webpage",
+            "description": (
+                "Fetch and extract readable text content from a specific URL. "
+                "Use this when you have a URL and want to read its full content. "
+                "Returns the page title, content, and metadata."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "url": {
+                        "type": "string",
+                        "description": (
+                            "The URL to fetch. Must start with http:// or https://"
+                        ),
+                    },
+                    "max_length": {
+                        "type": "integer",
+                        "description": (
+                            "Maximum content length to return in characters "
+                            "(default: 10000)"
+                        ),
+                        "default": 10000,
+                    },
+                    "include_links": {
+                        "type": "boolean",
+                        "description": (
+                            "Whether to include link URLs in the output "
+                            "(default: false)"
+                        ),
+                        "default": False,
+                    },
+                },
+                "required": ["url"],
+            },
+        },
+    }
+
     @classmethod
     def get_tool_definitions(cls) -> list[dict[str, Any]]:
         """Get all available tool definitions."""
-        return [cls.CLI_TOOL_DESCRIPTION, cls.WEB_SEARCH_TOOL_DESCRIPTION]
+        return [
+            cls.CLI_TOOL_DESCRIPTION,
+            cls.WEB_SEARCH_TOOL_DESCRIPTION,
+            cls.WEB_FETCH_TOOL_DESCRIPTION,
+        ]
 
 
 class ResponseTemplates:
