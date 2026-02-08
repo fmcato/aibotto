@@ -18,6 +18,8 @@ logger = logging.getLogger(__name__)
 class ToolCallingManager:
     """Manager for LLM tool calling functionality."""
 
+    MAX_ITERATIONS = 10
+
     def __init__(self) -> None:
         self.llm_client = LLMClient()
         self.cli_executor = CLIExecutor()
@@ -342,11 +344,13 @@ class ToolCallingManager:
         await db_ops.save_message(user_id, chat_id, 0, "user", message)
 
         # Prepare messages with improved system prompts
-        messages = SystemPrompts.get_conversation_prompt(history)
+        messages = SystemPrompts.get_conversation_prompt(
+            history, max_turns=self.MAX_ITERATIONS
+        )
         messages.append({"role": "user", "content": message})
 
         try:
-            max_iterations = 10
+            max_iterations = self.MAX_ITERATIONS
             iteration = 0
 
             while iteration < max_iterations:
@@ -407,11 +411,11 @@ class ToolCallingManager:
             The assistant's response
         """
         # Prepare messages with system prompt (no history for stateless)
-        messages = SystemPrompts.get_base_prompt()
+        messages = SystemPrompts.get_base_prompt(max_turns=self.MAX_ITERATIONS)
         messages.append({"role": "user", "content": message})
 
         try:
-            max_iterations = 10
+            max_iterations = self.MAX_ITERATIONS
             iteration = 0
 
             while iteration < max_iterations:

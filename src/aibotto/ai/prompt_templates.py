@@ -52,8 +52,20 @@ class SystemPrompts:
     Provide a helpful response based on the actual information you received.
     Don't mention the tool commands or technical details."""
 
-    # Tool instructions
-    TOOL_INSTRUCTIONS = """You have three types of tools available:
+    # Default max turns (can be overridden)
+    DEFAULT_MAX_TURNS = 10
+
+    @classmethod
+    def get_tool_instructions(cls, max_turns: int = 10) -> str:
+        """Get tool instructions with dynamic turn limit.
+
+        Args:
+            max_turns: Maximum number of tool-calling turns allowed
+
+        Returns:
+            Tool instructions string with turn limit
+        """
+        return f"""You have three types of tools available:
 
     1. CLI commands for system information:
        - Use for date/time, system info, file operations, calculations
@@ -71,7 +83,7 @@ class SystemPrompts:
 
     Choose the appropriate tool based on the user's request.
 
-    You have a maximum of 10 tool-calling turns to complete your task.
+    You have a maximum of {max_turns} tool-calling turns to complete your task.
     Provide a final answer within this limit."""
 
     # Fallback response
@@ -87,20 +99,35 @@ class SystemPrompts:
     - News and information gathering"""
 
     @classmethod
-    def get_base_prompt(cls) -> list[dict[str, str]]:
-        """Get the base system prompt without conversation history."""
+    def get_base_prompt(cls, max_turns: int = 10) -> list[dict[str, str]]:
+        """Get the base system prompt without conversation history.
+
+        Args:
+            max_turns: Maximum number of tool-calling turns allowed
+
+        Returns:
+            List of system message dicts
+        """
         return [
             {"role": "system", "content": cls.MAIN_SYSTEM_PROMPT},
-            {"role": "system", "content": cls.TOOL_INSTRUCTIONS},
+            {"role": "system", "content": cls.get_tool_instructions(max_turns)},
             DateTimeContext.get_current_datetime_message(),
         ]
 
     @classmethod
     def get_conversation_prompt(
-        cls, conversation_history: list[dict[str, str]]
+        cls, conversation_history: list[dict[str, str]], max_turns: int = 10
     ) -> list[dict[str, str]]:
-        """Get the complete conversation prompt with system message."""
-        messages = cls.get_base_prompt()
+        """Get the complete conversation prompt with system message.
+
+        Args:
+            conversation_history: List of previous conversation messages
+            max_turns: Maximum number of tool-calling turns allowed
+
+        Returns:
+            List of message dicts including system prompt and history
+        """
+        messages = cls.get_base_prompt(max_turns)
 
         # Add conversation history if available
         if conversation_history:

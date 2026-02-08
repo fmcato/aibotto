@@ -35,10 +35,11 @@ class TestFactualResponses:
         assert "helpful AI assistant" in SystemPrompts.MAIN_SYSTEM_PROMPT
         assert "CLI tools" in SystemPrompts.MAIN_SYSTEM_PROMPT
 
-        # Test tool instructions
-        assert "python3" in SystemPrompts.TOOL_INSTRUCTIONS
-        assert "CLI commands" in SystemPrompts.TOOL_INSTRUCTIONS
-        assert "Web search" in SystemPrompts.TOOL_INSTRUCTIONS
+        # Test tool instructions (now a method)
+        tool_instructions = SystemPrompts.get_tool_instructions()
+        assert "python3" in tool_instructions
+        assert "CLI commands" in tool_instructions
+        assert "Web search" in tool_instructions
 
         # Test fallback response
         assert "don't have access" in SystemPrompts.FALLBACK_RESPONSE
