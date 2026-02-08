@@ -36,7 +36,7 @@ class TestFactualResponses:
         assert "CLI tools" in SystemPrompts.MAIN_SYSTEM_PROMPT
 
         # Test tool instructions
-        assert "curl" in SystemPrompts.TOOL_INSTRUCTIONS
+        assert "python3" in SystemPrompts.TOOL_INSTRUCTIONS
         assert "CLI commands" in SystemPrompts.TOOL_INSTRUCTIONS
         assert "Web search" in SystemPrompts.TOOL_INSTRUCTIONS
 

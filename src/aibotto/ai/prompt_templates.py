@@ -34,11 +34,11 @@ class SystemPrompts:
     TOOL_INSTRUCTIONS = """You have three types of tools available:
 
     1. CLI commands for system information:
-       - Use for date/time, weather, system info, file operations
-       - Examples: date, uname -a, ls -la, curl wttr.in/London?format=3
+       - Use for date/time, system info, file operations, calculations
+       - Examples: date, uname -a, ls -la, python3 -c "print(2**10)"
 
     2. Web search for finding information:
-       - Use for recent news, current events, or topics not covered by CLI tools
+       - Use for recent news, current events, weather, and topics not in CLI tools
        - Returns search results with snippets
        - You can specify number of results and time range (e.g., last 7 days)
 
