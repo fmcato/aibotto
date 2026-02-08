@@ -16,6 +16,9 @@ logger = logging.getLogger(__name__)
 class WebSearchTool:
     """Web search tool using ddgs library."""
 
+    # Engines to use (excluding mojeek, google, brave)
+    ENGINES = ["duckduckgo", "wikipedia", "yahoo", "yandex", "grokipedia"]
+
     def __init__(self) -> None:
         self.ddgs = ddgs.DDGS()
         self.timeout = Config.DDGS_TIMEOUT
@@ -71,7 +74,9 @@ class WebSearchTool:
             loop = asyncio.get_event_loop()
             results = await loop.run_in_executor(
                 None,
-                lambda: list(self.ddgs.text(query, **search_params))
+                lambda: list(
+                    self.ddgs.text(query, engines=self.ENGINES, **search_params)
+                )
             )
 
             # Convert ddgs results to our format
