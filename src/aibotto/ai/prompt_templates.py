@@ -69,7 +69,10 @@ class SystemPrompts:
        - Extracts readable text from web pages (not HTML code)
        - Useful for reading articles, blog posts, documentation pages
 
-    Choose the appropriate tool based on the user's request."""
+    Choose the appropriate tool based on the user's request.
+
+    You have a maximum of 10 tool-calling turns to complete your task.
+    Provide a final answer within this limit."""
 
     # Fallback response
     FALLBACK_RESPONSE = """I don't have access to the specific tools needed

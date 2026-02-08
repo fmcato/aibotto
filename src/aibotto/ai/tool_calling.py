@@ -346,11 +346,22 @@ class ToolCallingManager:
         messages.append({"role": "user", "content": message})
 
         try:
-            max_iterations = 20
+            max_iterations = 10
             iteration = 0
 
             while iteration < max_iterations:
                 iteration += 1
+                remaining = max_iterations - iteration
+
+                # Add warning when running low on turns
+                if remaining <= 3:
+                    messages.append({
+                        "role": "system",
+                        "content": (
+                            f"Warning: Only {remaining} turn(s) remaining. "
+                            "Provide a final answer now."
+                        ),
+                    })
 
                 final_response, tool_results = await self._process_llm_iteration(
                     messages, user_id, chat_id, db_ops
@@ -400,11 +411,22 @@ class ToolCallingManager:
         messages.append({"role": "user", "content": message})
 
         try:
-            max_iterations = 20
+            max_iterations = 10
             iteration = 0
 
             while iteration < max_iterations:
                 iteration += 1
+                remaining = max_iterations - iteration
+
+                # Add warning when running low on turns
+                if remaining <= 3:
+                    messages.append({
+                        "role": "system",
+                        "content": (
+                            f"Warning: Only {remaining} turn(s) remaining. "
+                            "Provide a final answer now."
+                        ),
+                    })
 
                 final_response, tool_results = await self._process_llm_iteration(
                     messages, 0, 0, None
