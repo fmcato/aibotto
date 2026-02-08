@@ -3,9 +3,31 @@ Prompt templates for the AI system.
 """
 
 import logging
+from datetime import UTC, datetime
 from typing import Any
 
 logger = logging.getLogger(__name__)
+
+
+class DateTimeContext:
+    """Provides current date/time context for the LLM."""
+
+    @classmethod
+    def get_current_datetime_message(cls) -> dict[str, str]:
+        """Get a system message with the current date and time.
+
+        Returns:
+            A system message dict with current date/time in ISO format.
+        """
+        now = datetime.now(UTC)
+        # Format: 2025-01-15T14:30:00+00:00 Wednesday
+        iso_format = now.isoformat()
+        day_name = now.strftime("%A")
+
+        return {
+            "role": "system",
+            "content": f"Current date and time: {iso_format} ({day_name}, UTC)"
+        }
 
 
 class SystemPrompts:
@@ -67,6 +89,7 @@ class SystemPrompts:
         return [
             {"role": "system", "content": cls.MAIN_SYSTEM_PROMPT},
             {"role": "system", "content": cls.TOOL_INSTRUCTIONS},
+            DateTimeContext.get_current_datetime_message(),
         ]
 
     @classmethod
