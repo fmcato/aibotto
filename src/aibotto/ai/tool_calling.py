@@ -360,7 +360,7 @@ class ToolCallingManager:
                 # Add warning when running low on turns
                 if remaining <= 3:
                     messages.append({
-                        "role": "system",
+                        "role": "user",
                         "content": (
                             f"Warning: Only {remaining} turn(s) remaining. "
                             "Provide a final answer now."
@@ -425,7 +425,7 @@ class ToolCallingManager:
                 # Add warning when running low on turns
                 if remaining <= 3:
                     messages.append({
-                        "role": "system",
+                        "role": "user",
                         "content": (
                             f"Warning: Only {remaining} turn(s) remaining. "
                             "Provide a final answer now."
