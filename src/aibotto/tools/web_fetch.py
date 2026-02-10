@@ -3,11 +3,10 @@ Web fetch tool for extracting readable content from URLs.
 """
 
 import logging
-import re
 from typing import Any
 
 import aiohttp
-from bs4 import BeautifulSoup
+import trafilatura
 
 from ..config.settings import Config
 
@@ -52,8 +51,8 @@ class WebFetchTool:
         max_length = max_length or self.max_content_length
 
         try:
-            content = await self._fetch_url(url)
-            extracted = self._extract_content(content, url, include_links)
+            html = await self._fetch_url(url)
+            extracted = self._extract_content(html, url, include_links)
 
             # Truncate if needed
             if len(extracted["content"]) > max_length:
@@ -108,100 +107,52 @@ class WebFetchTool:
         url: str,
         include_links: bool
     ) -> dict[str, Any]:
-        """Extract readable content from HTML."""
-        soup = BeautifulSoup(html, "lxml")
-
-        # Remove unwanted elements
-        for element in soup.find_all(["script", "style", "nav", "header", "footer",
-                                       "aside", "iframe", "noscript", "form"]):
-            element.decompose()
-
-        # Try to find main content area
-        main_content = (
-            soup.find("main") or
-            soup.find("article") or
-            soup.find("div", class_=re.compile(r"content|main|article|post|entry",
-                                                re.IGNORECASE)) or
-            soup.find("div", id=re.compile(r"content|main|article|post|entry",
-                                            re.IGNORECASE)) or
-            soup.find("body")
+        """Extract readable content from HTML using trafilatura."""
+        # Use trafilatura for extraction
+        # include_links=True will preserve links in the output
+        extracted = trafilatura.extract(
+            html,
+            url=url,
+            include_links=include_links,
+            include_comments=False,
+            include_images=False,
+            output_format="txt",
+            favor_precision=True,  # Prefer precision over recall
         )
 
-        if not main_content:
-            main_content = soup
+        if not extracted:
+            # Fallback: try with less precision if nothing found
+            extracted = trafilatura.extract(
+                html,
+                url=url,
+                include_links=include_links,
+                include_comments=False,
+                include_images=False,
+                output_format="txt",
+                favor_precision=False,
+            )
 
-        # Extract title
+        content = extracted or ""
+
+        # Extract metadata using trafilatura
+        metadata = trafilatura.extract_metadata(html, default_url=url)
+
         title = ""
-        title_tag = soup.find("title")
-        if title_tag:
-            title = title_tag.get_text(strip=True)
-
-        # Try meta title if page title is too generic
-        if not title or len(title) < 5:
-            meta_title = soup.find("meta", property="og:title")
-            if meta_title and meta_title.get("content"):
-                content_val = meta_title["content"]
-                if isinstance(content_val, str):
-                    title = content_val
-
-        # Extract text content
-        content_parts = []
-
-        for element in main_content.find_all(["p", "h1", "h2", "h3", "h4", "h5", "h6",
-                                                "li", "blockquote", "pre"]):
-            text = element.get_text(strip=True)
-            if text and len(text) > 10:  # Skip very short fragments
-                # Add heading markers
-                if element.name in ["h1", "h2", "h3", "h4", "h5", "h6"]:
-                    text = f"\n## {text}\n"
-                elif element.name == "li":
-                    text = f"- {text}"
-                elif element.name == "blockquote":
-                    text = f"> {text}"
-
-                content_parts.append(text)
-
-                # Include links if requested
-                if include_links:
-                    for link in element.find_all("a", href=True):
-                        href = link.get("href", "")
-                        if isinstance(href, str) and href.startswith("http"):
-                            link_text = link.get_text(strip=True)
-                            if link_text and len(link_text) > 2:
-                                content_parts.append(f"  [Link: {link_text}]({href})")
-
-        content = "\n\n".join(content_parts)
-
-        # Clean up whitespace
-        content = re.sub(r"\n{3,}", "\n\n", content)
-        content = re.sub(r" {2,}", " ", content)
-
-        # Extract metadata
-        metadata: dict[str, str | None] = {
-            "description": None,
-            "author": None,
-            "published_date": None,
-        }
-
-        # Try to get meta description
-        meta_desc = soup.find("meta", attrs={"name": "description"})
-        if meta_desc and meta_desc.get("content"):
-            desc_val = meta_desc["content"]
-            if isinstance(desc_val, str):
-                metadata["description"] = desc_val[:500]
-
-        # Try to get author
-        meta_author = soup.find("meta", attrs={"name": "author"})
-        if meta_author and meta_author.get("content"):
-            author_val = meta_author["content"]
-            if isinstance(author_val, str):
-                metadata["author"] = author_val
+        if metadata:
+            title = metadata.title or ""
+        if not title:
+            # Fallback to URL-derived title
+            title = url.split("/")[-1] or url
 
         return {
             "title": title,
             "content": content.strip(),
             "url": url,
-            "metadata": metadata,
+            "metadata": {
+                "description": metadata.description if metadata else None,
+                "author": metadata.author if metadata else None,
+                "published_date": metadata.date if metadata else None,
+            },
         }
 
     async def close(self) -> None:
