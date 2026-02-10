@@ -81,7 +81,12 @@ class SystemPrompts:
        - Extracts readable text from web pages (not HTML code)
        - Useful for reading articles, blog posts, documentation pages
 
-    Choose the appropriate tool based on the user's request.
+    IMPORTANT GUIDELINES:
+    - Do NOT call the same tool with the same parameters multiple times
+    - Do NOT fetch the same URL more than once
+    - If a tool result is not useful, try a DIFFERENT approach instead of repeating
+    - Start with web search for news/current events, then fetch specific URLs if needed
+    - Provide your best answer based on available information, even if incomplete
 
     You have a maximum of {max_turns} tool-calling turns to complete your task.
     Provide a final answer within this limit."""

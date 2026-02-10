@@ -15,9 +15,14 @@ logger = logging.getLogger(__name__)
 class LLMClient:
     """Client for OpenAI-compatible API."""
 
+    # Timeout for LLM API calls (seconds)
+    LLM_TIMEOUT = 60.0
+
     def __init__(self) -> None:
         self.client = openai.AsyncOpenAI(
-            api_key=Config.OPENAI_API_KEY, base_url=Config.OPENAI_BASE_URL
+            api_key=Config.OPENAI_API_KEY,
+            base_url=Config.OPENAI_BASE_URL,
+            timeout=self.LLM_TIMEOUT,
         )
 
     async def chat_completion(
