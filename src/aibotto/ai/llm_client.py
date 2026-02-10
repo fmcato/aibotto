@@ -16,7 +16,7 @@ class LLMClient:
     """Client for OpenAI-compatible API."""
 
     # Timeout for LLM API calls (seconds)
-    LLM_TIMEOUT = 60.0
+    LLM_TIMEOUT = 120.0
 
     def __init__(self) -> None:
         self.client = openai.AsyncOpenAI(
