@@ -53,7 +53,7 @@ class SystemPrompts:
     Don't mention the tool commands or technical details."""
 
     # Default max turns (can be overridden)
-    DEFAULT_MAX_TURNS = 10
+    DEFAULT_MAX_TURNS = 5
 
     @classmethod
     def get_tool_instructions(cls, max_turns: int = 10) -> str:

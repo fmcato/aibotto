@@ -34,14 +34,21 @@ class LLMClient:
     ) -> dict[str, Any]:
         """Create chat completion with optional tool calling."""
         try:
-            response = await self.client.chat.completions.create(  # type: ignore[call-overload]
-                model=Config.OPENAI_MODEL,
-                messages=messages,
-                tools=tools,
-                tool_choice=tool_choice,
-                stream=False,
+            # Build request params
+            params: dict[str, Any] = {
+                "model": Config.OPENAI_MODEL,
+                "messages": messages,
+                "tools": tools,
+                "tool_choice": tool_choice,
+                "stream": False,
                 **kwargs,
-            )
+            }
+
+            # Add max_tokens if configured (can speed up reasoning models)
+            if Config.LLM_MAX_TOKENS is not None:
+                params["max_tokens"] = Config.LLM_MAX_TOKENS
+
+            response = await self.client.chat.completions.create(**params)
             return cast(dict[str, Any], response.model_dump())
         except Exception as e:
             logger.error(f"LLM API error: {e}")

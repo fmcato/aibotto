@@ -248,12 +248,22 @@ def mock_llm_client_with_responses():
     
     # Set up different responses based on the query and message history
     async def mock_chat_completion(messages, **kwargs):
-        # Find the original user message (not tool results)
+        # Find the original user message (not tool results or warnings)
         user_message = ""
         for msg in reversed(messages):
             if msg.get("role") == "user":
-                user_message = msg["content"]
-                break
+                content = msg["content"]
+                # Skip warning messages
+                if "Warning:" not in content and "turn(s) remaining" not in content:
+                    user_message = content
+                    break
+        
+        # If no non-warning user message found, use the last user message
+        if not user_message:
+            for msg in reversed(messages):
+                if msg.get("role") == "user":
+                    user_message = msg["content"]
+                    break
         
         # Check if tools parameter is provided (indicating tool calling mode)
         tools = kwargs.get('tools', [])

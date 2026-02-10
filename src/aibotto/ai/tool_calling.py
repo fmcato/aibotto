@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 class ToolCallingManager:
     """Manager for LLM tool calling functionality."""
 
-    MAX_ITERATIONS = 10
+    MAX_ITERATIONS = 5
 
     def __init__(self) -> None:
         self.llm_client = LLMClient()

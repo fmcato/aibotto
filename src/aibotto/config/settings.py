@@ -55,6 +55,13 @@ class Config:
     # SEARXNG_TIMEOUT: int = int(os.getenv("SEARXNG_TIMEOUT", "30"))
     DDGS_TIMEOUT: int = int(os.getenv("DDGS_TIMEOUT", "30"))
 
+    # LLM Configuration
+    # Max tokens for LLM responses (None = no limit, lower values = faster responses)
+    # For reasoning models, setting this to 1000-2000 can significantly improve speed
+    LLM_MAX_TOKENS: int | None = (
+        int(os.getenv("LLM_MAX_TOKENS", "0")) or None
+    )
+
     @classmethod
     def validate_config(cls) -> bool:
         """Validate configuration"""
