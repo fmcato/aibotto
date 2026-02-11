@@ -11,24 +11,36 @@ from typing import Any
 logger = logging.getLogger(__name__)
 
 TELEGRAM_MAX_LENGTH_PER_SECOND = 4095
+# Reserve space for continuation markers (header/footer/continuation text)
+MARKER_OVERHEAD = 100
 
 
 class MessageSplitter:
     """Smart message splitter for rate limiting."""
 
     @staticmethod
-    def split_message_for_rate_limiting(message: str) -> list[str]:
+    def split_message_for_rate_limiting(
+        message: str, reserve_marker_space: bool = False
+    ) -> list[str]:
         """
         Split a message into chunks that respect Telegram's 4095
         characters per second rate limit.
 
         Args:
             message: The message to split
+            reserve_marker_space: If True, reserve space for continuation markers
 
         Returns:
             List of message chunks that can be sent within rate limits
         """
-        if len(message) <= TELEGRAM_MAX_LENGTH_PER_SECOND:
+        # Use smaller limit if we need to reserve space for markers
+        max_length = (
+            TELEGRAM_MAX_LENGTH_PER_SECOND - MARKER_OVERHEAD
+            if reserve_marker_space
+            else TELEGRAM_MAX_LENGTH_PER_SECOND
+        )
+
+        if len(message) <= max_length:
             return [message]
 
         chunks = []
@@ -37,7 +49,7 @@ class MessageSplitter:
         # First, try to split by natural boundaries
         for paragraph in message.split('\n\n'):
             if (len(current_chunk) + len(paragraph) + 2
-                <= TELEGRAM_MAX_LENGTH_PER_SECOND):
+                <= max_length):
                 # Add paragraph to current chunk
                 if current_chunk:
                     current_chunk += '\n\n'
@@ -49,13 +61,13 @@ class MessageSplitter:
                     current_chunk = ""
 
                 # If paragraph itself is too long, split it further
-                if len(paragraph) > TELEGRAM_MAX_LENGTH_PER_SECOND:
+                if len(paragraph) > max_length:
                     # Try to split by sentences first
                     sentences = re.split(r'(?<=[.!?])\s+', paragraph)
 
                     for sentence in sentences:
                         if (len(current_chunk) + len(sentence) + 1
-                            <= TELEGRAM_MAX_LENGTH_PER_SECOND):
+                            <= max_length):
                             if current_chunk:
                                 current_chunk += ' '
                             current_chunk += sentence
@@ -65,12 +77,12 @@ class MessageSplitter:
                                 current_chunk = ""
 
                             # If sentence is too long, split by words
-                            if len(sentence) > TELEGRAM_MAX_LENGTH_PER_SECOND:
+                            if len(sentence) > max_length:
                                 words = sentence.split(' ')
 
                                 for word in words:
                                     if (len(current_chunk) + len(word) + 1
-                                        <= TELEGRAM_MAX_LENGTH_PER_SECOND):
+                                        <= max_length):
                                         if current_chunk:
                                             current_chunk += ' '
                                         current_chunk += word
@@ -99,12 +111,12 @@ class MessageSplitter:
         # If we still have very long chunks (fallback), split by character limit
         final_chunks = []
         for chunk in chunks:
-            if len(chunk) <= TELEGRAM_MAX_LENGTH_PER_SECOND:
+            if len(chunk) <= max_length:
                 final_chunks.append(chunk)
             else:
                 # Split by character limit as last resort
-                for i in range(0, len(chunk), TELEGRAM_MAX_LENGTH_PER_SECOND):
-                    final_chunks.append(chunk[i:i + TELEGRAM_MAX_LENGTH_PER_SECOND])
+                for i in range(0, len(chunk), max_length):
+                    final_chunks.append(chunk[i:i + max_length])
 
         logger.info(f"Split message into {len(final_chunks)} chunks for rate limiting")
         return final_chunks
@@ -146,6 +158,7 @@ class MessageSplitter:
     def add_continuation_markers(chunks: list[str]) -> list[str]:
         """
         Add continuation markers to message chunks for better readability.
+        Ensures marked chunks don't exceed Telegram's character limit.
 
         Args:
             chunks: List of message chunks
@@ -161,16 +174,24 @@ class MessageSplitter:
             if i == 0:
                 # First chunk - add header
                 header = f"📄 **Message (Part 1 of {len(chunks)}):**\n\n"
-                marked_chunks.append(header + chunk)
+                marked_chunk = header + chunk
             elif i == len(chunks) - 1:
                 # Last chunk - add footer
                 footer = "\n\n---\n✅ **End of message**"
-                marked_chunks.append(chunk + footer)
+                marked_chunk = chunk + footer
             else:
                 # Middle chunks - add continuation marker
                 continuation = (
                     f"\n\n---\n📄 **Continuation (Part {i + 1} of {len(chunks)}):**\n\n"
                 )
-                marked_chunks.append(chunk + continuation)
+                marked_chunk = chunk + continuation
+
+            # Safety check: truncate if still exceeds limit (shouldn't happen
+            # if reserve_marker_space was used during splitting)
+            if len(marked_chunk) > TELEGRAM_MAX_LENGTH_PER_SECOND:
+                excess = len(marked_chunk) - TELEGRAM_MAX_LENGTH_PER_SECOND
+                marked_chunk = marked_chunk[:-(excess + 3)] + "..."
+
+            marked_chunks.append(marked_chunk)
 
         return marked_chunks

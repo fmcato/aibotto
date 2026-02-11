@@ -165,7 +165,10 @@ I provide factual information using safe system tools. Here's what I can help wi
             )
 
             # Split response if it's too long for rate limiting
-            chunks = MessageSplitter.split_message_for_rate_limiting(response)
+            # Reserve space for continuation markers when we'll have multiple chunks
+            chunks = MessageSplitter.split_message_for_rate_limiting(
+                response, reserve_marker_space=len(response) > 4095
+            )
             if len(chunks) > 1:
                 # Add continuation markers for better readability
                 chunks = MessageSplitter.add_continuation_markers(chunks)
