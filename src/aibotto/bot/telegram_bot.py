@@ -204,9 +204,23 @@ I provide factual information using safe system tools. Here's what I can help wi
                 MessageHandler(filters.TEXT & ~filters.COMMAND, self._handle_message)
             )
 
+            # Initialize and clear any existing webhook/conflicts
+            # This prevents "terminated by other getUpdates request" errors
+            import asyncio
+
+            async def setup_bot() -> None:
+                if self.application:
+                    await self.application.initialize()
+                    # Delete any existing webhook to allow polling
+                    await self.application.bot.delete_webhook(drop_pending_updates=True)
+                    logger.info("✅ Cleared any existing webhooks and pending updates")
+
+            # Run setup synchronously
+            asyncio.get_event_loop().run_until_complete(setup_bot())
+
             # Start polling
             logger.info("🤖 Bot started. Polling for updates...")
-            self.application.run_polling()
+            self.application.run_polling(drop_pending_updates=True)
 
         except Exception as e:
             logger.error(f"❌ Failed to run bot: {e}")
