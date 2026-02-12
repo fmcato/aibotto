@@ -33,6 +33,10 @@ RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 # Create non-root user for security
 RUN useradd --create-home --shell /bin/bash aibotto && \
     chown -R aibotto:aibotto /app
+
+# Create data directory with correct permissions
+RUN mkdir -p /app/data && chown -R aibotto:aibotto /app/data
+
 USER aibotto
 
 # Expose port (if needed for future web interface)
