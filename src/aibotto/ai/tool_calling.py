@@ -7,6 +7,7 @@ import json
 import logging
 from typing import Any
 
+from ..config.settings import Config
 from ..db.operations import DatabaseOperations
 from ..tools import CLIExecutor, fetch_webpage, search_web
 from .llm_client import LLMClient
@@ -18,11 +19,10 @@ logger = logging.getLogger(__name__)
 class ToolCallingManager:
     """Manager for LLM tool calling functionality."""
 
-    MAX_ITERATIONS = 5
-
     def __init__(self) -> None:
         self.llm_client = LLMClient()
         self.cli_executor = CLIExecutor()
+        self.max_iterations = Config.MAX_TOOL_ITERATIONS
 
     def _get_tool_definitions(self) -> list[dict[str, Any]]:
         """Get tool definitions for the LLM."""
@@ -345,12 +345,12 @@ class ToolCallingManager:
 
         # Prepare messages with improved system prompts
         messages = SystemPrompts.get_conversation_prompt(
-            history, max_turns=self.MAX_ITERATIONS
+            history, max_turns=self.max_iterations
         )
         messages.append({"role": "user", "content": message})
 
         try:
-            max_iterations = self.MAX_ITERATIONS
+            max_iterations = self.max_iterations
             iteration = 0
 
             while iteration < max_iterations:
@@ -411,11 +411,11 @@ class ToolCallingManager:
             The assistant's response
         """
         # Prepare messages with system prompt (no history for stateless)
-        messages = SystemPrompts.get_base_prompt(max_turns=self.MAX_ITERATIONS)
+        messages = SystemPrompts.get_base_prompt(max_turns=self.max_iterations)
         messages.append({"role": "user", "content": message})
 
         try:
-            max_iterations = self.MAX_ITERATIONS
+            max_iterations = self.max_iterations
             iteration = 0
 
             while iteration < max_iterations:

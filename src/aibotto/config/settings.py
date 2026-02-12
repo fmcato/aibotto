@@ -62,6 +62,9 @@ class Config:
         int(os.getenv("LLM_MAX_TOKENS", "0")) or None
     )
 
+    # Tool Calling Configuration
+    MAX_TOOL_ITERATIONS: int = int(os.getenv("MAX_TOOL_ITERATIONS", "10"))
+
     @classmethod
     def validate_config(cls) -> bool:
         """Validate configuration"""
