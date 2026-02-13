@@ -8,13 +8,15 @@ import sys
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
 
 import asyncio
+import pytest
 from unittest.mock import AsyncMock, MagicMock
 
 from src.aibotto.ai.tool_calling import ToolCallingManager
 from src.aibotto.db.operations import DatabaseOperations
 
 
-async def test_complete_flow():
+@pytest.mark.asyncio
+async def test_complete_flow(real_db_ops):
     """Test the complete flow with real database and security checks."""
     print("=== Testing Complete Flow ===")
 
@@ -50,8 +52,8 @@ async def test_complete_flow():
         side_effect=[mock_response, mock_final_response]
     )
 
-    # Use a real database
-    db_ops = DatabaseOperations()
+    # Use the fixture-provided database
+    db_ops = real_db_ops
 
     try:
         result = await manager.process_user_request(
@@ -89,7 +91,8 @@ async def test_complete_flow():
         traceback.print_exc()
 
 
-async def test_direct_response():
+@pytest.mark.asyncio
+async def test_direct_response(real_db_ops):
     """Test direct response without tool calls."""
     print("\n=== Testing Direct Response ===")
 
@@ -106,8 +109,8 @@ async def test_direct_response():
     manager.llm_client.chat_completion = AsyncMock(return_value=mock_response)
     manager.cli_executor = MagicMock()
 
-    # Use a real database
-    db_ops = DatabaseOperations()
+    # Use the fixture-provided database
+    db_ops = real_db_ops
 
     try:
         result = await manager.process_user_request(
