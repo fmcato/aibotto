@@ -3,11 +3,11 @@ End-to-end tests for basic tool interactions.
 Tests the actual flow from user input to LLM response with tool execution.
 """
 
-import pytest
 from unittest.mock import AsyncMock, Mock, patch
 
+import pytest
+
 from src.aibotto.ai.tool_calling import ToolCallingManager
-from src.aibotto.tools.cli_executor import CLIExecutor
 from src.aibotto.config.settings import Config
 
 

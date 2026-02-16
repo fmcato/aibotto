@@ -2,11 +2,12 @@
 Unit tests for CLI interface.
 """
 
-import pytest
 from unittest.mock import AsyncMock, patch
 
-from aibotto.prompt_cli import parse_args, run_prompt, main
+import pytest
+
 from aibotto.ai.tool_calling import ToolCallingManager
+from aibotto.prompt_cli import main, parse_args, run_prompt
 
 
 class TestCLIInterface:

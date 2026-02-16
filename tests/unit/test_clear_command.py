@@ -2,8 +2,9 @@
 Tests for the /clear command functionality.
 """
 
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
 
 from src.aibotto.db.operations import DatabaseOperations
 
@@ -35,7 +36,7 @@ class TestClearCommand:
 
         # Import the actual handler function
         from src.aibotto.bot.telegram_bot import TelegramBot
-        
+
         # Create a bot instance but mock the database initialization
         with patch.object(DatabaseOperations, '__init__', return_value=None):
             with patch.object(DatabaseOperations, 'init_database', return_value=None):
@@ -67,7 +68,7 @@ class TestClearCommand:
 
         # Import the actual handler function
         from src.aibotto.bot.telegram_bot import TelegramBot
-        
+
         # Create a bot instance but mock the database initialization
         with patch.object(DatabaseOperations, '__init__', return_value=None):
             with patch.object(DatabaseOperations, 'init_database', return_value=None):
@@ -85,10 +86,10 @@ class TestClearCommand:
     def test_telegram_bot_has_clear_handler(self):
         """Test that TelegramBot has the _handle_clear method."""
         from src.aibotto.bot.telegram_bot import TelegramBot
-        
+
         # Check that the method exists
         assert hasattr(TelegramBot, '_handle_clear')
-        
+
         # Check that it's an async method
         import inspect
         assert inspect.iscoroutinefunction(TelegramBot._handle_clear)

@@ -2,8 +2,9 @@
 Unit tests for web fetch tool.
 """
 
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
 
 from src.aibotto.tools.web_fetch import WebFetchTool, fetch_webpage
 
@@ -19,7 +20,9 @@ class TestWebFetchTool:
     def test_init(self, web_fetch_tool):
         """Test WebFetchTool initialization."""
         assert web_fetch_tool.max_content_length == 10000
-        assert "Mozilla" in web_fetch_tool.user_agent
+        assert "Mozilla" in web_fetch_tool._get_random_user_agent()
+        assert web_fetch_tool.max_retries == 3
+        assert web_fetch_tool.retry_delay == 1.0
 
     @pytest.mark.asyncio
     async def test_fetch_empty_url(self, web_fetch_tool):
@@ -54,7 +57,7 @@ class TestWebFetchTool:
         """
 
         with patch.object(
-            web_fetch_tool, '_fetch_url', return_value=html_content
+            web_fetch_tool, '_fetch_url_with_retry', return_value=html_content
         ):
             result = await web_fetch_tool.fetch("https://example.com")
 
@@ -76,7 +79,7 @@ class TestWebFetchTool:
         """
 
         with patch.object(
-            web_fetch_tool, '_fetch_url', return_value=html_content
+            web_fetch_tool, '_fetch_url_with_retry', return_value=html_content
         ):
             result = await web_fetch_tool.fetch(
                 "https://example.com", max_length=1000
@@ -100,7 +103,7 @@ class TestWebFetchTool:
         """
 
         with patch.object(
-            web_fetch_tool, '_fetch_url', return_value=html_content
+            web_fetch_tool, '_fetch_url_with_retry', return_value=html_content
         ):
             result = await web_fetch_tool.fetch(
                 "https://example.com", include_links=True
@@ -131,7 +134,7 @@ class TestWebFetchTool:
         """
 
         with patch.object(
-            web_fetch_tool, '_fetch_url', return_value=html_content
+            web_fetch_tool, '_fetch_url_with_retry', return_value=html_content
         ):
             result = await web_fetch_tool.fetch("https://example.com")
 
@@ -158,7 +161,7 @@ class TestWebFetchTool:
         """
 
         with patch.object(
-            web_fetch_tool, '_fetch_url', return_value=html_content
+            web_fetch_tool, '_fetch_url_with_retry', return_value=html_content
         ):
             result = await web_fetch_tool.fetch("https://example.com")
 
@@ -183,7 +186,7 @@ class TestWebFetchTool:
         """
 
         with patch.object(
-            web_fetch_tool, '_fetch_url', return_value=html_content
+            web_fetch_tool, '_fetch_url_with_retry', return_value=html_content
         ):
             result = await web_fetch_tool.fetch("https://example.com")
 
@@ -210,7 +213,7 @@ class TestWebFetchTool:
         """
 
         with patch.object(
-            web_fetch_tool, '_fetch_url', return_value=html_content
+            web_fetch_tool, '_fetch_url_with_retry', return_value=html_content
         ):
             result = await web_fetch_tool.fetch("https://example.com")
 
@@ -232,7 +235,7 @@ class TestWebFetchTool:
         """
 
         with patch.object(
-            web_fetch_tool, '_fetch_url', return_value=html_content
+            web_fetch_tool, '_fetch_url_with_retry', return_value=html_content
         ):
             result = await web_fetch_tool.fetch("https://example.com")
 
@@ -328,7 +331,7 @@ class TestFetchWebpage:
 
 
 class TestFetchUrl:
-    """Test cases for _fetch_url method."""
+    """Test cases for _fetch_url_with_retry method."""
 
     @pytest.fixture
     def web_fetch_tool(self):
@@ -356,7 +359,7 @@ class TestFetchUrl:
             mock_client.return_value.__aexit__ = AsyncMock(return_value=None)
 
             with pytest.raises(RuntimeError, match="Unsupported content type"):
-                await web_fetch_tool._fetch_url("https://example.com/doc.pdf")
+                await web_fetch_tool._fetch_url_with_retry("https://example.com/doc.pdf", 0)
 
     @pytest.mark.asyncio
     async def test_fetch_url_html_content(self, web_fetch_tool):
@@ -379,6 +382,6 @@ class TestFetchUrl:
             )
             mock_client.return_value.__aexit__ = AsyncMock(return_value=None)
 
-            result = await web_fetch_tool._fetch_url("https://example.com")
+            result = await web_fetch_tool._fetch_url_with_retry("https://example.com", 0)
 
             assert result == html

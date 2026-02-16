@@ -3,6 +3,7 @@ Tests for message splitting functionality.
 """
 
 import pytest
+
 from aibotto.utils.message_splitter import MessageSplitter
 
 
@@ -23,9 +24,9 @@ class TestMessageSplitter:
         paragraph2 = "This is paragraph 2. " * 100
         paragraph3 = "This is paragraph 3. " * 100
         message = f"{paragraph1}\n\n{paragraph2}\n\n{paragraph3}"
-        
+
         chunks = MessageSplitter.split_message_for_rate_limiting(message)
-        
+
         # Should be split into 3 chunks (one per paragraph)
         assert len(chunks) == 3
         assert paragraph1 in chunks[0]
@@ -38,9 +39,9 @@ class TestMessageSplitter:
         sentence = "This is a sentence. " * 50
         paragraph = sentence * 10  # Make it very long
         message = paragraph
-        
+
         chunks = MessageSplitter.split_message_for_rate_limiting(message)
-        
+
         # Should be split into multiple chunks
         assert len(chunks) > 1
         # Each chunk should end with proper sentence punctuation
@@ -53,9 +54,9 @@ class TestMessageSplitter:
         word = "supercalifragilisticexpialidocious"
         sentence = " ".join([word] * 200)  # Make it very long
         message = sentence
-        
+
         chunks = MessageSplitter.split_message_for_rate_limiting(message)
-        
+
         # Should be split into multiple chunks
         assert len(chunks) > 1
         # Each chunk should contain complete words
@@ -69,18 +70,18 @@ class TestMessageSplitter:
         message = "Short. " * 1000  # Make it long enough to split
         chunks = MessageSplitter.split_message_for_rate_limiting(message)
         marked_chunks = MessageSplitter.add_continuation_markers(chunks)
-        
+
         # Should have the same number of chunks
         assert len(marked_chunks) == len(chunks)
-        
+
         # First chunk should have header
         assert "📄 **Message (Part 1 of" in marked_chunks[0]
         assert marked_chunks[0].startswith("📄 **Message (Part 1 of")
-        
+
         # Middle chunks should have continuation markers
         if len(marked_chunks) > 2:
             assert "📄 **Continuation (Part" in marked_chunks[1]
-        
+
         # Last chunk should have footer
         assert "✅ **End of message**" in marked_chunks[-1]
         assert marked_chunks[-1].endswith("✅ **End of message**")
@@ -90,7 +91,7 @@ class TestMessageSplitter:
         message = "This is a single chunk message"
         chunks = MessageSplitter.split_message_for_rate_limiting(message)
         marked_chunks = MessageSplitter.add_continuation_markers(chunks)
-        
+
         # Should be unchanged
         assert len(marked_chunks) == 1
         assert marked_chunks[0] == message
@@ -98,15 +99,15 @@ class TestMessageSplitter:
     def test_send_chunks_with_rate_limit_async(self):
         """Test that send_chunks_with_rate_limit works asynchronously."""
         import asyncio
-        
+
         async def mock_send_func(text):
             """Mock send function that just logs the text."""
             print(f"Sending: {text[:50]}...")
             await asyncio.sleep(0.1)  # Simulate network delay
-        
+
         message = "Test. " * 500  # Make it long enough to split
         chunks = MessageSplitter.split_message_for_rate_limiting(message)
-        
+
         # This should not raise an exception
         try:
             asyncio.run(MessageSplitter.send_chunks_with_rate_limit(
@@ -126,7 +127,7 @@ class TestMessageSplitter:
         # Create a message that's exactly 4095 characters
         message = "A" * 4095
         chunks = MessageSplitter.split_message_for_rate_limiting(message)
-        
+
         # Should not be split
         assert len(chunks) == 1
         assert len(chunks[0]) == 4095
@@ -136,7 +137,7 @@ class TestMessageSplitter:
         # Create a message that's just over 4095 characters
         message = "A" * 4096
         chunks = MessageSplitter.split_message_for_rate_limiting(message)
-        
+
         # Should be split into 2 chunks
         assert len(chunks) == 2
         assert len(chunks[0]) <= 4095

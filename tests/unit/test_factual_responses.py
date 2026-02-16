@@ -2,7 +2,7 @@
 Unit tests for factual response system.
 """
 
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
 
@@ -81,11 +81,11 @@ class TestFactualResponses:
                 }
             ]
         }
-        
+
         # Mock the chat_completion method to return our mock response
         async def mock_chat_completion(*args, **kwargs):
             return mock_response
-        
+
         tool_manager.llm_client.chat_completion = mock_chat_completion
 
         # Mock database operations
@@ -110,17 +110,17 @@ class TestFactualResponses:
         # Test that CLI executor can execute commands directly
         # Since the CLI executor is mocked, we'll test that it was called correctly
         test_command = "date"
-        
+
         # Execute the command
         result = await tool_manager.cli_executor.execute_command(test_command)
-        
+
         # Should return a string (the mock result)
         assert isinstance(result, str)
         assert len(result) > 0
-        
+
         # Test that the command was executed successfully
         assert "command not found" not in result.lower()
-        
+
         # Verify the command was called with the right arguments
         tool_manager.cli_executor.execute_command.assert_called_with(test_command)
 

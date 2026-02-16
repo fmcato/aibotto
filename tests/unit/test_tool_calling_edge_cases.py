@@ -2,7 +2,7 @@
 Unit tests for tool calling edge cases.
 """
 
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
 

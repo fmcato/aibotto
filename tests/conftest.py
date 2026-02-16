@@ -5,14 +5,14 @@ Pytest configuration and fixtures.
 import asyncio
 import os
 import tempfile
-from unittest.mock import AsyncMock, Mock
+from unittest.mock import AsyncMock
 
 import pytest
 
 from src.aibotto.ai.llm_client import LLMClient
-from src.aibotto.tools.cli_executor import CLIExecutor
 from src.aibotto.config.settings import Config
 from src.aibotto.db.operations import DatabaseOperations
+from src.aibotto.tools.cli_executor import CLIExecutor
 
 
 @pytest.fixture(scope="session")
@@ -245,7 +245,7 @@ def security_test_data():
 def mock_llm_client_with_responses():
     """Mock LLM client with predictable responses for tool calling tests."""
     client = TestLLMClient()
-    
+
     # Set up different responses based on the query and message history
     async def mock_chat_completion(messages, **kwargs):
         # Find the original user message (not tool results or warnings)
@@ -257,23 +257,23 @@ def mock_llm_client_with_responses():
                 if "Warning:" not in content and "turn(s) remaining" not in content:
                     user_message = content
                     break
-        
+
         # If no non-warning user message found, use the last user message
         if not user_message:
             for msg in reversed(messages):
                 if msg.get("role") == "user":
                     user_message = msg["content"]
                     break
-        
+
         # Check if tools parameter is provided (indicating tool calling mode)
         tools = kwargs.get('tools', [])
-        
+
         # Check if we have tool results in the messages
         tool_results = [msg for msg in messages if msg.get("role") == "tool"]
-        
+
         # Check if we have error results in the messages
         error_results = [msg for msg in messages if msg.get("role") == "tool" and "error" in msg.get("content", "").lower()]
-        
+
         if tools and not tool_results:
             # First call with tools - return tool calls
             if "day" in user_message.lower() or "date" in user_message.lower():
@@ -367,7 +367,7 @@ def mock_llm_client_with_responses():
                         }
                     }]
                 }
-        
+
         elif tools and error_results:
             # Handle error case - return error response
             return {
@@ -378,7 +378,7 @@ def mock_llm_client_with_responses():
                     }
                 }]
             }
-        
+
         elif tools and tool_results:
             # Second call with tools and tool results - return final response
             if "date" in user_message.lower() and "time" in user_message.lower():
@@ -453,7 +453,7 @@ def mock_llm_client_with_responses():
                         }
                     }]
                 }
-        
+
         else:
             # Non-tool calling mode - return direct responses
             if "hello" in user_message.lower():
@@ -492,7 +492,7 @@ def mock_llm_client_with_responses():
                         }
                     }]
                 }
-    
+
     client.chat_completion = mock_chat_completion
     return client
 
@@ -501,10 +501,10 @@ def mock_llm_client_with_responses():
 def mock_llm_client_direct_response():
     """Mock LLM client that returns direct responses without tool calls."""
     client = TestLLMClient()
-    
+
     async def mock_chat_completion(messages, **kwargs):
         user_message = messages[-1]["content"] if messages else ""
-        
+
         if "hello" in user_message.lower():
             return {
                 "choices": [{
@@ -523,7 +523,7 @@ def mock_llm_client_direct_response():
                     }
                 }]
             }
-    
+
     client.chat_completion = mock_chat_completion
     return client
 
@@ -532,13 +532,13 @@ def mock_llm_client_direct_response():
 def mock_llm_client_with_error():
     """Mock LLM client that returns error responses."""
     client = TestLLMClient()
-    
+
     async def mock_chat_completion(messages, **kwargs):
         user_message = messages[-1]["content"] if messages else ""
-        
+
         if "error" in user_message.lower():
             raise Exception("Test error from LLM client")
-        
+
         return {
             "choices": [{
                 "message": {
@@ -547,6 +547,6 @@ def mock_llm_client_with_error():
                 }
             }]
         }
-    
+
     client.chat_completion = mock_chat_completion
     return client

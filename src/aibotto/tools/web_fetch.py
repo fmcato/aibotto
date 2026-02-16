@@ -2,7 +2,9 @@
 Web fetch tool for extracting readable content from URLs.
 """
 
+import asyncio
 import logging
+import random
 from typing import Any
 
 import aiohttp
@@ -19,19 +21,83 @@ class WebFetchTool:
     def __init__(self) -> None:
         self.timeout = Config.DDGS_TIMEOUT  # Reuse timeout config
         self.max_content_length = 10000  # Max characters to return
-        self.user_agent = (
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
-            "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-        )
+        self.max_retries = Config.WEB_FETCH_MAX_RETRIES
+        self.retry_delay = Config.WEB_FETCH_RETRY_DELAY
+        self.strict_content_type = Config.WEB_FETCH_STRICT_CONTENT_TYPE
+
+        # Multiple user agents to rotate through
+        self.user_agents = [
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+            "AppleWebKit/537.36 (KHTML, like Gecko) "
+            "Chrome/120.0.0.0 Safari/537.36",
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+            "AppleWebKit/537.36 (KHTML, like Gecko) "
+            "Chrome/120.0.0.0 Safari/537.36",
+            "Mozilla/5.0 (X11; Linux x86_64) "
+            "AppleWebKit/537.36 (KHTML, like Gecko) "
+            "Chrome/120.0.0.0 Safari/537.36",
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:121.0) "
+            "Gecko/20100101 Firefox/121.0",
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:121.0) "
+            "Gecko/20100101 Firefox/121.0",
+            "Mozilla/5.0 (X11; Linux x86_64; rv:121.0) "
+            "Gecko/20100101 Firefox/121.0",
+            "Mozilla/5.0 (iPhone; CPU iPhone OS 15_6 like Mac OS X) "
+            "AppleWebKit/605.1.15 (KHTML, like Gecko) "
+            "Version/15.6 Mobile/15E148 Safari/604.1",
+            "Mozilla/5.0 (iPad; CPU OS 15_6 like Mac OS X) "
+            "AppleWebKit/605.1.15 (KHTML, like Gecko) "
+            "Version/15.6 Mobile/15E148 Safari/604.1",
+        ]
+
+        # Common browser headers
+        self.common_headers = {
+            "Accept": (
+                "text/html,application/xhtml+xml,application/xml;"
+                "q=0.9,image/avif,image/webp,image/apng,*/*;"
+                "q=0.8,application/signed-exchange;v=b3;q=0.7"
+            ),
+            "Accept-Language": "en-US,en;q=0.9",
+            "Accept-Encoding": "gzip, deflate, br",
+            "DNT": "1",
+            "Connection": "keep-alive",
+            "Upgrade-Insecure-Requests": "1",
+            "Sec-Fetch-Dest": "document",
+            "Sec-Fetch-Mode": "navigate",
+            "Sec-Fetch-Site": "none",
+            "Sec-Fetch-User": "?1",
+            "Cache-Control": "max-age=0",
+        }
+
+    def _get_random_user_agent(self) -> str:
+        """Get a random user agent from the list."""
+        return random.choice(self.user_agents)
+
+    def _get_headers(self) -> dict[str, str]:
+        """Get realistic browser headers with random user agent."""
+        headers = self.common_headers.copy()
+        headers["User-Agent"] = self._get_random_user_agent()
+
+        # Add Accept-Language variation
+        languages = [
+            "en-US,en;q=0.9",
+            "en-GB,en;q=0.9",
+            "en-CA,en;q=0.9",
+            "en-AU,en;q=0.9",
+            "en-ZA,en;q=0.9",
+        ]
+        headers["Accept-Language"] = random.choice(languages)
+
+        return headers
 
     async def fetch(
         self,
         url: str,
         max_length: int | None = None,
-        include_links: bool = False
+        include_links: bool = False,
     ) -> dict[str, Any]:
         """
-        Fetch a URL and extract readable text content.
+        Fetch a URL and extract readable text content with retry logic.
 
         Args:
             url: URL to fetch
@@ -50,39 +116,102 @@ class WebFetchTool:
 
         max_length = max_length or self.max_content_length
 
-        try:
-            html = await self._fetch_url(url)
-            extracted = self._extract_content(html, url, include_links)
+        # Retry logic with exponential backoff
+        for attempt in range(self.max_retries):
+            try:
+                html = await self._fetch_url_with_retry(url, attempt)
+                extracted = self._extract_content(html, url, include_links)
 
-            # Truncate if needed
-            if len(extracted["content"]) > max_length:
-                extracted["content"] = (
-                    extracted["content"][:max_length] +
-                    "\n\n[Content truncated...]"
+                # Truncate if needed
+                if len(extracted["content"]) > max_length:
+                    extracted["content"] = (
+                        extracted["content"][:max_length] +
+                        "\n\n[Content truncated...]"
+                    )
+                    extracted["truncated"] = True
+                else:
+                    extracted["truncated"] = False
+
+                extracted["content_length"] = len(extracted["content"])
+                return extracted
+
+            except aiohttp.ClientError as e:
+                if attempt == self.max_retries - 1:
+                    logger.error(
+                        f"HTTP error fetching {url} after "
+                        f"{self.max_retries} attempts: {e}"
+                    )
+                    raise RuntimeError(
+                        f"Failed to fetch URL after {self.max_retries} "
+                        f"attempts: {str(e)}"
+                    )
+                else:
+                    delay = self.retry_delay * (2 ** attempt) + random.uniform(0, 1)
+                    logger.warning(
+                        f"Attempt {attempt + 1} failed for {url}, "
+                        f"retrying in {delay:.2f}s: {e}"
+                    )
+                    await asyncio.sleep(delay)
+
+            except Exception as e:
+                if attempt == self.max_retries - 1:
+                    logger.error(
+                        f"Error fetching {url} after "
+                        f"{self.max_retries} attempts: {e}"
+                    )
+                    raise RuntimeError(
+                        f"Failed to fetch URL after {self.max_retries} "
+                        f"attempts: {str(e)}"
+                    )
+                else:
+                    delay = self.retry_delay * (2 ** attempt) + random.uniform(0, 1)
+                    logger.warning(
+                        f"Attempt {attempt + 1} failed for {url}, "
+                        f"retrying in {delay:.2f}s: {e}"
+                    )
+                    await asyncio.sleep(delay)
+
+        # This should never be reached due to the raise in the loop
+        raise RuntimeError(
+            f"Failed to fetch URL after {self.max_retries} attempts"
+        )
+
+    async def _fetch_url_with_retry(self, url: str, attempt: int) -> str:
+        """Fetch URL content with proper headers and timeout, with retry logic."""
+        headers = self._get_headers()
+
+        # Add some variation to headers on different attempts to avoid detection
+        if attempt > 0:
+            # Add a random referer
+            referers = [
+                "https://www.google.com/",
+                "https://www.bing.com/",
+                "https://duckduckgo.com/",
+                "https://www.yahoo.com/",
+                "https://www.reddit.com/",
+                "https://news.ycombinator.com/",
+            ]
+            headers["Referer"] = random.choice(referers)
+
+            # Add Accept-Language variation
+            languages = ["en-US,en;q=0.9", "en-GB,en;q=0.9", "en-CA,en;q=0.9"]
+            headers["Accept-Language"] = random.choice(languages)
+
+            # Add some additional headers that real browsers send
+            if random.random() > 0.5:
+                headers["Sec-Ch-Ua"] = (
+                    '"Not_A Brand";v="8", "Chromium";v="120", '
+                    '"Google Chrome";v="120"'
                 )
-                extracted["truncated"] = True
-            else:
-                extracted["truncated"] = False
+                headers["Sec-Ch-Ua-Mobile"] = "?0"
+                headers["Sec-Ch-Ua-Platform"] = '"Windows"'
 
-            extracted["content_length"] = len(extracted["content"])
-            return extracted
-
-        except aiohttp.ClientError as e:
-            logger.error(f"HTTP error fetching {url}: {e}")
-            raise RuntimeError(f"Failed to fetch URL: {str(e)}")
-        except Exception as e:
-            logger.error(f"Error fetching {url}: {e}")
-            raise RuntimeError(f"Failed to fetch URL: {str(e)}")
-
-    async def _fetch_url(self, url: str) -> str:
-        """Fetch URL content with proper headers and timeout."""
-        headers = {
-            "User-Agent": self.user_agent,
-            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-            "Accept-Language": "en-US,en;q=0.5",
-            "Accept-Encoding": "gzip, deflate",
-            "Connection": "keep-alive",
-        }
+            # Add cookie header to simulate returning visitor
+            if random.random() > 0.7:
+                headers["Cookie"] = (
+                    f"session_{random.randint(1000, 9999)}="
+                    f"{random.randint(100000, 999999)}"
+                )
 
         timeout = aiohttp.ClientTimeout(total=self.timeout)
 
@@ -93,11 +222,19 @@ class WebFetchTool:
                 # Check content type
                 content_type = response.headers.get("Content-Type", "")
                 supported_types = ["text/html", "application/xhtml"]
+
                 if not any(ct in content_type for ct in supported_types):
-                    raise RuntimeError(
-                        f"Unsupported content type: {content_type}. "
-                        "Only HTML pages are supported."
-                    )
+                    if self.strict_content_type:
+                        raise RuntimeError(
+                            f"Unsupported content type: {content_type}. "
+                            "Only HTML pages are supported."
+                        )
+                    else:
+                        # If not strict, try to process anyway but log a warning
+                        logger.warning(
+                            f"Non-HTML content type '{content_type}' for "
+                            f"{url}, attempting to process anyway"
+                        )
 
                 return await response.text()
 
@@ -105,7 +242,7 @@ class WebFetchTool:
         self,
         html: str,
         url: str,
-        include_links: bool
+        include_links: bool,
     ) -> dict[str, Any]:
         """Extract readable content from HTML using trafilatura."""
         # Use trafilatura for extraction
@@ -167,7 +304,7 @@ web_fetch_tool = WebFetchTool()
 async def fetch_webpage(
     url: str,
     max_length: int | None = None,
-    include_links: bool = False
+    include_links: bool = False,
 ) -> str:
     """
     Tool function for fetching web page content that can be called by the LLM.
@@ -184,13 +321,21 @@ async def fetch_webpage(
         result = await web_fetch_tool.fetch(url, max_length, include_links)
 
         # Format output for LLM
+        output_parts = []
+
+        # Handle case where result might be an error message
+        if isinstance(result, str) and result.startswith("Error:"):
+            return result
+
         output_parts = [
             f"# {result['title']}",
             f"URL: {result['url']}",
         ]
 
         if result["metadata"].get("description"):
-            output_parts.append(f"Description: {result['metadata']['description']}")
+            output_parts.append(
+                f"Description: {result['metadata']['description']}"
+            )
 
         if result["metadata"].get("author"):
             output_parts.append(f"Author: {result['metadata']['author']}")
@@ -200,7 +345,8 @@ async def fetch_webpage(
 
         if result.get("truncated"):
             output_parts.append(
-                f"\n[Content truncated at {result['content_length']} characters]"
+                f"\n[Content truncated at {result['content_length']} "
+                f"characters]"
             )
 
         return "\n".join(output_parts)
@@ -211,3 +357,4 @@ async def fetch_webpage(
     except Exception as e:
         logger.error(f"Error in fetch_webpage tool: {e}")
         return f"Error fetching webpage: {str(e)}"
+

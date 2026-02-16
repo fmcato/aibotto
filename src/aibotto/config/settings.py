@@ -65,6 +65,13 @@ class Config:
     # Tool Calling Configuration
     MAX_TOOL_ITERATIONS: int = int(os.getenv("MAX_TOOL_ITERATIONS", "10"))
 
+    # Web Fetch Configuration
+    WEB_FETCH_MAX_RETRIES: int = int(os.getenv("WEB_FETCH_MAX_RETRIES", "3"))
+    WEB_FETCH_RETRY_DELAY: float = float(os.getenv("WEB_FETCH_RETRY_DELAY", "1.0"))
+    WEB_FETCH_STRICT_CONTENT_TYPE: bool = (
+        os.getenv("WEB_FETCH_STRICT_CONTENT_TYPE", "true").lower() == "true"
+    )
+
     @classmethod
     def validate_config(cls) -> bool:
         """Validate configuration"""
@@ -77,3 +84,4 @@ class Config:
             return False
 
         return True
+

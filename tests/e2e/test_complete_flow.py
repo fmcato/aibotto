@@ -8,11 +8,11 @@ import sys
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
 
 import asyncio
-import pytest
 from unittest.mock import AsyncMock, MagicMock
 
+import pytest
+
 from src.aibotto.ai.tool_calling import ToolCallingManager
-from src.aibotto.db.operations import DatabaseOperations
 
 
 @pytest.mark.asyncio
