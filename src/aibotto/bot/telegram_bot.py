@@ -181,10 +181,25 @@ I provide factual information using safe system tools. Here's what I can help wi
                 from telegramify_markdown import telegramify
                 formatted_chunks = []
                 for chunk in chunks:
-                    telegram_result = await telegramify(chunk)
-                    # Extract text from the Text objects
-                    chunk_text = ''.join(text_obj.text for text_obj in telegram_result)
-                    formatted_chunks.append(chunk_text)
+                    try:
+                        telegram_result = await telegramify(chunk)
+                        # Extract text from the result, handling different object types
+                        chunk_text = ""
+                        if hasattr(telegram_result, '__iter__') and not isinstance(telegram_result, str):
+                            for item in telegram_result:
+                                if hasattr(item, 'text'):
+                                    chunk_text += item.text
+                                elif hasattr(item, 'content'):
+                                    chunk_text += str(item.content)
+                                else:
+                                    chunk_text += str(item)
+                        else:
+                            chunk_text = str(telegram_result)
+                        formatted_chunks.append(chunk_text)
+                    except Exception as e:
+                        logger.warning(f"Failed to format chunk with telegramify: {e}")
+                        # Fall back to original chunk
+                        formatted_chunks.append(chunk)
                 await MessageSplitter.send_chunks_with_rate_limit(
                     formatted_chunks,
                     thinking_message.reply_text,
@@ -195,9 +210,24 @@ I provide factual information using safe system tools. Here's what I can help wi
                 # Edit thinking message with response (single chunk)
                 # Format response with telegramify-markdown for proper MarkdownV2 escaping
                 from telegramify_markdown import telegramify
-                telegram_result = await telegramify(response)
-                # Extract text from the Text objects
-                formatted_response = ''.join(text_obj.text for text_obj in telegram_result)
+                try:
+                    telegram_result = await telegramify(response)
+                    # Extract text from the result, handling different object types
+                    formatted_response = ""
+                    if hasattr(telegram_result, '__iter__') and not isinstance(telegram_result, str):
+                        for item in telegram_result:
+                            if hasattr(item, 'text'):
+                                formatted_response += item.text
+                            elif hasattr(item, 'content'):
+                                formatted_response += str(item.content)
+                            else:
+                                formatted_response += str(item)
+                    else:
+                        formatted_response = str(telegram_result)
+                except Exception as e:
+                    logger.warning(f"Failed to format response with telegramify: {e}")
+                    # Fall back to original response
+                    formatted_response = response
                 await thinking_message.edit_text(formatted_response, parse_mode="MarkdownV2")
 
         except Exception as e:
