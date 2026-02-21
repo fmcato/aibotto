@@ -181,11 +181,11 @@ I provide factual information using safe system tools. Here's what I can help wi
                     chunks,
                     thinking_message.reply_text,
                     delay_between_chunks=1.0,
-                    parse_mode="MarkdownV2"
+                    parse_mode="Markdown"
                 )
             else:
                 # Edit thinking message with response (single chunk)
-                await thinking_message.edit_text(response, parse_mode="MarkdownV2")
+                await thinking_message.edit_text(response, parse_mode="Markdown")
 
         except Exception as e:
             await thinking_message.edit_text(f"❌ Error: {str(e)}")

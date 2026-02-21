@@ -47,7 +47,7 @@ class TestFactualResponses:
     def test_tool_descriptions(self):
         """Test that tool descriptions are properly structured."""
         tools = ToolDescriptions.get_tool_definitions()
-        assert len(tools) == 3
+        assert len(tools) == 4
 
         # Check that all tools are present
         tool_names = [tool["function"]["name"] for tool in tools]

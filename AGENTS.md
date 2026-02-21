@@ -220,4 +220,4 @@ aibotto-cli -v "search for latest news about AI"
 ```
 ## Troubleshooting
 
-- if you fail twice in a row to use the search_replace tool, switch to overwrite the whole file instead
+- if you fail twice in a row to use the search_replace tool, switch to overwrite the whole file content instead

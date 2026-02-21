@@ -173,7 +173,7 @@ class TestTelegramBot:
         await telegram_bot._handle_message(mock_update, mock_context)
 
         # Verify thinking message was edited
-        mock_thinking.edit_text.assert_called_once_with("The current time is 2:30 PM", parse_mode="MarkdownV2")
+        mock_thinking.edit_text.assert_called_once_with("The current time is 2:30 PM", parse_mode="Markdown")
         telegram_bot.tool_manager.process_user_request.assert_called_once()
 
     @pytest.mark.asyncio

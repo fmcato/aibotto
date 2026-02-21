@@ -105,3 +105,38 @@ class DatabaseOperations:
         except Exception as e:
             logger.error(f"Failed to clear conversation history: {e}")
             raise
+
+    async def replace_conversation_with_summary(
+        self, user_id: int, chat_id: int, summary: str
+    ) -> None:
+        """Replace conversation history with a summary message."""
+        try:
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+            
+            # Clear existing conversation
+            cursor.execute(
+                """
+                DELETE FROM conversations
+                WHERE user_id = ? AND chat_id = ?
+            """,
+                (user_id, chat_id),
+            )
+            
+            # Add summary as a system message
+            cursor.execute(
+                """
+                INSERT INTO conversations (user_id, chat_id, message_id, role, content)
+                VALUES (?, ?, ?, ?, ?)
+            """,
+                (user_id, chat_id, 0, "system", summary),
+            )
+            
+            conn.commit()
+            conn.close()
+            logger.info(
+                f"Replaced conversation history with summary for user {user_id}, chat {chat_id}"
+            )
+        except Exception as e:
+            logger.error(f"Failed to replace conversation with summary: {e}")
+            raise
