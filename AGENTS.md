@@ -135,7 +135,7 @@ uv run pytest tests/unit/test_my_tool.py -v
 uv run pytest
 
 # 6. Commit
-git add -A && git commit
+git add <list of changed files> && git commit
 ```
 
 ### Quality Checks
