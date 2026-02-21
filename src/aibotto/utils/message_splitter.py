@@ -124,8 +124,9 @@ class MessageSplitter:
     @staticmethod
     async def send_chunks_with_rate_limit(
         chunks: list[str],
-        send_func: Callable[[str], Any],
-        delay_between_chunks: float = 1.0
+        send_func: Callable[[str, str | None], Any],
+        delay_between_chunks: float = 1.0,
+        parse_mode: str | None = None
     ) -> None:
         """
         Send message chunks with proper rate limiting.
@@ -134,14 +135,15 @@ class MessageSplitter:
             chunks: List of message chunks to send
             send_func: Async function to call for sending each chunk
             delay_between_chunks: Delay in seconds between chunks (default: 1.0)
+            parse_mode: Parse mode for message formatting (default: None)
         """
         if not chunks:
             return
 
         for i, chunk in enumerate(chunks):
             try:
-                # Send the chunk
-                await send_func(chunk)
+                # Send the chunk with parse_mode
+                await send_func(chunk, parse_mode)
 
                 # If this is not the last chunk, wait before sending next
                 if i < len(chunks) - 1:

@@ -58,17 +58,19 @@ class TelegramBot:
         if update and update.message:
             if update and update.message:
                 await update.message.reply_text(
-                "🤖 Hello! I'm an AI assistant that provides factual information.\n\n"
-            "I can help you with:\n"
-            "• Current date and time\n"
-            "• Weather information\n"
-            "• File system details\n"
-            "• System information\n"
-            "• Network information\n\n"
-            "Just ask me any question and I'll get you the factual answer!\n\n"
-            "Type /help for more information.\n"
-            "Type /clear to reset our conversation."
-        )
+                    "🤖 Hello! I'm an AI assistant that provides factual "
+                    "information.\n\n"
+                    "I can help you with:\n"
+                    "• Current date and time\n"
+                    "• Weather information\n"
+                    "• File system details\n"
+                    "• System information\n"
+                    "• Network information\n\n"
+                    "Just ask me any question and I'll get you the factual "
+                    "answer!\n\n"
+                    "Type /help for more information.\n"
+                    "Type /clear to reset our conversation."
+                )
 
     async def _handle_help(
         self, update: Update, context: ContextTypes.DEFAULT_TYPE
@@ -129,10 +131,10 @@ I provide factual information using safe system tools. Here's what I can help wi
             # Send confirmation message
             if update and update.message:
                 await update.message.reply_text(
-                "✅ Conversation history cleared! I've forgotten our "
-                "previous conversation.\n\n"
-                "You can start fresh with any question you'd like to ask."
-            )
+                    "✅ Conversation history cleared! I've forgotten our "
+                    "previous conversation.\n\n"
+                    "You can start fresh with any question you'd like to ask."
+                )
 
         except Exception as e:
             if update and update.message:
@@ -178,11 +180,12 @@ I provide factual information using safe system tools. Here's what I can help wi
                 await MessageSplitter.send_chunks_with_rate_limit(
                     chunks,
                     thinking_message.reply_text,
-                    delay_between_chunks=1.0
+                    delay_between_chunks=1.0,
+                    parse_mode="MarkdownV2"
                 )
             else:
                 # Edit thinking message with response (single chunk)
-                await thinking_message.edit_text(response)
+                await thinking_message.edit_text(response, parse_mode="MarkdownV2")
 
         except Exception as e:
             await thinking_message.edit_text(f"❌ Error: {str(e)}")
