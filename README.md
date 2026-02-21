@@ -264,11 +264,19 @@ Bot: "2^20 = 1,048,576"
 | `OPENAI_BASE_URL` | OpenAI API base URL | `https://api.openai.com/v1` |
 | `OPENAI_MODEL` | OpenAI model to use | `gpt-3.5-turbo` |
 | `DATABASE_PATH` | SQLite database path | `conversations.db` |
-| `MAX_COMMAND_LENGTH` | Maximum command length | `1000` |
+| `MAX_COMMAND_LENGTH` | Maximum command length | `300000` |
 | `ALLOWED_COMMANDS` | Whitelist of commands | (empty) |
 | `BLOCKED_COMMANDS` | Blacklist of commands | `rm -rf,sudo,dd,mkfs,fdisk,format,shutdown,reboot,poweroff,halt` |
 | `MAX_HISTORY_LENGTH` | Maximum conversation history | `20` |
 | `THINKING_MESSAGE` | Thinking indicator message | `🤔 Thinking...` |
+| `DDGS_TIMEOUT` | DuckDuckGo search timeout (seconds) | `30` |
+| `LLM_MAX_TOKENS` | Max tokens for LLM responses (0 = no limit) | `0` |
+| `MAX_TOOL_ITERATIONS` | Maximum tool calling iterations | `10` |
+| `WEB_FETCH_MAX_RETRIES` | Web fetch retry attempts | `3` |
+| `WEB_FETCH_RETRY_DELAY` | Web fetch retry delay (seconds) | `1.0` |
+| `WEB_FETCH_STRICT_CONTENT_TYPE` | Strict content type checking | `true` |
+| `LLM_MAX_RETRIES` | LLM API retry attempts | `3` |
+| `LLM_RETRY_DELAY` | LLM API retry delay (seconds) | `1.0` |
 
 ## 🔒 Security Features
 

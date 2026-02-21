@@ -90,6 +90,13 @@ from aibotto.bot.telegram_bot import TelegramBot
 | `MAX_HISTORY_LENGTH` | Maximum conversation history | `20` |
 | `THINKING_MESSAGE` | Thinking indicator message | `🤔 Thinking...` |
 | `DDGS_TIMEOUT` | DuckDuckGo search timeout (seconds) | `30` |
+| `LLM_MAX_TOKENS` | Max tokens for LLM responses (0 = no limit) | `0` |
+| `MAX_TOOL_ITERATIONS` | Maximum tool calling iterations | `10` |
+| `WEB_FETCH_MAX_RETRIES` | Web fetch retry attempts | `3` |
+| `WEB_FETCH_RETRY_DELAY` | Web fetch retry delay (seconds) | `1.0` |
+| `WEB_FETCH_STRICT_CONTENT_TYPE` | Strict content type checking | `true` |
+| `LLM_MAX_RETRIES` | LLM API retry attempts | `3` |
+| `LLM_RETRY_DELAY` | LLM API retry delay (seconds) | `1.0` |
 
 ## Development Workflow
 
@@ -213,4 +220,4 @@ aibotto-cli -v "search for latest news about AI"
 ```
 ## Troubleshooting
 
-- if you have problems with the search_replace tool, switch to overwrite
+- if you fail twice in a row to use the search_replace tool, switch to overwrite the whole file instead
