@@ -72,6 +72,10 @@ class Config:
         os.getenv("WEB_FETCH_STRICT_CONTENT_TYPE", "true").lower() == "true"
     )
 
+    # LLM Retry Configuration
+    LLM_MAX_RETRIES: int = int(os.getenv("LLM_MAX_RETRIES", "3"))
+    LLM_RETRY_DELAY: float = float(os.getenv("LLM_RETRY_DELAY", "1.0"))
+
     @classmethod
     def validate_config(cls) -> bool:
         """Validate configuration"""

@@ -211,3 +211,6 @@ aibotto-cli list files in current directory
 # Verbose mode (shows debug output)
 aibotto-cli -v "search for latest news about AI"
 ```
+## Troubleshooting
+
+- if you have problems with the search_replace tool, switch to overwrite
