@@ -177,15 +177,28 @@ I provide factual information using safe system tools. Here's what I can help wi
 
                 # Delete thinking message and send chunks with rate limiting
                 await thinking_message.delete()
+                # Format chunks with telegramify-markdown for proper MarkdownV2 escaping
+                from telegramify_markdown import telegramify
+                formatted_chunks = []
+                for chunk in chunks:
+                    telegram_result = await telegramify(chunk)
+                    # Extract text from the Text objects
+                    chunk_text = ''.join(text_obj.text for text_obj in telegram_result)
+                    formatted_chunks.append(chunk_text)
                 await MessageSplitter.send_chunks_with_rate_limit(
-                    chunks,
+                    formatted_chunks,
                     thinking_message.reply_text,
                     delay_between_chunks=1.0,
-                    parse_mode="Markdown"
+                    parse_mode="MarkdownV2"
                 )
             else:
                 # Edit thinking message with response (single chunk)
-                await thinking_message.edit_text(response, parse_mode="Markdown")
+                # Format response with telegramify-markdown for proper MarkdownV2 escaping
+                from telegramify_markdown import telegramify
+                telegram_result = await telegramify(response)
+                # Extract text from the Text objects
+                formatted_response = ''.join(text_obj.text for text_obj in telegram_result)
+                await thinking_message.edit_text(formatted_response, parse_mode="MarkdownV2")
 
         except Exception as e:
             await thinking_message.edit_text(f"❌ Error: {str(e)}")

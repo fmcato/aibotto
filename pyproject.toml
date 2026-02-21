@@ -29,6 +29,7 @@ dependencies = [
     "aiohttp>=3.13.3",
     "ddgs>=9.10.0",
     "trafilatura>=2.0.0",
+    "telegramify-markdown>=1.0.0rc4",
 ]
 
 [project.optional-dependencies]
