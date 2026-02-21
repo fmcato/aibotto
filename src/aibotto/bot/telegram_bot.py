@@ -179,13 +179,19 @@ I provide factual information using safe system tools. Here's what I can help wi
                 await thinking_message.delete()
                 # Format chunks with telegramify-markdown for proper MarkdownV2 escaping
                 from telegramify_markdown import telegramify
+
+                from ..utils.helpers import escape_markdown_v2
                 formatted_chunks = []
                 for chunk in chunks:
                     try:
+                        # First, convert markdown using telegramify
                         telegram_result = await telegramify(chunk)
-                        # Extract text from the result, handling different object types
-                        chunk_text = ""
-                        if hasattr(telegram_result, '__iter__') and not isinstance(telegram_result, str):
+
+                        # Extract text from the result
+                        if hasattr(telegram_result, "__iter__") and not isinstance(
+                            telegram_result, str
+                        ):
+                            chunk_text = ""
                             for item in telegram_result:
                                 if hasattr(item, 'text'):
                                     chunk_text += item.text
@@ -195,11 +201,15 @@ I provide factual information using safe system tools. Here's what I can help wi
                                     chunk_text += str(item)
                         else:
                             chunk_text = str(telegram_result)
-                        formatted_chunks.append(chunk_text)
+
+                        # Then apply proper MarkdownV2 escaping
+                        escaped_chunk = escape_markdown_v2(chunk_text)
+                        formatted_chunks.append(escaped_chunk)
                     except Exception as e:
                         logger.warning(f"Failed to format chunk with telegramify: {e}")
-                        # Fall back to original chunk
-                        formatted_chunks.append(chunk)
+                        # Fall back to original chunk with escaping
+                        escaped_chunk = escape_markdown_v2(chunk)
+                        formatted_chunks.append(escaped_chunk)
                 await MessageSplitter.send_chunks_with_rate_limit(
                     formatted_chunks,
                     thinking_message.reply_text,
@@ -208,13 +218,19 @@ I provide factual information using safe system tools. Here's what I can help wi
                 )
             else:
                 # Edit thinking message with response (single chunk)
-                # Format response with telegramify-markdown for proper MarkdownV2 escaping
+                # Format response with telegramify-markdown for proper
+                # MarkdownV2 escaping
                 from telegramify_markdown import telegramify
+
+                from ..utils.helpers import escape_markdown_v2
                 try:
+                    # First, convert markdown using telegramify
                     telegram_result = await telegramify(response)
                     # Extract text from the result, handling different object types
                     formatted_response = ""
-                    if hasattr(telegram_result, '__iter__') and not isinstance(telegram_result, str):
+                    if hasattr(telegram_result, "__iter__") and not isinstance(
+                        telegram_result, str
+                    ):
                         for item in telegram_result:
                             if hasattr(item, 'text'):
                                 formatted_response += item.text
@@ -224,11 +240,16 @@ I provide factual information using safe system tools. Here's what I can help wi
                                 formatted_response += str(item)
                     else:
                         formatted_response = str(telegram_result)
+
+                    # Then apply proper MarkdownV2 escaping
+                    escaped_response = escape_markdown_v2(formatted_response)
                 except Exception as e:
                     logger.warning(f"Failed to format response with telegramify: {e}")
-                    # Fall back to original response
-                    formatted_response = response
-                await thinking_message.edit_text(formatted_response, parse_mode="MarkdownV2")
+                    # Fall back to original response with escaping
+                    escaped_response = escape_markdown_v2(response)
+                await thinking_message.edit_text(
+                    escaped_response, parse_mode="MarkdownV2"
+                )
 
         except Exception as e:
             await thinking_message.edit_text(f"❌ Error: {str(e)}")

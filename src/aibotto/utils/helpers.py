@@ -27,3 +27,23 @@ def truncate_text(text: str, max_length: int = 100) -> str:
     if len(text) <= max_length:
         return text
     return text[: max_length - 3] + "..."
+
+
+def escape_markdown_v2(text: str) -> str:
+    """Escape MarkdownV2 special characters in text.
+
+    Args:
+        text: The text to escape
+
+    Returns:
+        Text with all MarkdownV2 special characters properly escaped
+    """
+    if not text:
+        return text
+
+    # MarkdownV2 special characters that need escaping
+    escape_chars = r'_*[]()~`>#+-=|{}.!'
+    for char in escape_chars:
+        text = text.replace(char, f'\\{char}')
+
+    return text
