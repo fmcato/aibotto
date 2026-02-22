@@ -142,3 +142,39 @@ class TestMessageSplitter:
         assert len(chunks) == 2
         assert len(chunks[0]) <= 4095
         assert len(chunks[1]) <= 4095
+
+    def test_split_message_for_sending_escaping_safety(self):
+        """Test that the new splitting method accounts for MarkdownV2 escaping."""
+        # Create a message with many MarkdownV2 special characters that will expand
+        special_chars = r'_*[]()~`>#+-=|{}.!'
+        message = special_chars * 200  # This will expand significantly when escaped
+        
+        # Use the new method that accounts for escaping
+        chunks = MessageSplitter.split_message_for_sending(message)
+        
+        # All chunks should be safe (won't exceed Telegram's limit after escaping)
+        for chunk in chunks:
+            # Estimate worst-case expansion (each char could become 2 chars)
+            estimated_length = len(chunk) * 2
+            assert estimated_length <= 4095, f"Chunk too long after escaping: {estimated_length}"
+        
+        # Should be split into multiple chunks due to escaping expansion
+        assert len(chunks) > 1
+
+    def test_split_message_for_sending_with_markers(self):
+        """Test splitting with continuation markers enabled."""
+        # Create a long message that will definitely need splitting
+        message = "This is a sentence. " * 1000
+        
+        # Split with marker space reservation
+        chunks = MessageSplitter.split_message_for_sending(
+            message, reserve_marker_space=True
+        )
+        
+        # Should account for the additional space needed by markers
+        assert len(chunks) >= 1
+        
+        # Verify that even with markers, chunks won't exceed limits
+        for chunk in chunks:
+            estimated_length = len(chunk) * 2  # Account for escaping
+            assert estimated_length <= 4095, f"Chunk too long with markers: {estimated_length}"

@@ -112,7 +112,7 @@ I provide factual information using safe system tools. Here's what I can help wi
 
 ⚠️ **Security Note:** I only execute safe, pre-approved commands for your security.
         """
-        if update_data["has_message"]:
+        if update_data["has_message"] and update and update.message:
             await update.message.reply_text(help_text, parse_mode="Markdown")
 
     async def _handle_clear(
@@ -128,7 +128,7 @@ I provide factual information using safe system tools. Here's what I can help wi
             await self.db_ops.clear_conversation_history(user_id, chat_id)
 
             # Send confirmation message
-            if update_data["has_message"]:
+            if update_data["has_message"] and update and update.message:
                 await update.message.reply_text(
                     "✅ Conversation history cleared! I've forgotten our "
                     "previous conversation.\n\n"
@@ -136,7 +136,7 @@ I provide factual information using safe system tools. Here's what I can help wi
                 )
 
         except Exception as e:
-            if update_data["has_message"]:
+            if update_data["has_message"] and update and update.message:
                 await update.message.reply_text(
                     f"❌ Failed to clear conversation history: {str(e)}"
                 )
@@ -146,9 +146,15 @@ I provide factual information using safe system tools. Here's what I can help wi
         """Extract safe data from update object."""
         safe_update = update
         return {
-            "user_id": safe_update.effective_user.id if safe_update and safe_update.effective_user else 0,
-            "chat_id": safe_update.effective_chat.id if safe_update and safe_update.effective_chat else 0,
-            "message": safe_update.message.text or "" if safe_update and safe_update.message else "",
+            "user_id": safe_update.effective_user.id
+            if safe_update and safe_update.effective_user
+            else 0,
+            "chat_id": safe_update.effective_chat.id
+            if safe_update and safe_update.effective_chat
+            else 0,
+            "message": safe_update.message.text or ""
+            if safe_update and safe_update.message
+            else "",
             "has_message": bool(safe_update and safe_update.message),
         }
 
@@ -163,6 +169,7 @@ I provide factual information using safe system tools. Here's what I can help wi
     async def _format_text_with_telegramify(self, text: str) -> str:
         """Format text using telegramify-markdown and escape for MarkdownV2."""
         from telegramify_markdown import telegramify
+
         from ..utils.helpers import escape_markdown_v2
 
         try:
@@ -175,10 +182,10 @@ I provide factual information using safe system tools. Here's what I can help wi
             ):
                 formatted_text = ""
                 for item in telegram_result:
-                    if hasattr(item, 'text'):
-                        formatted_text += item.text
-                    elif hasattr(item, 'content'):
-                        formatted_text += str(item.content)
+                    if hasattr(item, 'text') and item.text is not None:  # type: ignore
+                        formatted_text += str(item.text)  # type: ignore
+                    elif hasattr(item, 'content') and item.content is not None:  # type: ignore
+                        formatted_text += str(item.content)  # type: ignore
                     else:
                         formatted_text += str(item)
             else:
@@ -195,6 +202,10 @@ I provide factual information using safe system tools. Here's what I can help wi
         self, chunks: list[str], thinking_message: Any
     ) -> None:
         """Send multiple response chunks with rate limiting."""
+        if not thinking_message:
+            logger.error("No thinking message available for chunked response")
+            return
+
         # Format chunks with telegramify-markdown for proper MarkdownV2 escaping
         formatted_chunks = []
         for chunk in chunks:
@@ -239,8 +250,8 @@ I provide factual information using safe system tools. Here's what I can help wi
             )
 
             # Split response if it's too long for rate limiting
-            # Reserve space for continuation markers when we'll have multiple chunks
-            chunks = MessageSplitter.split_message_for_rate_limiting(
+            # Use improved splitting that accounts for MarkdownV2 escaping
+            chunks = MessageSplitter.split_message_for_sending(
                 response, reserve_marker_space=len(response) > 4095
             )
             if len(chunks) > 1:

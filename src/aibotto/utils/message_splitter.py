@@ -13,6 +13,8 @@ logger = logging.getLogger(__name__)
 TELEGRAM_MAX_LENGTH_PER_SECOND = 4095
 # Reserve space for continuation markers (header/footer/continuation text)
 MARKER_OVERHEAD = 100
+# Safety margin for text expansion after MarkdownV2 escaping
+ESCAPE_EXPANSION_SAFETY_MARGIN = 100
 
 
 class MessageSplitter:
@@ -120,6 +122,42 @@ class MessageSplitter:
 
         logger.info(f"Split message into {len(final_chunks)} chunks for rate limiting")
         return final_chunks
+
+    @staticmethod
+    def split_message_for_sending(
+        message: str, reserve_marker_space: bool = False
+    ) -> list[str]:
+        """
+        Split a message into chunks that will be safe after MarkdownV2 escaping.
+        Accounts for potential character expansion during escaping.
+
+        Args:
+            message: The message to split
+            reserve_marker_space: If True, reserve space for continuation markers
+
+        Returns:
+            List of message chunks that will be safe to send after escaping
+        """
+        # Be very conservative - split message into chunks that are safe even
+        # if every character gets escaped (2x expansion)
+        conservative_max = TELEGRAM_MAX_LENGTH_PER_SECOND // 2
+
+        # Additional space for continuation markers if needed
+        if reserve_marker_space:
+            conservative_max -= ESCAPE_EXPANSION_SAFETY_MARGIN
+
+        if len(message) <= conservative_max:
+            return [message]
+
+        chunks = []
+        for i in range(0, len(message), conservative_max):
+            chunk = message[i:i + conservative_max]
+            chunks.append(chunk)
+
+        logger.info(
+            f"Split message into {len(chunks)} conservative chunks for escaping safety"
+        )
+        return chunks
 
     @staticmethod
     async def send_chunks_with_rate_limit(
