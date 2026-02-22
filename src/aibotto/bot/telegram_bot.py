@@ -170,9 +170,14 @@ I provide factual information using safe system tools. Here's what I can help wi
         """Format text using telegramify-markdown and escape for MarkdownV2."""
         from telegramify_markdown import telegramify
 
-        from ..utils.helpers import escape_markdown_v2
+        from ..utils.helpers import escape_markdown_v2, process_file_content
 
         try:
+            # Handle File objects with binary data
+            if hasattr(text, 'file_data') and hasattr(text, 'file_name'):
+                # Use the dedicated file processing function
+                return process_file_content(text)
+
             # First, convert markdown using telegramify
             telegram_result = await telegramify(text)
 

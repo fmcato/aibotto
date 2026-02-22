@@ -5,6 +5,7 @@ Tests for message splitting functionality.
 import pytest
 
 from aibotto.utils.message_splitter import MessageSplitter
+from aibotto.utils.helpers import process_file_content
 
 
 class TestMessageSplitter:
@@ -178,3 +179,102 @@ class TestMessageSplitter:
         for chunk in chunks:
             estimated_length = len(chunk) * 2  # Account for escaping
             assert estimated_length <= 4095, f"Chunk too long with markers: {estimated_length}"
+
+    def test_split_message_for_sending_file_object(self):
+        """Test handling of File objects in message splitting."""
+        # Create a mock File object with binary data
+        class MockFile:
+            def __init__(self, file_name, file_data):
+                self.file_name = file_name
+                self.file_data = file_data
+        
+        # Create binary data with UTF-8 encoded box drawing characters
+        binary_content = b'docker-compose.yml\n\xe2\x94\x9c\xe2\x94\x80\xe2\x94\x80 bot (main service)\n\xe2\x94\x9c\xe2\x94\x80\xe2\x94\x80 scheduler (cron-based summary service)\n\xe2\x94\x94\xe2\x94\x80\xe2\x94\x80 shared database volume'
+        file_obj = MockFile('docker-compose.yml.txt', binary_content)
+        
+        # Split the file object
+        chunks = MessageSplitter.split_message_for_sending(file_obj)
+        
+        # Should return a single chunk for files
+        assert len(chunks) == 1
+        assert "📄 **File: docker-compose.yml.txt**" in chunks[0]
+        assert "docker-compose.yml" in chunks[0]
+        assert "bot (main service)" in chunks[0]
+        assert "scheduler (cron-based summary service)" in chunks[0]
+        # Should have properly decoded the box drawing characters
+        assert "├──" in chunks[0]  # Box drawing character
+        assert "─" in chunks[0]  # Box drawing character  
+        assert "└──" in chunks[0]  # Box drawing character
+
+    def test_split_message_for_sending_binary_file(self):
+        """Test handling of binary file objects."""
+        # Create a mock File object with binary data that can't be decoded as UTF-8
+        class MockFile:
+            def __init__(self, file_name, file_data):
+                self.file_name = file_name
+                self.file_data = file_data
+        
+        # Create binary data that's not valid UTF-8 (PNG header)
+        binary_content = b'\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01\x08\x02\x00\x00\x00\x90wS\xde'
+        file_obj = MockFile('image.png', binary_content)
+        
+        # Split the file object
+        chunks = MessageSplitter.split_message_for_sending(file_obj)
+        
+        # Should return a single chunk for files
+        assert len(chunks) == 1
+        assert "📄 **File: image.png**" in chunks[0]
+        assert "⚠️ Binary file content" in chunks[0]
+        assert "base64" in chunks[0]
+        # Should show base64 encoded content (first 2000 bytes)
+        assert len(chunks[0]) > 100  # Should have substantial content
+
+    def test_process_file_content_function(self):
+        """Test the dedicated file processing function."""
+        # Create a mock File object with UTF-8 encoded content
+        class MockFile:
+            def __init__(self, file_name, file_data):
+                self.file_name = file_name
+                self.file_data = file_data
+        
+        # Test with UTF-8 encoded content
+        binary_content = b'docker-compose.yml\n\xe2\x94\x9c\xe2\x94\x80\xe2\x94\x80 bot (main service)'
+        file_obj = MockFile('docker-compose.yml.txt', binary_content)
+        
+        result = process_file_content(file_obj)
+        
+        # Should return formatted file content
+        assert "📄 **File: docker-compose.yml.txt**" in result
+        assert "docker-compose.yml" in result
+        assert "bot (main service)" in result
+        assert "├──" in result  # Should have properly decoded box drawing characters
+        assert "```" in result  # Should be formatted as code block
+
+    def test_process_file_content_binary(self):
+        """Test the file processing function with binary content."""
+        # Create a mock File object with binary content
+        class MockFile:
+            def __init__(self, file_name, file_data):
+                self.file_name = file_name
+                self.file_data = file_data
+        
+        # Test with binary content that can't be decoded as UTF-8
+        binary_content = b'\x89PNG\r\n\x1a\n binary data here'
+        file_obj = MockFile('image.png', binary_content)
+        
+        result = process_file_content(file_obj)
+        
+        # Should handle binary content gracefully
+        assert "📄 **File: image.png**" in result
+        assert "⚠️ Binary file content" in result
+        assert "base64" in result
+
+    def test_process_file_content_regular_object(self):
+        """Test that the function handles non-file objects gracefully."""
+        # Test with a regular string
+        result = process_file_content("regular text")
+        assert result == "regular text"
+        
+        # Test with None
+        result = process_file_content(None)
+        assert result == "None"
