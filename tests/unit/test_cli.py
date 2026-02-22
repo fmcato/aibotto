@@ -27,15 +27,15 @@ class TestCLIExecutor:
         """Test successful command execution."""
         executor.security_manager.validate_command = AsyncMock(return_value={"allowed": True})
 
-        with patch('asyncio.create_subprocess_shell') as mock_subprocess:
+        with patch('asyncio.create_subprocess_exec') as mock_subprocess:
             mock_process = MagicMock()
             mock_process.returncode = 0
-            mock_process.communicate = AsyncMock(return_value=(b"Success", b""))
+            mock_process.communicate = AsyncMock(return_value=(b"hello\n", b""))
             mock_subprocess.return_value = mock_process
 
             result = await executor.execute_command("echo hello")
 
-            assert result == "Success"
+            assert result == "hello\n"
             executor.security_manager.validate_command.assert_called_once_with("echo hello")
 
     @pytest.mark.asyncio

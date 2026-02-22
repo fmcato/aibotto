@@ -100,7 +100,7 @@ class TestMessageSplitter:
         """Test that send_chunks_with_rate_limit works asynchronously."""
         import asyncio
 
-        async def mock_send_func(text):
+        async def mock_send_func(text, parse_mode=None):
             """Mock send function that just logs the text."""
             print(f"Sending: {text[:50]}...")
             await asyncio.sleep(0.1)  # Simulate network delay

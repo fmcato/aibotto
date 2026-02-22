@@ -2,14 +2,16 @@
 Message processing utilities for LLM tool calling.
 """
 
-from typing import Any, List
+from typing import Any
 
 
 class MessageProcessor:
     """Utility class for processing LLM messages and tool calls."""
-    
+
     @staticmethod
-    def extract_tool_call_info(tool_call: Any) -> tuple[str | None, str | None, str | None]:
+    def extract_tool_call_info(
+        tool_call: Any
+    ) -> tuple[str | None, str | None, str | None]:
         """Extract tool call ID, function name, and arguments from a tool call.
 
         Args:
@@ -31,7 +33,7 @@ class MessageProcessor:
                 getattr(tool_call.function, "name", None) if has_func else None,
                 getattr(tool_call.function, "arguments", None) if has_func else None,
             )
-    
+
     @staticmethod
     def extract_response_content(message_obj: Any) -> str:
         """Extract content from a message object.
@@ -46,9 +48,9 @@ class MessageProcessor:
             return message_obj.get("content", "") or ""
         else:
             return getattr(message_obj, "content", "") or ""
-    
+
     @staticmethod
-    def extract_tool_calls_from_response(message_obj: Any) -> List[Any] | None:
+    def extract_tool_calls_from_response(message_obj: Any) -> list[Any] | None:
         """Extract tool calls from a message object.
 
         Args:

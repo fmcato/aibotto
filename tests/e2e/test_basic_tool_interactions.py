@@ -49,7 +49,10 @@ class TestBasicToolInteractions:
         user_query = "What day is today?"
 
         # Mock the CLI executor to simulate successful command execution
-        with patch.object(tool_calling_manager.cli_executor, 'execute_command') as mock_execute:
+        from src.aibotto.tools.tool_registry import tool_registry
+        cli_executor = tool_registry.get_executor("execute_cli_command")
+        
+        with patch.object(cli_executor, 'execute') as mock_execute:
             mock_execute.return_value = "Today is Monday, February 3, 2025."
 
             response = await tool_calling_manager.process_user_request(1, 1, user_query, mock_db_ops)
@@ -68,7 +71,10 @@ class TestBasicToolInteractions:
         user_query = "What's the weather in London?"
 
         # Mock the CLI executor to simulate successful weather API call
-        with patch.object(tool_calling_manager.cli_executor, 'execute_command') as mock_execute:
+        from src.aibotto.tools.tool_registry import tool_registry
+        cli_executor = tool_registry.get_executor("execute_cli_command")
+        
+        with patch.object(cli_executor, 'execute') as mock_execute:
             mock_execute.return_value = "The weather in London is partly cloudy with a temperature of 15°C."
 
             response = await tool_calling_manager.process_user_request(1, 1, user_query, mock_db_ops)
@@ -87,7 +93,10 @@ class TestBasicToolInteractions:
         user_query = "What system information do you have?"
 
         # Mock the CLI executor to simulate successful command execution
-        with patch.object(tool_calling_manager.cli_executor, 'execute_command') as mock_execute:
+        from src.aibotto.tools.tool_registry import tool_registry
+        cli_executor = tool_registry.get_executor("execute_cli_command")
+        
+        with patch.object(cli_executor, 'execute') as mock_execute:
             mock_execute.return_value = "Linux Ubuntu 5.15.0-88-generic x86_64"
 
             response = await tool_calling_manager.process_user_request(1, 1, user_query, mock_db_ops)
@@ -105,7 +114,10 @@ class TestBasicToolInteractions:
         user_query = "List files in current directory"
 
         # Mock the CLI executor to simulate successful command execution
-        with patch.object(tool_calling_manager.cli_executor, 'execute_command') as mock_execute:
+        from src.aibotto.tools.tool_registry import tool_registry
+        cli_executor = tool_registry.get_executor("execute_cli_command")
+        
+        with patch.object(cli_executor, 'execute') as mock_execute:
             mock_execute.return_value = "total 16\ndrwxr-xr-x 2 user user 4096 Feb  3 10:00 .\ndrwxr-xr-x 5 user user 4096 Feb  3 10:00 ..\n-rw-r--r-- 1 user user 123 Feb  3 10:00 test.txt"
 
             response = await tool_calling_manager.process_user_request(1, 1, user_query, mock_db_ops)
@@ -145,7 +157,10 @@ class TestBasicToolInteractions:
         user_query = "What day is today?"
 
         # Mock the CLI executor to simulate command execution error
-        with patch.object(tool_calling_manager.cli_executor, 'execute_command') as mock_execute:
+        from src.aibotto.tools.tool_registry import tool_registry
+        cli_executor = tool_registry.get_executor("execute_cli_command")
+        
+        with patch.object(cli_executor, 'execute') as mock_execute:
             mock_execute.side_effect = Exception("Command not found")
 
             response = await tool_calling_manager.process_user_request(1, 1, user_query, mock_db_ops)
@@ -159,7 +174,10 @@ class TestBasicToolInteractions:
         user_query = "What is the current date and time?"
 
         # Mock the CLI executor to simulate successful command execution
-        with patch.object(tool_calling_manager.cli_executor, 'execute_command') as mock_execute:
+        from src.aibotto.tools.tool_registry import tool_registry
+        cli_executor = tool_registry.get_executor("execute_cli_command")
+        
+        with patch.object(cli_executor, 'execute') as mock_execute:
             mock_execute.return_value = "Date: Mon Feb  3 14:30:45 UTC 2026\nTime: 14:30:45"
 
             response = await tool_calling_manager.process_user_request(1, 1, user_query, mock_db_ops)

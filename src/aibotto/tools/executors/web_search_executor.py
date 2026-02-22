@@ -2,10 +2,8 @@
 Web search executor for web search functionality.
 """
 
-import asyncio
 import json
 import logging
-from typing import Any
 
 from ...db.operations import DatabaseOperations
 from ..base import ToolExecutor
@@ -16,12 +14,18 @@ logger = logging.getLogger(__name__)
 class WebSearchExecutor(ToolExecutor):
     """Executor for web search functionality."""
 
-    async def execute(self, arguments: str, user_id: int = 0, db_ops: DatabaseOperations | None = None, chat_id: int = 0) -> str:
+    async def execute(
+        self,
+        arguments: str,
+        user_id: int = 0,
+        db_ops: DatabaseOperations | None = None,
+        chat_id: int = 0,
+    ) -> str:
         """Execute web search with given arguments."""
         try:
             # Parse arguments
             args = json.loads(arguments)
-            
+
             query = args.get("query", "")
             num_results = args.get("num_results", 5)
             days_ago = args.get("days_ago")
@@ -33,7 +37,7 @@ class WebSearchExecutor(ToolExecutor):
 
             # Import search function
             from ..web_search import search_web
-            
+
             result = await search_web(
                 query=query,
                 num_results=num_results,

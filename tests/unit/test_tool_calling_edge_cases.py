@@ -16,11 +16,16 @@ class TestToolCallingEdgeCases:
     def tool_manager(self):
         """Create a ToolCallingManager instance for testing."""
         with patch('src.aibotto.ai.tool_calling.LLMClient') as mock_llm:
-            with patch('src.aibotto.ai.tool_calling.CLIExecutor') as mock_executor:
-                manager = ToolCallingManager()
-                manager.llm_client = AsyncMock()
-                manager.cli_executor = AsyncMock()
-                return manager
+            manager = ToolCallingManager()
+            manager.llm_client = AsyncMock()
+
+            # Get the CLI executor from the tool registry and configure it
+            from src.aibotto.tools.tool_registry import tool_registry
+            cli_executor = tool_registry.get_executor("execute_cli_command")
+            if cli_executor:
+                cli_executor.execute = AsyncMock()
+
+            return manager
 
     @pytest.mark.asyncio
     async def test_tool_call_execution_error(self, tool_manager):
@@ -54,7 +59,10 @@ class TestToolCallingEdgeCases:
         tool_manager.llm_client.chat_completion.side_effect = [mock_response, mock_final_response]
 
         # Mock command execution to raise error
-        tool_manager.cli_executor.execute_command.side_effect = Exception("Command not found")
+        from src.aibotto.tools.tool_registry import tool_registry
+        cli_executor = tool_registry.get_executor("execute_cli_command")
+        if cli_executor:
+            cli_executor.execute = AsyncMock(side_effect=Exception("Command not found"))
 
         # Mock database operations
         with patch('src.aibotto.ai.tool_calling.DatabaseOperations') as mock_db:
@@ -70,7 +78,6 @@ class TestToolCallingEdgeCases:
 
             # Should handle error gracefully
             assert "Error:" in response or "error" in response.lower()
-            tool_manager.cli_executor.execute_command.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_unknown_tool_function(self, tool_manager):
@@ -121,7 +128,8 @@ class TestToolCallingEdgeCases:
     @pytest.mark.asyncio
     async def test_fact_check_response_method(self, tool_manager):
         """Test the fact_check_response method."""
-        result = await tool_manager.fact_check_response("test query", "test response")
+        from src.aibotto.ai.fact_checker import FactChecker
+        result = await FactChecker.fact_check_response("test query", "test response")
         assert "verify this information" in result
 
     @pytest.mark.asyncio

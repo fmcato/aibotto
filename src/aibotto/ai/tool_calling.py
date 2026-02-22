@@ -9,7 +9,6 @@ from typing import Any
 from ..config.settings import Config
 from ..db.operations import DatabaseOperations
 from ..tools.tool_registry import tool_registry
-from .fact_checker import FactChecker
 from .iteration_manager import IterationManager
 from .llm_client import LLMClient
 from .message_processor import MessageProcessor
@@ -25,28 +24,28 @@ class ToolCallingManager:
         self.llm_client = LLMClient()
         self.max_iterations = Config.MAX_TOOL_ITERATIONS
         self.iteration_manager = IterationManager(self.max_iterations)
-        
+
         # Register tool executors
         self._register_tools()
 
     def _get_tool_definitions(self) -> list[dict[str, Any]]:
         """Get tool definitions for the LLM."""
         return ToolDescriptions.get_tool_definitions()
-    
+
     def _register_tools(self) -> None:
         """Register tool executors with the registry."""
         from ..tools.executors.cli_executor import CLIExecutor
-        from ..tools.executors.web_search_executor import WebSearchExecutor
         from ..tools.executors.web_fetch_executor import WebFetchExecutor
-        
+        from ..tools.executors.web_search_executor import WebSearchExecutor
+
         # Register executors
         tool_registry.register_executor("execute_cli_command", CLIExecutor())
         tool_registry.register_executor("search_web", WebSearchExecutor())
         tool_registry.register_executor("fetch_webpage", WebFetchExecutor())
-        
+
         logger.info("Registered all tool executors")
 
-    
+
 
     async def _execute_single_tool(
         self,
@@ -73,7 +72,7 @@ class ToolCallingManager:
             if db_ops:
                 await db_ops.save_message(user_id, chat_id, 0, "system", error_result)
             return error_result
-            
+
         if arguments is None:
             arguments = "{}"
 
@@ -88,11 +87,11 @@ class ToolCallingManager:
         try:
             logger.info(f"Executing tool {function_name} for user {user_id}")
             result = await executor.execute(arguments, user_id, db_ops, chat_id)
-            
+
             logger.info(
                 f"Tool {function_name} result for user {user_id}: {result[:200]}..."
             )
-            
+
             return result
 
         except Exception as e:
@@ -137,9 +136,9 @@ class ToolCallingManager:
             *[execute_single(tc) for tc in tool_calls]
         )
 
-    
 
-    
+
+
 
     async def _process_llm_iteration(
         self,
@@ -272,4 +271,4 @@ class ToolCallingManager:
             logger.error(f"Error in process_prompt_stateless: {e}")
             return f"Error: {e}"
 
-    
+

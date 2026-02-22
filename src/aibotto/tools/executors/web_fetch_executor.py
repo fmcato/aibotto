@@ -2,10 +2,8 @@
 Web fetch executor for fetching webpage content.
 """
 
-import asyncio
 import json
 import logging
-from typing import Any
 
 from ...db.operations import DatabaseOperations
 from ..base import ToolExecutor
@@ -16,12 +14,18 @@ logger = logging.getLogger(__name__)
 class WebFetchExecutor(ToolExecutor):
     """Executor for web page fetching functionality."""
 
-    async def execute(self, arguments: str, user_id: int = 0, db_ops: DatabaseOperations | None = None, chat_id: int = 0) -> str:
+    async def execute(
+        self,
+        arguments: str,
+        user_id: int = 0,
+        db_ops: DatabaseOperations | None = None,
+        chat_id: int = 0,
+    ) -> str:
         """Execute web fetch with given arguments."""
         try:
             # Parse arguments
             args = json.loads(arguments)
-            
+
             url = args.get("url", "")
             max_length = args.get("max_length")
             include_links = args.get("include_links", False)
@@ -33,7 +37,7 @@ class WebFetchExecutor(ToolExecutor):
 
             # Import fetch function
             from ..web_fetch import fetch_webpage
-            
+
             result = await fetch_webpage(
                 url=url,
                 max_length=max_length,

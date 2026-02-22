@@ -30,6 +30,7 @@ dependencies = [
     "ddgs>=9.10.0",
     "trafilatura>=2.0.0",
     "telegramify-markdown>=1.0.0rc4",
+    "mypy>=1.19.1",
 ]
 
 [project.optional-dependencies]

@@ -113,7 +113,7 @@ class DatabaseOperations:
         try:
             conn = sqlite3.connect(self.db_path)
             cursor = conn.cursor()
-            
+
             # Clear existing conversation
             cursor.execute(
                 """
@@ -122,7 +122,7 @@ class DatabaseOperations:
             """,
                 (user_id, chat_id),
             )
-            
+
             # Add summary as a system message
             cursor.execute(
                 """
@@ -131,11 +131,12 @@ class DatabaseOperations:
             """,
                 (user_id, chat_id, 0, "system", summary),
             )
-            
+
             conn.commit()
             conn.close()
             logger.info(
-                f"Replaced conversation history with summary for user {user_id}, chat {chat_id}"
+                "Replaced conversation history with summary "
+                f"for user {user_id}, chat {chat_id}"
             )
         except Exception as e:
             logger.error(f"Failed to replace conversation with summary: {e}")
