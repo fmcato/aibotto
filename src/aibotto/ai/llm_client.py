@@ -18,8 +18,8 @@ logger = logging.getLogger(__name__)
 class LLMClient:
     """Client for OpenAI-compatible API."""
 
-    # Timeout for LLM API calls (seconds)
-    LLM_TIMEOUT = 120.0
+    # Timeout for LLM API calls (seconds) - removed cap for complex questions
+    LLM_TIMEOUT = 300.0  # 5 minutes instead of 2 minutes
 
     def __init__(self) -> None:
         self.client = openai.AsyncOpenAI(

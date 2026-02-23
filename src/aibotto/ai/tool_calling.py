@@ -423,33 +423,9 @@ class ToolCallingManager:
         # Prepare messages with conversation history
         messages = await self._prepare_messages(user_id, chat_id, message, db_ops)
 
-        try:
-            # Add overall timeout to prevent excessive LLM retries
-            overall_timeout = min(self.max_iterations * 15, 120)  # Max 2 minutes total
-            logger.info(f"Starting user request with overall timeout: {overall_timeout}s")
-
-            return await asyncio.wait_for(
-                self.iteration_manager.process_iterations(
-                    self, messages, user_id, chat_id, db_ops
-                ),
-                timeout=overall_timeout
-            )
-
-        except TimeoutError:
-            logger.error(f"User request timed out after {overall_timeout}s")
-            error_msg = f"⏰ Request timed out after {overall_timeout} seconds. The system was taking too long to process your request."
-            if db_ops:
-                await db_ops.save_message(user_id, chat_id, 0, "system", error_msg)
-            return error_msg
-
-        except Exception as e:
-            logger.error(f"Error in process_user_request: {e}")
-            error_msg = ResponseTemplates.ERROR_RESPONSE.format(
-                error=str(e) if hasattr(e, "__str__") else str(type(e))
-            )
-            if db_ops:
-                await db_ops.save_message(user_id, chat_id, 0, "system", error_msg)
-            return error_msg
+        return await self.iteration_manager.process_iterations(
+            self, messages, user_id, chat_id, db_ops
+        )
 
     async def _prepare_messages(
         self,
@@ -486,34 +462,6 @@ class ToolCallingManager:
 
         return messages
 
-        try:
-            # Add overall timeout to prevent excessive LLM retries
-            overall_timeout = min(self.max_iterations * 15, 120)  # Max 2 minutes total
-            logger.info(f"Starting user request with overall timeout: {overall_timeout}s")
-
-            return await asyncio.wait_for(
-                self.iteration_manager.process_iterations(
-                    self, messages, user_id, chat_id, db_ops
-                ),
-                timeout=overall_timeout
-            )
-
-        except TimeoutError:
-            logger.error(f"User request timed out after {overall_timeout}s")
-            error_msg = f"⏰ Request timed out after {overall_timeout} seconds. The system was taking too long to process your request."
-            if db_ops:
-                await db_ops.save_message(user_id, chat_id, 0, "system", error_msg)
-            return error_msg
-
-        except Exception as e:
-            logger.error(f"Error in process_user_request: {e}")
-            error_msg = ResponseTemplates.ERROR_RESPONSE.format(
-                error=str(e) if hasattr(e, "__str__") else str(type(e))
-            )
-            if db_ops:
-                await db_ops.save_message(user_id, chat_id, 0, "system", error_msg)
-            return error_msg
-
     async def process_prompt_stateless(self, message: str) -> str:
         """Process a single prompt without database persistence (stateless).
 
@@ -532,21 +480,9 @@ class ToolCallingManager:
         messages.append({"role": "user", "content": message})
 
         try:
-            # Add overall timeout to prevent excessive LLM retries
-            overall_timeout = min(self.max_iterations * 15, 60)  # Max 1 minute for stateless
-            logger.info(f"Starting stateless prompt with overall timeout: {overall_timeout}s")
-
-            return await asyncio.wait_for(
-                self.iteration_manager.process_iterations(
-                    self, messages, 0, 0, None
-                ),
-                timeout=overall_timeout
+            return await self.iteration_manager.process_iterations(
+                self, messages, 0, 0, None
             )
-
-        except TimeoutError:
-            logger.error(f"Stateless prompt timed out after {overall_timeout}s")
-            return f"⏰ Request timed out after {overall_timeout} seconds. The system was taking too long to process your request."
-
         except Exception as e:
             logger.error(f"Error in process_prompt_stateless: {e}")
             return f"Error: {e}"
