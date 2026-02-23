@@ -90,7 +90,7 @@ class CLIExecutor:
                 f"Starting subprocess for executable: {executable}"
                 f" with args: {cmd_args}"
             )
-            
+
             process = None
             try:
                 process = await asyncio.create_subprocess_exec(
@@ -103,19 +103,19 @@ class CLIExecutor:
                     process.communicate(),
                     timeout=30.0
                 )
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 logger.error(f"Command timed out after 30 seconds: {command}")
                 # Kill the process to prevent it from continuing
                 if process:
                     process.kill()
                     await process.wait()
-                return f"Error: Command timed out after 30 seconds. This might be a complex calculation that needs optimization."
+                return "Error: Command timed out after 30 seconds. This might be a complex calculation that needs optimization."
             except asyncio.CancelledError:
                 logger.error(f"Command execution cancelled: {command}")
                 if process:
                     process.kill()
                     await process.wait()
-                return f"Error: Command execution was cancelled."
+                return "Error: Command execution was cancelled."
 
             if process.returncode == 0:
                 result = stdout.decode("utf-8", errors="ignore")

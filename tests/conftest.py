@@ -13,6 +13,7 @@ from src.aibotto.ai.llm_client import LLMClient
 from src.aibotto.config.settings import Config
 from src.aibotto.db.operations import DatabaseOperations
 from src.aibotto.tools.cli_executor import CLIExecutor
+from src.aibotto.ai import tool_calling
 
 
 @pytest.fixture(scope="session")
@@ -526,6 +527,16 @@ def mock_llm_client_direct_response():
 
     client.chat_completion = mock_chat_completion
     return client
+
+
+@pytest.fixture
+def reset_tool_call_tracker():
+    """Reset the global tool call tracker before each test."""
+    # Clear the global tracker
+    tool_calling._tool_call_tracker.clear()
+    yield
+    # Clean up after test
+    tool_calling._tool_call_tracker.clear()
 
 
 @pytest.fixture

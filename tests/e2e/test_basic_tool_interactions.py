@@ -152,7 +152,7 @@ class TestBasicToolInteractions:
         assert "don't have access" in response.lower() or "cannot predict" in response.lower()
 
     @pytest.mark.asyncio
-    async def test_command_execution_error_handling(self, tool_calling_manager, mock_db_ops):
+    async def test_command_execution_error_handling(self, tool_calling_manager, mock_db_ops, reset_tool_call_tracker):
         """Test that command execution errors are handled properly."""
         user_query = "What day is today?"
 
@@ -169,7 +169,7 @@ class TestBasicToolInteractions:
             assert "error" in response.lower() or "failed" in response.lower()
 
     @pytest.mark.asyncio
-    async def test_multiple_tool_calls(self, tool_calling_manager, mock_db_ops):
+    async def test_multiple_tool_calls(self, tool_calling_manager, mock_db_ops, reset_tool_call_tracker):
         """Test that multiple tool calls are handled properly."""
         user_query = "What is the current date and time?"
 

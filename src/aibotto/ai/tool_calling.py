@@ -4,10 +4,9 @@ Enhanced tool calling functionality for LLM integration.
 
 import asyncio
 import hashlib
-import json
 import logging
 import time
-from typing import Any, Dict, Set
+from typing import Any
 
 from ..config.settings import Config
 from ..db.operations import DatabaseOperations
@@ -20,7 +19,7 @@ from .prompt_templates import ResponseTemplates, SystemPrompts, ToolDescriptions
 logger = logging.getLogger(__name__)
 
 # Global tracking for tool call deduplication
-_tool_call_tracker: Dict[str, Set[str]] = {}  # user_chat_id -> set of tool call hashes
+_tool_call_tracker: dict[str, set[str]] = {}  # user_chat_id -> set of tool call hashes
 
 
 class ToolCallingManager:
@@ -30,11 +29,11 @@ class ToolCallingManager:
         self.llm_client = LLMClient()
         self.max_iterations = Config.MAX_TOOL_ITERATIONS
         self.iteration_manager = IterationManager(self.max_iterations)
-        
+
         # Tool call tracking
-        self._executed_tool_calls: Set[str] = set()  # Track tool calls in current session
+        self._executed_tool_calls: set[str] = set()  # Track tool calls in current session
         self._iteration_count = 0  # Track current iteration number
-        self._recent_tool_calls: Set[str] = set()  # Track calls in recent iterations
+        self._recent_tool_calls: set[str] = set()  # Track calls in recent iterations
 
         # Register tool executors
         self._register_tools()
@@ -65,15 +64,15 @@ class ToolCallingManager:
     def _is_duplicate_tool_call(self, function_name: str, arguments: str, user_id: int, chat_id: int = 0) -> bool:
         """Check if this tool call has been executed before in this conversation."""
         call_hash = self._generate_tool_call_hash(function_name, arguments)
-        
+
         # Check global tracker for this user
         user_key = f"{user_id}_{chat_id}" if chat_id else f"user_{user_id}"
         if user_key not in _tool_call_tracker:
             _tool_call_tracker[user_key] = set()
-        
+
         # Check if this exact call has been made before
         is_duplicate = call_hash in _tool_call_tracker[user_key]
-        
+
         if is_duplicate:
             logger.warning(
                 f"DUPLICATE TOOL CALL DETECTED: {function_name} with arguments {arguments[:100]}... "
@@ -85,19 +84,19 @@ class ToolCallingManager:
                 f"New tool call: {function_name}, Arguments: {arguments[:100]}..., "
                 f"User: {user_id}, Chat: {chat_id}, Iteration: {self._iteration_count}"
             )
-        
+
         return is_duplicate
 
     def _is_similar_tool_call(self, function_name: str, arguments: str, user_id: int, chat_id: int = 0) -> bool:
         """Check if this tool call is similar to a previous one (same function, different args)."""
         # Check for similar function calls that might indicate retry logic issues
         user_key = f"{user_id}_{chat_id}" if chat_id else f"user_{user_id}"
-        
+
         if user_key not in _tool_call_tracker:
             return False
-            
+
         existing_calls = _tool_call_tracker[user_key]
-        
+
         # Check if we have calls to the same function with different arguments
         for call_hash in existing_calls:
             try:
@@ -113,18 +112,18 @@ class ToolCallingManager:
                         return True
             except Exception:
                 continue
-        
+
         return False
 
     def _should_prevent_retry(self, function_name: str, arguments: str, user_id: int, chat_id: int = 0) -> bool:
         """Intelligently determine if a tool call should be prevented based on retry patterns."""
         user_key = f"{user_id}_{chat_id}" if chat_id else f"user_{user_id}"
-        
+
         if user_key not in _tool_call_tracker:
             return False
-            
+
         existing_calls = _tool_call_tracker[user_key]
-        
+
         # Count calls to the same function
         same_function_calls = 0
         for call_hash in existing_calls:
@@ -135,7 +134,7 @@ class ToolCallingManager:
                         same_function_calls += 1
             except Exception:
                 continue
-        
+
         # Prevent retry if:
         # 1. Same function called more than 3 times (excessive)
         # 2. Complex calculations called more than once (unnecessary retry)
@@ -143,7 +142,7 @@ class ToolCallingManager:
         if same_function_calls > 3:
             logger.warning(f"Excessive function calls detected: {function_name} called {same_function_calls} times")
             return True
-            
+
         # Special handling for different types of tools
         if "python3" in arguments.lower():
             # Complex calculations shouldn't be retried
@@ -155,7 +154,7 @@ class ToolCallingManager:
             if same_function_calls > 5:
                 logger.warning(f"Excessive CLI command retries: {function_name}")
                 return True
-                
+
         return False
 
     async def _execute_single_tool(
@@ -179,7 +178,7 @@ class ToolCallingManager:
             Tool execution result as string
         """
         start_time = time.time()
-        
+
         if function_name is None:
             error_result = "No function name provided"
             if db_ops:
@@ -194,24 +193,24 @@ class ToolCallingManager:
             # Return early for duplicates to prevent infinite loops
             logger.warning(f"Skipping duplicate tool call: {function_name}")
             return f"⚠️ Tool call '{function_name}' already executed in this conversation. Skipping to prevent infinite loops."
-        
+
         # Track this call in recent calls (keep last 10 calls)
         call_hash = self._generate_tool_call_hash(function_name, arguments)
         self._recent_tool_calls.add(call_hash)
         if len(self._recent_tool_calls) > 10:
             self._recent_tool_calls.pop()
-        
+
         # Check for similar tool calls that might indicate retry logic issues
         if self._is_similar_tool_call(function_name, arguments, user_id, chat_id):
             logger.info(f"Implementing smart retry prevention for {function_name}")
             # For complex calculations, suggest optimization instead of retry
             if "python3" in arguments.lower() and "calc" in arguments.lower():
-                return f"🔄 I already attempted a similar calculation. Let me try a different approach or provide you with what I found so far."
-        
+                return "🔄 I already attempted a similar calculation. Let me try a different approach or provide you with what I found so far."
+
         # Check if this call should be prevented due to retry patterns
         if self._should_prevent_retry(function_name, arguments, user_id, chat_id):
             logger.warning(f"Preventing retry of {function_name} - detected unnecessary retry pattern")
-            return f"🚫 I've already attempted this type of operation multiple times. Let me try a different approach or provide you with the results I have so far."
+            return "🚫 I've already attempted this type of operation multiple times. Let me try a different approach or provide you with the results I have so far."
 
         # Get executor from registry
         executor = tool_registry.get_executor(function_name)
@@ -226,10 +225,10 @@ class ToolCallingManager:
                 f"Starting tool execution: {function_name} for user {user_id}, "
                 f"chat {chat_id}, iteration {self._iteration_count}"
             )
-            
+
             result = await executor.execute(arguments, user_id, db_ops, chat_id)
             execution_time = time.time() - start_time
-            
+
             logger.info(
                 f"Tool {function_name} completed in {execution_time:.2f}s for user {user_id}: "
                 f"{result[:200]}..."
@@ -275,7 +274,7 @@ class ToolCallingManager:
         if not tool_calls:
             logger.info("No tool calls to execute")
             return []
-            
+
         logger.info(
             f"Executing {len(tool_calls)} tool calls in parallel for user {user_id}, "
             f"chat {chat_id}, iteration {self._iteration_count}"
@@ -285,22 +284,22 @@ class ToolCallingManager:
             tool_call_id, function_name, arguments = (
                 MessageProcessor.extract_tool_call_info(tool_call)
             )
-            
+
             safe_args = arguments[:100] if arguments else "None"
             logger.info(
                 f"Processing tool call {tool_call_id}: {function_name} "
                 f"with arguments: {safe_args}..."
             )
-            
+
             content = await self._execute_single_tool(
                 function_name, arguments, user_id, db_ops, chat_id
             )
-            
+
             logger.info(
                 f"Tool call {tool_call_id} completed: {function_name} "
                 f"result length: {len(content)} chars"
             )
-            
+
             return {
                 "tool_call_id": tool_call_id,
                 "content": content,
@@ -420,15 +419,15 @@ class ToolCallingManager:
         self._iteration_count = 0
         self._executed_tool_calls.clear()
         self._recent_tool_calls.clear()
-        
+
         # Prepare messages with conversation history
         messages = await self._prepare_messages(user_id, chat_id, message, db_ops)
-        
+
         try:
             # Add overall timeout to prevent excessive LLM retries
             overall_timeout = min(self.max_iterations * 15, 120)  # Max 2 minutes total
             logger.info(f"Starting user request with overall timeout: {overall_timeout}s")
-            
+
             return await asyncio.wait_for(
                 self.iteration_manager.process_iterations(
                     self, messages, user_id, chat_id, db_ops
@@ -436,13 +435,13 @@ class ToolCallingManager:
                 timeout=overall_timeout
             )
 
-        except asyncio.TimeoutError:
+        except TimeoutError:
             logger.error(f"User request timed out after {overall_timeout}s")
             error_msg = f"⏰ Request timed out after {overall_timeout} seconds. The system was taking too long to process your request."
             if db_ops:
                 await db_ops.save_message(user_id, chat_id, 0, "system", error_msg)
             return error_msg
-            
+
         except Exception as e:
             logger.error(f"Error in process_user_request: {e}")
             error_msg = ResponseTemplates.ERROR_RESPONSE.format(
@@ -453,10 +452,10 @@ class ToolCallingManager:
             return error_msg
 
     async def _prepare_messages(
-        self, 
-        user_id: int, 
-        chat_id: int, 
-        message: str, 
+        self,
+        user_id: int,
+        chat_id: int,
+        message: str,
         db_ops: DatabaseOperations | None
     ) -> list[dict[str, str]]:
         """Prepare messages for LLM including conversation history.
@@ -472,7 +471,7 @@ class ToolCallingManager:
         """
         # Get base system prompt
         messages = SystemPrompts.get_base_prompt(max_turns=self.max_iterations)
-        
+
         # Add conversation history if available
         if db_ops:
             history = await db_ops.get_conversation_history(user_id, chat_id)
@@ -481,17 +480,17 @@ class ToolCallingManager:
                     "role": msg["role"],
                     "content": msg["content"]
                 })
-        
+
         # Add current message
         messages.append({"role": "user", "content": message})
-        
+
         return messages
 
         try:
             # Add overall timeout to prevent excessive LLM retries
             overall_timeout = min(self.max_iterations * 15, 120)  # Max 2 minutes total
             logger.info(f"Starting user request with overall timeout: {overall_timeout}s")
-            
+
             return await asyncio.wait_for(
                 self.iteration_manager.process_iterations(
                     self, messages, user_id, chat_id, db_ops
@@ -499,13 +498,13 @@ class ToolCallingManager:
                 timeout=overall_timeout
             )
 
-        except asyncio.TimeoutError:
+        except TimeoutError:
             logger.error(f"User request timed out after {overall_timeout}s")
             error_msg = f"⏰ Request timed out after {overall_timeout} seconds. The system was taking too long to process your request."
             if db_ops:
                 await db_ops.save_message(user_id, chat_id, 0, "system", error_msg)
             return error_msg
-            
+
         except Exception as e:
             logger.error(f"Error in process_user_request: {e}")
             error_msg = ResponseTemplates.ERROR_RESPONSE.format(
@@ -527,7 +526,7 @@ class ToolCallingManager:
         # Reset tracking for stateless processing
         self._iteration_count = 0
         self._executed_tool_calls.clear()
-        
+
         # Prepare messages with system prompt (no history for stateless)
         messages = SystemPrompts.get_base_prompt(max_turns=self.max_iterations)
         messages.append({"role": "user", "content": message})
@@ -536,7 +535,7 @@ class ToolCallingManager:
             # Add overall timeout to prevent excessive LLM retries
             overall_timeout = min(self.max_iterations * 15, 60)  # Max 1 minute for stateless
             logger.info(f"Starting stateless prompt with overall timeout: {overall_timeout}s")
-            
+
             return await asyncio.wait_for(
                 self.iteration_manager.process_iterations(
                     self, messages, 0, 0, None
@@ -544,10 +543,10 @@ class ToolCallingManager:
                 timeout=overall_timeout
             )
 
-        except asyncio.TimeoutError:
+        except TimeoutError:
             logger.error(f"Stateless prompt timed out after {overall_timeout}s")
             return f"⏰ Request timed out after {overall_timeout} seconds. The system was taking too long to process your request."
-            
+
         except Exception as e:
             logger.error(f"Error in process_prompt_stateless: {e}")
             return f"Error: {e}"
@@ -563,6 +562,6 @@ class ToolCallingManager:
         empty_users = [user_key for user_key, calls in _tool_call_tracker.items() if len(calls) == 0]
         for user_key in empty_users:
             del _tool_call_tracker[user_key]
-        
+
         if empty_users:
             logger.info(f"Cleaned up {len(empty_users)} empty user entries from tracker")
