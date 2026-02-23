@@ -1,219 +1,196 @@
 """
-Unit tests for bot module.
+Unit tests for refactored bot module.
 """
 
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from src.aibotto.bot.handlers import BaseHandler, CommandHandler, MessageHandler
 from src.aibotto.bot.telegram_bot import TelegramBot
 
 
-class TestBaseHandler:
-    """Test cases for BaseHandler abstract class."""
-
-    def test_base_handler_abstract(self):
-        """Test that BaseHandler is abstract."""
-        with pytest.raises(TypeError):
-            BaseHandler()
-
-
-class TestCommandHandler:
-    """Test cases for CommandHandler class."""
-
-    @pytest.fixture
-    def mock_callback(self):
-        """Create a mock callback function."""
-        return AsyncMock()
-
-    @pytest.fixture
-    def command_handler(self, mock_callback):
-        """Create a CommandHandler instance."""
-        return CommandHandler("test", mock_callback)
-
-    @pytest.mark.asyncio
-    async def test_handle_command(self, command_handler, mock_callback):
-        """Test command handling."""
-
-        # Mock update and context
-        mock_update = MagicMock()
-        mock_context = MagicMock()
-
-        await command_handler.handle(mock_update, mock_context)
-
-        mock_callback.assert_called_once_with(mock_update, mock_context)
-
-    def test_command_handler_initialization(self):
-        """Test CommandHandler initialization."""
-        mock_callback = AsyncMock()
-        handler = CommandHandler("start", mock_callback)
-
-        assert handler.command == "start"
-        assert handler.callback == mock_callback
-
-
-class TestMessageHandler:
-    """Test cases for MessageHandler class."""
-
-    @pytest.fixture
-    def mock_callback(self):
-        """Create a mock callback function."""
-        return AsyncMock()
-
-    @pytest.fixture
-    def message_handler(self, mock_callback):
-        """Create a MessageHandler instance."""
-        return MessageHandler(mock_callback)
-
-    @pytest.mark.asyncio
-    async def test_handle_message(self, message_handler, mock_callback):
-        """Test message handling."""
-
-        # Mock update and context
-        mock_update = MagicMock()
-        mock_context = MagicMock()
-
-        await message_handler.handle(mock_update, mock_context)
-
-        mock_callback.assert_called_once_with(mock_update, mock_context)
-
-    def test_message_handler_initialization(self):
-        """Test MessageHandler initialization."""
-        mock_callback = AsyncMock()
-        handler = MessageHandler(mock_callback)
-
-        assert handler.callback == mock_callback
-
-
 class TestTelegramBot:
-    """Test cases for TelegramBot class."""
+    """Test cases for refactored TelegramBot class."""
 
     @pytest.fixture
-    def telegram_bot(self):
+    def bot(self):
         """Create a TelegramBot instance for testing."""
-        with patch('src.aibotto.bot.telegram_bot.Application') as mock_app:
+        with patch('src.aibotto.bot.telegram_bot.Config.TELEGRAM_TOKEN', 'test_token'):
             with patch('src.aibotto.bot.telegram_bot.DatabaseOperations') as mock_db:
                 with patch('src.aibotto.bot.telegram_bot.ToolCallingManager') as mock_tool:
-                    bot = TelegramBot()
-                    bot.application = MagicMock()
-                    bot.db_ops = MagicMock()
-                    bot.tool_manager = MagicMock()
-                    return bot
+                    with patch('src.aibotto.bot.telegram_bot.BotSetupService') as mock_setup:
+                        bot = TelegramBot()
+                        bot.db_ops = mock_db.return_value
+                        bot.tool_manager = mock_tool.return_value
+                        bot.setup_service = mock_setup.return_value
+                        return bot
+
+    def test_bot_initialization(self, bot):
+        """Test that bot initializes with correct components."""
+        assert bot.db_ops is not None
+        assert bot.tool_manager is not None
+        assert bot.setup_service is not None
+        assert bot.content_handler_factory is not None
 
     @pytest.mark.asyncio
-    async def test_handle_start(self, telegram_bot):
+    async def test_handle_start_message(self, bot):
         """Test /start command handling."""
-
-        # Mock update
         mock_update = MagicMock()
         mock_message = MagicMock()
-        mock_message.reply_text = AsyncMock()
         mock_update.message = mock_message
+        mock_update.effective_user = MagicMock()
         mock_update.effective_user.id = 123
+        mock_update.effective_chat = MagicMock()
         mock_update.effective_chat.id = 456
+        mock_message.text = ""
 
-        # Mock context
-        mock_context = MagicMock()
+        mock_message.reply_text = AsyncMock()
 
-        await telegram_bot._handle_start(mock_update, mock_context)
+        await bot._handle_start(mock_update, None)
 
         mock_message.reply_text.assert_called_once()
-        reply_text = mock_message.reply_text.call_args[0][0]
-        assert "Hello!" in reply_text
-        assert "AI assistant" in reply_text
+        call_args = mock_message.reply_text.call_args[0][0]
+        assert "🤖 Hello! I'm an AI assistant" in call_args
+        assert "Type /help for more information" in call_args
 
     @pytest.mark.asyncio
-    async def test_handle_help(self, telegram_bot):
+    async def test_handle_help_message(self, bot):
         """Test /help command handling."""
-
-        # Mock update
         mock_update = MagicMock()
         mock_message = MagicMock()
-        mock_message.reply_text = AsyncMock()
         mock_update.message = mock_message
+        mock_update.effective_user = MagicMock()
         mock_update.effective_user.id = 123
+        mock_update.effective_chat = MagicMock()
         mock_update.effective_chat.id = 456
+        mock_message.text = ""
 
-        # Mock context
-        mock_context = MagicMock()
+        mock_message.reply_text = AsyncMock()
 
-        await telegram_bot._handle_help(mock_update, mock_context)
+        await bot._handle_help(mock_update, None)
 
         mock_message.reply_text.assert_called_once()
-        reply_text = mock_message.reply_text.call_args[0][0]
-        assert "Help" in reply_text
-        assert "AI Bot Help" in reply_text
+        call_args = mock_message.reply_text.call_args[0][0]
+        assert "🤖 **AI Bot Help**" in call_args
+        assert "Date & Time:" in call_args
+        assert "File Operations:" in call_args
 
     @pytest.mark.asyncio
-    async def test_handle_message_success(self, telegram_bot):
+    async def test_handle_clear_message(self, bot):
+        """Test /clear command handling."""
+        mock_update = MagicMock()
+        mock_message = MagicMock()
+        mock_update.message = mock_message
+        mock_update.effective_user = MagicMock()
+        mock_update.effective_user.id = 123
+        mock_update.effective_chat = MagicMock()
+        mock_update.effective_chat.id = 456
+        mock_message.text = ""
+
+        mock_message.reply_text = AsyncMock()
+        bot.db_ops.clear_conversation_history = AsyncMock()
+
+        await bot._handle_clear(mock_update, None)
+
+        bot.db_ops.clear_conversation_history.assert_called_once_with(123, 456)
+        mock_message.reply_text.assert_called_once()
+        call_args = mock_message.reply_text.call_args[0][0]
+        assert "✅ Conversation history cleared" in call_args
+
+    @pytest.mark.asyncio
+    async def test_handle_clear_error(self, bot):
+        """Test /clear command error handling."""
+        mock_update = MagicMock()
+        mock_message = MagicMock()
+        mock_update.message = mock_message
+        mock_update.effective_user = MagicMock()
+        mock_update.effective_user.id = 123
+        mock_update.effective_chat = MagicMock()
+        mock_update.effective_chat.id = 456
+        mock_message.text = ""
+
+        mock_message.reply_text = AsyncMock()
+        bot.db_ops.clear_conversation_history = AsyncMock(side_effect=Exception("DB error"))
+
+        await bot._handle_clear(mock_update, None)
+
+        mock_message.reply_text.assert_called_once()
+        call_args = mock_message.reply_text.call_args[0][0]
+        assert "⚠️ Failed to clear conversation history" in call_args
+
+    @pytest.mark.asyncio
+    async def test_handle_thinking_indicator(self, bot):
+        """Test thinking indicator message."""
+        mock_update = MagicMock()
+        mock_message = MagicMock()
+        mock_update.message = mock_message
+        mock_message.reply_text = AsyncMock()
+
+        result = await bot._handle_thinking_indicator(mock_update)
+
+        mock_message.reply_text.assert_called_once_with("🤔 Thinking...")
+        assert result is not None
+
+    @pytest.mark.asyncio
+    async def test_handle_message_success(self, bot):
         """Test successful message handling."""
-
-        # Mock update
         mock_update = MagicMock()
         mock_message = MagicMock()
         mock_update.message = mock_message
+        mock_update.effective_user = MagicMock()
         mock_update.effective_user.id = 123
+        mock_update.effective_chat = MagicMock()
         mock_update.effective_chat.id = 456
-        mock_update.message.text = "What time is it?"
+        mock_message.text = "test message"
 
-        # Mock context
-        mock_context = MagicMock()
+        mock_message.reply_text = AsyncMock()
+        bot.tool_manager.process_user_request = AsyncMock(return_value="test response")
+        bot.response_sender = MagicMock()
+        bot.response_sender.send_single_response = AsyncMock()
 
-        # Mock thinking message
-        mock_thinking = MagicMock()
-        mock_thinking.edit_text = AsyncMock()
-        mock_message.reply_text = AsyncMock(return_value=mock_thinking)
+        await bot._handle_message(mock_update, None)
 
-        # Mock tool manager response
-        telegram_bot.tool_manager.process_user_request = AsyncMock(
-            return_value="The current time is 2:30 PM"
-        )
-
-        await telegram_bot._handle_message(mock_update, mock_context)
-
-        # Verify thinking message was edited
-        mock_thinking.edit_text.assert_called_once_with("The current time is 2:30 PM", parse_mode="MarkdownV2")
-        telegram_bot.tool_manager.process_user_request.assert_called_once()
+        bot.tool_manager.process_user_request.assert_called_once_with(123, 456, "test message", bot.db_ops)
+        bot.response_sender.send_single_response.assert_called_once_with("test response", mock_message.reply_text.return_value)
 
     @pytest.mark.asyncio
-    async def test_handle_message_error(self, telegram_bot):
-        """Test message handling with error."""
-
-        # Mock update
+    async def test_handle_message_error(self, bot):
+        """Test message handling error."""
         mock_update = MagicMock()
         mock_message = MagicMock()
         mock_update.message = mock_message
+        mock_update.effective_user = MagicMock()
         mock_update.effective_user.id = 123
+        mock_update.effective_chat = MagicMock()
         mock_update.effective_chat.id = 456
-        mock_update.message.text = "What time is it?"
+        mock_message.text = "test message"
 
-        # Mock context
-        mock_context = MagicMock()
+        mock_message.reply_text = AsyncMock()
+        bot.tool_manager.process_user_request = AsyncMock(side_effect=Exception("Tool error"))
+        bot.response_sender = MagicMock()
 
-        # Mock thinking message
-        mock_thinking = MagicMock()
-        mock_thinking.edit_text = AsyncMock()
-        mock_message.reply_text = AsyncMock(return_value=mock_thinking)
+        await bot._handle_message(mock_update, None)
 
-        # Mock tool manager to raise error
-        telegram_bot.tool_manager.process_user_request = AsyncMock(
-            side_effect=Exception("Test error")
-        )
+        # The bot sends thinking indicator first, then edits it with error
+        assert mock_message.reply_text.call_count == 1
+        # The thinking message should be edited with error
+        thinking_message = mock_message.reply_text.return_value
+        assert thinking_message.edit_text.called
+        error_call = thinking_message.edit_text.call_args[0][0]
+        assert "⚠️ Error: Tool error" in error_call
 
-        await telegram_bot._handle_message(mock_update, mock_context)
+    def test_create_handlers(self, bot):
+        """Test that handlers are created correctly."""
+        handlers = bot._create_handlers()
 
-        # Verify error message was sent
-        mock_thinking.edit_text.assert_called_once()
-        error_text = mock_thinking.edit_text.call_args[0][0]
-        assert "Error:" in error_text
+        assert 'start' in handlers
+        assert 'help' in handlers
+        assert 'clear' in handlers
+        assert 'message' in handlers
 
-    def test_setup_handlers(self, telegram_bot):
-        """Test handler setup."""
-        mock_application = MagicMock()
-        telegram_bot.application = mock_application
-
-        telegram_bot._setup_handlers()
-
-        # Verify handlers were added (start, help, clear, message)
-        assert mock_application.add_handler.call_count == 4
+        # Check handler types
+        from telegram.ext import CommandHandler, MessageHandler
+        assert isinstance(handlers['start'], CommandHandler)
+        assert isinstance(handlers['help'], CommandHandler)
+        assert isinstance(handlers['clear'], CommandHandler)
+        assert isinstance(handlers['message'], MessageHandler)

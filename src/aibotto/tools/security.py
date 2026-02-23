@@ -93,7 +93,7 @@ class SecurityManager:
         # If we get here, the command is allowed
         if self.enable_audit_logging:
             logger.info(f"Command allowed: {command[:50]}...")
-        
+
         result["allowed"] = True
         return result
 
@@ -107,7 +107,7 @@ class SecurityManager:
             self.custom_blocked_patterns = SecurityConfig.CUSTOM_BLOCKED_PATTERNS
             self.max_command_length = SecurityConfig.MAX_COMMAND_LENGTH
             self.enable_audit_logging = SecurityConfig.ENABLE_AUDIT_LOGGING
-            
+
             logger.info("Security rules reloaded successfully")
         except Exception as e:
             logger.error(f"Failed to reload security rules: {e}")

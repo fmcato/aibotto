@@ -129,7 +129,8 @@ class MessageSplitter:
     ) -> list[str]:
         """
         Split a message into chunks that will be safe after MarkdownV2 escaping.
-        Accounts for potential character expansion during escaping and handles File objects.
+        Accounts for potential character expansion during escaping and handles
+        File objects.
 
         Args:
             message: The message to split (str or File object)
@@ -143,7 +144,7 @@ class MessageSplitter:
             # For files, we want to keep them as single chunks to preserve structure
             file_name = getattr(message, 'file_name', 'unknown.txt')
             file_data = getattr(message, 'file_data', b'')
-            
+
             try:
                 # Try to decode as UTF-8
                 decoded_content = file_data.decode('utf-8')
@@ -152,24 +153,28 @@ class MessageSplitter:
             except UnicodeDecodeError:
                 # If UTF-8 fails, show as base64
                 import base64
-                encoded = base64.b64encode(file_data[:2000]).decode('ascii')  # Show first 2000 bytes
-                content = f"📄 **File: {file_name}**\n\n⚠️ Binary file content (first 2000 bytes base64):\n```\n{encoded}\n```\n..."
-            
+                encoded = base64.b64encode(file_data[:2000]).decode('ascii')
+                # Show first 2000 bytes
+                content = (
+                    f"📄 **File: {file_name}**\n\n⚠️ Binary file content "
+                    f"(first 2000 bytes base64):\n```\n{encoded}\n```\n..."
+                )
+
             # For files, we don't split to preserve the structure
             return [content]
-        
+
         # Handle regular text messages
         if not isinstance(message, str):
             message = str(message)
-        
+
         # Be very conservative - split message into chunks that are safe even
         # if every character gets escaped (2x expansion)
         conservative_max = TELEGRAM_MAX_LENGTH_PER_SECOND // 2
-        
+
         # Additional space for continuation markers if needed
         if reserve_marker_space:
             conservative_max -= ESCAPE_EXPANSION_SAFETY_MARGIN
-        
+
         if len(message) <= conservative_max:
             return [message]
 
@@ -177,8 +182,11 @@ class MessageSplitter:
         for i in range(0, len(message), conservative_max):
             chunk = message[i:i + conservative_max]
             chunks.append(chunk)
-        
-        logger.info(f"Split message into {len(chunks)} conservative chunks for escaping safety")
+
+        logger.info(
+                f"Split message into {len(chunks)} conservative "
+                f"chunks for escaping safety"
+            )
         return chunks
 
     @staticmethod

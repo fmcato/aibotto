@@ -13,19 +13,19 @@ logger = logging.getLogger(__name__)
 
 def _parse_command_args(command: str) -> list[str]:
     """Parse command string into arguments list.
-    
+
     Args:
         command: Command string to parse
-        
+
     Returns:
         List of arguments
-        
+
     Raises:
         ValueError: If command is empty or invalid
     """
     if not command or not command.strip():
         raise ValueError("Empty command")
-    
+
     try:
         # Use shlex to properly handle quoted arguments and escape sequences
         return shlex.split(command)
@@ -35,10 +35,10 @@ def _parse_command_args(command: str) -> list[str]:
 
 def _sanitize_args(args: list[str]) -> list[str]:
     """Sanitize command arguments to prevent injection.
-    
+
     Args:
         args: List of command arguments
-        
+
     Returns:
         Sanitized arguments list
     """
@@ -83,7 +83,10 @@ class CLIExecutor:
                 return f"Error: Invalid command format: {e}"
 
             # Execute command in a controlled environment using subprocess_exec
-            logger.info(f"Starting subprocess for executable: {executable} with args: {cmd_args}")
+            logger.info(
+                    f"Starting subprocess for executable: {executable}"
+                    f" with args: {cmd_args}"
+                )
             process = await asyncio.create_subprocess_exec(
                 executable, *cmd_args,
                 stdout=asyncio.subprocess.PIPE,

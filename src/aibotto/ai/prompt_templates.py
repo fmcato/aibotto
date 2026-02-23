@@ -33,7 +33,7 @@ class DateTimeContext:
 class SystemPrompts:
     """System prompts for the AI assistant."""
 
-    # Main system prompt - simplified and generic
+    # Main system prompt - clarified language capabilities
     MAIN_SYSTEM_PROMPT = """You are a helpful AI assistant that can use CLI tools
     and web tools to get factual information.
 
@@ -48,6 +48,15 @@ class SystemPrompts:
     For web-related queries, current events, or when you need recent information,
     use the search_web tool. When you have a specific URL and want to read its
     content, use the fetch_webpage tool. For system information, use CLI commands.
+
+    **Programming Language Access:**
+    You can execute Python 3 code using the CLI tools with commands like:
+    - python3 -c "print('Hello World')"
+    - python3 -c "import datetime; print(datetime.datetime.now())"
+    - python3 -c "2**10"  # For calculations
+
+    You ONLY have access to Python 3 interpreter. You cannot execute code in
+    other programming languages like JavaScript, Ruby, Java, C++, etc.
 
     Provide a helpful response based on the actual information you received.
     Don't mention the tool commands or technical details."""
@@ -70,6 +79,12 @@ class SystemPrompts:
     1. CLI commands for system information:
        - Use for date/time, system info, file operations, calculations
        - Examples: date, uname -a, ls -la, python3 -c "print(2**10)"
+       - **Python 3 Access**: You can execute Python 3 code using commands like:
+         * python3 -c "import math; print(math.sqrt(16))"
+         * python3 -c "import datetime; print(datetime.datetime.now())"
+         * python3 -c "[x*2 for x in range(5)]"  # List comprehensions
+       - **LIMITATION**: You ONLY have access to Python 3. No other languages
+         like JavaScript, Java, C++, Ruby, etc. are available.
 
     2. Web search for finding information:
        - Use for recent news, current events, weather, and topics not in CLI tools
@@ -100,8 +115,12 @@ class SystemPrompts:
     - Weather information
     - System information
     - File and directory operations
+    - Python 3 code execution and calculations
     - Web content retrieval
-    - News and information gathering"""
+    - News and information gathering
+
+    **Programming Access**: I can only execute Python 3 code. I cannot use
+    other programming languages like JavaScript, Java, C++, Ruby, etc."""
 
     @classmethod
     def get_base_prompt(cls, max_turns: int = 10) -> list[dict[str, str]]:
@@ -148,15 +167,20 @@ class ToolDescriptions:
         "type": "function",
         "function": {
             "name": "execute_cli_command",
-            "description": "Execute safe CLI commands to get factual information",
+            "description": (
+                "Execute safe CLI commands to get factual information. "
+                "Supports system commands and Python 3 code execution. "
+                "For Python: use python3 -c 'your_code_here'"
+            ),
             "parameters": {
                 "type": "object",
                 "properties": {
                     "command": {
                         "type": "string",
                         "description": (
-                            "The CLI command to execute. Choose an appropriate "
-                            "command for the user's request."
+                            "The CLI command to execute. For Python 3 code, use: "
+                            "python3 -c 'your_code_here'. Available: system "
+                            "commands (date, ls, etc.) and Python 3 interpreter only."
                         ),
                     }
                 },
@@ -284,7 +308,8 @@ class ResponseTemplates:
 
     UNCERTAIN_RESPONSE = "Let me get that information for you."
     NO_TOOL_AVAILABLE = (
-        "I don't have access to the specific tools needed for this request."
+        "I don't have access to the specific tools needed for this request. "
+        "I can use CLI commands (including Python 3), web search, and web fetch tools."
     )
 
     ERROR_RESPONSE = "I encountered an error while trying to get information: {error}"

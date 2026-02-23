@@ -2,9 +2,9 @@
 Utility functions for the AIBOTTO project.
 """
 
+import asyncio
 import logging
 import os
-import asyncio
 from typing import Any
 
 logger = logging.getLogger(__name__)
@@ -54,35 +54,40 @@ def escape_markdown_v2(text: str) -> str:
 
 def process_file_content(file_obj: Any) -> str:
     """Process file objects and return formatted text content.
-    
+
     Args:
         file_obj: File object with file_data and file_name attributes
-        
+
     Returns:
         Formatted string representation of the file content
     """
     if not hasattr(file_obj, 'file_data') or not hasattr(file_obj, 'file_name'):
         return str(file_obj)
-    
+
     file_name = getattr(file_obj, 'file_name', 'unknown.txt')
     file_data = getattr(file_obj, 'file_data', b'')
-    
+
     try:
         # Try to decode as UTF-8 first
         decoded_content = file_data.decode('utf-8')
         # Clean up any encoding artifacts
         decoded_content = decoded_content.replace('\\n', '\n').replace('\\r', '\r')
-        decoded_content = decoded_content.replace('nxe2x94x9c', '│')  # Fix UTF-8 box drawing chars
-        decoded_content = decoded_content.replace('nxe2x94x80', '─')  # Fix UTF-8 box drawing chars
-        decoded_content = decoded_content.replace('nxe2x94x94', '└')  # Fix UTF-8 box drawing chars
-        
+        # Fix UTF-8 box drawing chars
+        decoded_content = decoded_content.replace('nxe2x94x9c', '│')
+        decoded_content = decoded_content.replace('nxe2x94x80', '─')
+        decoded_content = decoded_content.replace('nxe2x94x94', '└')
+
         # Format as code block with file info
         return f"📄 **File: {file_name}**\n\n```\n{decoded_content}\n```"
     except UnicodeDecodeError:
         # If UTF-8 fails, show as base64 or indicate binary content
         import base64
-        encoded = base64.b64encode(file_data[:2000]).decode('ascii')  # Show first 2000 bytes
-        return f"📄 **File: {file_name}**\n\n⚠️ Binary file content (first 2000 bytes base64):\n```\n{encoded}\n```\n..."
+        encoded = base64.b64encode(file_data[:2000]).decode('ascii')
+        # Show first 2000 bytes
+        return (
+            f"📄 **File: {file_name}**\n\n⚠️ Binary file content "
+            f"(first 2000 bytes base64):\n```\n{encoded}\n```\n..."
+        )
     except Exception as e:
         logger.warning(f"Error processing file content: {e}")
         return f"📄 **File: {file_name}**\n\n⚠️ Could not process file content: {str(e)}"

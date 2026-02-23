@@ -18,7 +18,7 @@ class TestFactualResponses:
         """Create a ToolCallingManager instance for testing."""
         with patch('src.aibotto.ai.tool_calling.LLMClient') as mock_llm:
             mock_llm.return_value = AsyncMock()
-            
+
             manager = ToolCallingManager()
             manager.llm_client = mock_llm.return_value
 
@@ -109,15 +109,15 @@ class TestFactualResponses:
         # Test that CLI executor can execute commands directly
         # Since the CLI executor is mocked, we'll test that it was called correctly
         test_command = "date"
-        
+
         # Get the CLI executor from the tool registry
         from src.aibotto.tools.tool_registry import tool_registry
         cli_executor = tool_registry.get_executor("execute_cli_command")
-        
+
         # Skip test if CLI executor is not available
         if not cli_executor:
             pytest.skip("CLI executor not available")
-            
+
         # Execute the command
         result = await cli_executor.execute('{"command": "' + test_command + '"}', user_id=123)
 
@@ -133,7 +133,7 @@ class TestFactualResponses:
         """Test when factual verification is triggered."""
         # Import the FactChecker directly since it's no longer in ToolCallingManager
         from src.aibotto.ai.fact_checker import FactChecker
-        
+
         # Test case 1: Uncertain response with factual query
         uncertain_response = "It's probably around 2 PM"
         factual_query = "what time is it"

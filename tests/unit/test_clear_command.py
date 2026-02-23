@@ -80,7 +80,7 @@ class TestClearCommand:
 
         # Verify error message was sent
         mock_update.message.reply_text.assert_called_once_with(
-            "❌ Failed to clear conversation history: Database connection failed"
+            "⚠️ Failed to clear conversation history: Database connection failed"
         )
 
     def test_telegram_bot_has_clear_handler(self):

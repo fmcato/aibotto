@@ -4,8 +4,8 @@ Tests for message splitting functionality.
 
 import pytest
 
-from aibotto.utils.message_splitter import MessageSplitter
 from aibotto.utils.helpers import process_file_content
+from aibotto.utils.message_splitter import MessageSplitter
 
 
 class TestMessageSplitter:
@@ -149,16 +149,16 @@ class TestMessageSplitter:
         # Create a message with many MarkdownV2 special characters that will expand
         special_chars = r'_*[]()~`>#+-=|{}.!'
         message = special_chars * 200  # This will expand significantly when escaped
-        
+
         # Use the new method that accounts for escaping
         chunks = MessageSplitter.split_message_for_sending(message)
-        
+
         # All chunks should be safe (won't exceed Telegram's limit after escaping)
         for chunk in chunks:
             # Estimate worst-case expansion (each char could become 2 chars)
             estimated_length = len(chunk) * 2
             assert estimated_length <= 4095, f"Chunk too long after escaping: {estimated_length}"
-        
+
         # Should be split into multiple chunks due to escaping expansion
         assert len(chunks) > 1
 
@@ -166,15 +166,15 @@ class TestMessageSplitter:
         """Test splitting with continuation markers enabled."""
         # Create a long message that will definitely need splitting
         message = "This is a sentence. " * 1000
-        
+
         # Split with marker space reservation
         chunks = MessageSplitter.split_message_for_sending(
             message, reserve_marker_space=True
         )
-        
+
         # Should account for the additional space needed by markers
         assert len(chunks) >= 1
-        
+
         # Verify that even with markers, chunks won't exceed limits
         for chunk in chunks:
             estimated_length = len(chunk) * 2  # Account for escaping
@@ -187,14 +187,14 @@ class TestMessageSplitter:
             def __init__(self, file_name, file_data):
                 self.file_name = file_name
                 self.file_data = file_data
-        
+
         # Create binary data with UTF-8 encoded box drawing characters
         binary_content = b'docker-compose.yml\n\xe2\x94\x9c\xe2\x94\x80\xe2\x94\x80 bot (main service)\n\xe2\x94\x9c\xe2\x94\x80\xe2\x94\x80 scheduler (cron-based summary service)\n\xe2\x94\x94\xe2\x94\x80\xe2\x94\x80 shared database volume'
         file_obj = MockFile('docker-compose.yml.txt', binary_content)
-        
+
         # Split the file object
         chunks = MessageSplitter.split_message_for_sending(file_obj)
-        
+
         # Should return a single chunk for files
         assert len(chunks) == 1
         assert "📄 **File: docker-compose.yml.txt**" in chunks[0]
@@ -203,7 +203,7 @@ class TestMessageSplitter:
         assert "scheduler (cron-based summary service)" in chunks[0]
         # Should have properly decoded the box drawing characters
         assert "├──" in chunks[0]  # Box drawing character
-        assert "─" in chunks[0]  # Box drawing character  
+        assert "─" in chunks[0]  # Box drawing character
         assert "└──" in chunks[0]  # Box drawing character
 
     def test_split_message_for_sending_binary_file(self):
@@ -213,14 +213,14 @@ class TestMessageSplitter:
             def __init__(self, file_name, file_data):
                 self.file_name = file_name
                 self.file_data = file_data
-        
+
         # Create binary data that's not valid UTF-8 (PNG header)
         binary_content = b'\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01\x08\x02\x00\x00\x00\x90wS\xde'
         file_obj = MockFile('image.png', binary_content)
-        
+
         # Split the file object
         chunks = MessageSplitter.split_message_for_sending(file_obj)
-        
+
         # Should return a single chunk for files
         assert len(chunks) == 1
         assert "📄 **File: image.png**" in chunks[0]
@@ -236,13 +236,13 @@ class TestMessageSplitter:
             def __init__(self, file_name, file_data):
                 self.file_name = file_name
                 self.file_data = file_data
-        
+
         # Test with UTF-8 encoded content
         binary_content = b'docker-compose.yml\n\xe2\x94\x9c\xe2\x94\x80\xe2\x94\x80 bot (main service)'
         file_obj = MockFile('docker-compose.yml.txt', binary_content)
-        
+
         result = process_file_content(file_obj)
-        
+
         # Should return formatted file content
         assert "📄 **File: docker-compose.yml.txt**" in result
         assert "docker-compose.yml" in result
@@ -257,13 +257,13 @@ class TestMessageSplitter:
             def __init__(self, file_name, file_data):
                 self.file_name = file_name
                 self.file_data = file_data
-        
+
         # Test with binary content that can't be decoded as UTF-8
         binary_content = b'\x89PNG\r\n\x1a\n binary data here'
         file_obj = MockFile('image.png', binary_content)
-        
+
         result = process_file_content(file_obj)
-        
+
         # Should handle binary content gracefully
         assert "📄 **File: image.png**" in result
         assert "⚠️ Binary file content" in result
@@ -274,7 +274,7 @@ class TestMessageSplitter:
         # Test with a regular string
         result = process_file_content("regular text")
         assert result == "regular text"
-        
+
         # Test with None
         result = process_file_content(None)
         assert result == "None"
