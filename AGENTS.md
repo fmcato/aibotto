@@ -8,11 +8,220 @@ An AI agent that communicates through Telegram and uses CLI tools to fulfill use
 - User asks "What's the weather in London?" → Agent uses web_search tool to find current conditions
 - User asks "Calculate 2^20" → Agent runs `python3 -c "print(2**20)"`
 
+## Build & Quality Commands
+
+### Build/Setup
+```bash
+# Install dependencies
+uv sync
+
+# Development dependencies
+uv sync --dev
+
+# Install pre-commit hooks
+uv run pre-commit install
+```
+
+### Testing Commands
+```bash
+# Run all tests (required before commit)
+uv run pytest
+
+# Run with coverage report
+uv run pytest --cov=src --cov-report=html --cov-report=term-missing
+
+# Run specific test file
+uv run pytest tests/unit/test_cli.py
+
+# Run specific test
+uv run pytest tests/unit/test_cli.py::TestCLIExecutor::test_execute_command_success
+
+# Run only unit tests
+uv run pytest tests/unit/
+
+# Run only e2e tests
+uv run pytest tests/e2e/
+
+# Run with verbose output
+uv run pytest -v
+
+# Run with specific marker
+uv run pytest -k "web_fetch"
+
+# Stop on first failure
+uv run pytest --xfail
+
+# Run with timing info
+uv run pytest --durations=10
+```
+
+### Linting & Type Checking
+```bash
+# Run Ruff linting
+uv run ruff check src/
+uv run ruff check --fix src/  # Auto-fix issues
+
+# Run MyPy type checking
+uv run mypy src/
+
+# Run Bandit security scanning
+uv run bandit -r src/
+
+# Run all quality checks (pre-commit equivalent)
+uv run ruff check src/ && uv run mypy src/ && uv run bandit -r src/
+```
+
+### Pre-commit Hooks
+```bash
+# Run pre-commit checks manually
+uv run pre-commit run --all-files
+
+# Skip pre-commit for specific commit
+git commit --no-verify -m "message"
+```
+
 ## Tech Stack
 - **Python 3.12**: Core programming language
 - **UV**: Project and dependency management, running tests, code execution
 - **OpenAI-compatible LLM**: Configurable provider with tool calling functionality
 - **SQLite**: For storing conversation history
+
+## Code Style Guidelines
+
+#### Imports and Formatting
+- **Line length**: Maximum 88 characters (Ruff default)
+- **Type hints**: Always use type hints for all function parameters and return values
+- **Imports**: Group imports in sections: standard library, third-party, local
+- **Quotes**: Use double quotes for strings unless single quotes avoid escaping
+- **Trailing commas**: Use in multi-line structures for easier editing
+
+```python
+# Good imports
+import asyncio
+import logging
+from typing import Any, List, Optional
+
+import openai
+from aibotto.config.settings import Config
+from aibotto.tools.security import SecurityManager
+
+# Function with proper type hints
+async def execute_command(
+    command: str, 
+    timeout: float = 30.0
+) -> tuple[str, str, bool]:
+    """Execute CLI command with timeout and return output, error, and success status."""
+    ...
+```
+
+#### Naming Conventions
+- **Classes**: PascalCase (e.g., `LLMClient`, `SecurityManager`)
+- **Functions and methods**: snake_case (e.g., `execute_command`, `validate_command`)
+- **Variables**: snake_case (e.g., `command_output`, `max_retries`)
+- **Constants**: UPPER_SNAKE_CASE (e.g., `LLM_TIMEOUT`, `MAX_COMMAND_LENGTH`)
+- **Private attributes**: Leading underscore (e.g., `_rate_limit_reset_time`)
+
+#### Error Handling
+- **Specific exceptions**: Catch specific exceptions rather than generic ones
+- **Logging**: Use appropriate log levels (DEBUG, INFO, WARNING, ERROR)
+- **Error messages**: Provide clear, actionable error messages
+- **Async error handling**: Always use try/except around async operations
+
+```python
+# Good error handling
+try:
+    result = await asyncio.wait_for(
+        subprocess.communicate(), 
+        timeout=timeout
+    )
+except asyncio.TimeoutError:
+    logger.warning(f"Command timed out after {timeout}s: {command}")
+    raise CommandTimeoutError(f"Command timed out: {command}")
+except subprocess.CalledProcessError as e:
+    logger.error(f"Command failed with exit code {e.returncode}: {command}")
+    raise CommandExecutionError(f"Command failed: {e}")
+```
+
+#### Type Safety
+- **MyPy configuration**: Strict mode enabled
+- **Type annotations**: Always include return types
+- **Optional types**: Use `Optional[T]` instead of `T | None` for consistency
+- **Generic types**: Use properly when creating reusable components
+
+```python
+# Good type safety
+class CLIExecutor:
+    def __init__(self) -> None:
+        self.security_manager: SecurityManager = SecurityManager()
+    
+    async def execute_command(
+        self, 
+        command: str, 
+        timeout: float = 30.0
+    ) -> CommandResult:
+        """Execute command with security validation and timeout."""
+        ...
+```
+
+#### Function Design
+- **Single responsibility**: Each function should do one thing well
+- **Pure functions**: Prefer pure functions when possible
+- **Async/await**: Use async/await for I/O operations
+- **Error propagation**: Let exceptions bubble up unless specifically handled
+
+#### Logging Practices
+- **Module-level loggers**: Use `logger = logging.getLogger(__name__)`
+- **Log levels**: DEBUG for development, INFO for operational, WARNING for issues, ERROR for failures
+- **Structured logging**: Include relevant context in log messages
+- **Sensitive data**: Never log passwords, API keys, or personal information
+
+```python
+# Good logging
+logger = logging.getLogger(__name__)
+
+async def execute_command(command: str) -> str:
+    logger.debug(f"Executing command: {command}")
+    try:
+        result = await _run_command_safely(command)
+        logger.info(f"Command succeeded: {command[:50]}...")
+        return result
+    except CommandError as e:
+        logger.error(f"Command failed: {command[:50]}... - {e}")
+        raise
+```
+
+#### Security Considerations
+- **Input validation**: Validate all external inputs
+- **Command sanitization**: Prevent command injection
+- **Environment variables**: Use for sensitive configuration
+- **Least privilege**: Run with minimal required permissions
+- **Rate limiting**: Implement for external API calls
+
+#### Documentation Standards
+- **Docstrings**: Follow Google/NumPy style for public APIs
+- **Type hints**: Provide complete type information
+- **Examples**: Include usage examples for complex functions
+- **Version notes**: Document API changes with version numbers
+
+```python
+class LLMClient:
+    """Client for OpenAI-compatible API integration.
+    
+    Provides async chat completion with tool calling support and rate limiting.
+    
+    Args:
+        api_key: OpenAI API key (from environment)
+        base_url: API base URL
+        model: Model name to use
+        
+    Example:
+        >>> client = LLMClient()
+        >>> response = await client.chat_completion([
+        ...     {"role": "user", "content": "What day is today?"}
+        ... ])
+        >>> print(response["choices"][0]["message"]["content"])
+    """
+```
 
 ## Project Structure
 
@@ -219,6 +428,7 @@ aibotto-cli list files in current directory
 # Verbose mode (shows debug output)
 aibotto-cli -v "search for latest news about AI"
 ```
+
 ## Troubleshooting
 
-- if you fail twice in a row to use the search_replace tool, switch to overwrite the whole file content instead
+- If you fail twice in a row to use the search_replace tool, switch to overwrite the whole file content instead

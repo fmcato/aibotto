@@ -14,7 +14,7 @@ from ..tools.tool_registry import tool_registry
 from .iteration_manager import IterationManager
 from .llm_client import LLMClient
 from .message_processor import MessageProcessor
-from .prompt_templates import ResponseTemplates, SystemPrompts, ToolDescriptions
+from .prompt_templates import SystemPrompts, ToolDescriptions
 
 logger = logging.getLogger(__name__)
 
@@ -31,7 +31,8 @@ class ToolCallingManager:
         self.iteration_manager = IterationManager(self.max_iterations)
 
         # Tool call tracking
-        self._executed_tool_calls: set[str] = set()  # Track tool calls in current session
+        self._executed_tool_calls: set[str] = set()  # Track tool calls in
+                                                  # current session
         self._iteration_count = 0  # Track current iteration number
         self._recent_tool_calls: set[str] = set()  # Track calls in recent iterations
 
@@ -61,7 +62,9 @@ class ToolCallingManager:
         call_data = f"{function_name}:{arguments}"
         return hashlib.md5(call_data.encode()).hexdigest()
 
-    def _is_duplicate_tool_call(self, function_name: str, arguments: str, user_id: int, chat_id: int = 0) -> bool:
+    def _is_duplicate_tool_call(
+        self, function_name: str, arguments: str, user_id: int, chat_id: int = 0
+    ) -> bool:
         """Check if this tool call has been executed before in this conversation."""
         call_hash = self._generate_tool_call_hash(function_name, arguments)
 
@@ -75,8 +78,10 @@ class ToolCallingManager:
 
         if is_duplicate:
             logger.warning(
-                f"DUPLICATE TOOL CALL DETECTED: {function_name} with arguments {arguments[:100]}... "
-                f"User: {user_id}, Chat: {chat_id}, Iteration: {self._iteration_count}"
+                f"DUPLICATE TOOL CALL DETECTED: {function_name} with "
+                f"arguments {arguments[:100]}... "
+                f"User: {user_id}, Chat: {chat_id}, "
+                f"Iteration: {self._iteration_count}"
             )
         else:
             _tool_call_tracker[user_key].add(call_hash)
@@ -87,8 +92,11 @@ class ToolCallingManager:
 
         return is_duplicate
 
-    def _is_similar_tool_call(self, function_name: str, arguments: str, user_id: int, chat_id: int = 0) -> bool:
-        """Check if this tool call is similar to a previous one (same function, different args)."""
+    def _is_similar_tool_call(
+        self, function_name: str, arguments: str, user_id: int, chat_id: int = 0
+    ) -> bool:
+        """Check if this tool call is similar to a previous one (same function,
+        different args)."""
         # Check for similar function calls that might indicate retry logic issues
         user_key = f"{user_id}_{chat_id}" if chat_id else f"user_{user_id}"
 
@@ -115,8 +123,11 @@ class ToolCallingManager:
 
         return False
 
-    def _should_prevent_retry(self, function_name: str, arguments: str, user_id: int, chat_id: int = 0) -> bool:
-        """Intelligently determine if a tool call should be prevented based on retry patterns."""
+    def _should_prevent_retry(
+        self, function_name: str, arguments: str, user_id: int, chat_id: int = 0
+    ) -> bool:
+        """Intelligently determine if a tool call should be prevented based on
+        retry patterns."""
         user_key = f"{user_id}_{chat_id}" if chat_id else f"user_{user_id}"
 
         if user_key not in _tool_call_tracker:
@@ -140,14 +151,19 @@ class ToolCallingManager:
         # 2. Complex calculations called more than once (unnecessary retry)
         # 3. Simple commands called more than 5 times (clearly stuck)
         if same_function_calls > 3:
-            logger.warning(f"Excessive function calls detected: {function_name} called {same_function_calls} times")
+            logger.warning(
+                f"Excessive function calls detected: {function_name} called "
+                f"{same_function_calls} times"
+            )
             return True
 
         # Special handling for different types of tools
         if "python3" in arguments.lower():
             # Complex calculations shouldn't be retried
             if same_function_calls > 1:
-                logger.warning(f"Preventing retry of complex calculation: {function_name}")
+                logger.warning(
+                    f"Preventing retry of complex calculation: {function_name}"
+                )
                 return True
         elif function_name == "execute_cli_command":
             # Other CLI commands shouldn't be retried excessively
@@ -192,7 +208,10 @@ class ToolCallingManager:
         if self._is_duplicate_tool_call(function_name, arguments, user_id, chat_id):
             # Return early for duplicates to prevent infinite loops
             logger.warning(f"Skipping duplicate tool call: {function_name}")
-            return f"⚠️ Tool call '{function_name}' already executed in this conversation. Skipping to prevent infinite loops."
+            return (
+                f"⚠️ Tool call '{function_name}' already executed in this "
+                f"conversation. Skipping to prevent infinite loops."
+            )
 
         # Track this call in recent calls (keep last 10 calls)
         call_hash = self._generate_tool_call_hash(function_name, arguments)
@@ -205,12 +224,22 @@ class ToolCallingManager:
             logger.info(f"Implementing smart retry prevention for {function_name}")
             # For complex calculations, suggest optimization instead of retry
             if "python3" in arguments.lower() and "calc" in arguments.lower():
-                return "🔄 I already attempted a similar calculation. Let me try a different approach or provide you with what I found so far."
+                return (
+                    "🔄 I already attempted a similar calculation. Let me try a "
+                    "different approach or provide you with what I found so far."
+                )
 
         # Check if this call should be prevented due to retry patterns
         if self._should_prevent_retry(function_name, arguments, user_id, chat_id):
-            logger.warning(f"Preventing retry of {function_name} - detected unnecessary retry pattern")
-            return "🚫 I've already attempted this type of operation multiple times. Let me try a different approach or provide you with the results I have so far."
+            logger.warning(
+                f"Preventing retry of {function_name} - detected unnecessary "
+                "retry pattern"
+            )
+            return (
+                "🚫 I've already attempted this type of operation multiple "
+                "times. Let me try a different approach or provide you with the "
+                "results I have so far."
+            )
 
         # Get executor from registry
         executor = tool_registry.get_executor(function_name)
@@ -230,8 +259,8 @@ class ToolCallingManager:
             execution_time = time.time() - start_time
 
             logger.info(
-                f"Tool {function_name} completed in {execution_time:.2f}s for user {user_id}: "
-                f"{result[:200]}..."
+                f"Tool {function_name} completed in {execution_time:.2f}s for "
+                f"user {user_id}: {result[:200]}..."
             )
 
             # Log slow executions (> 10 seconds)
@@ -246,7 +275,8 @@ class ToolCallingManager:
         except Exception as e:
             execution_time = time.time() - start_time
             logger.error(
-                f"Tool {function_name} failed after {execution_time:.2f}s for user {user_id}: {e}"
+                f"Tool {function_name} failed after {execution_time:.2f}s for "
+                f"user {user_id}: {e}"
             )
             error_result = f"Error executing {function_name}: {str(e)}"
             if db_ops:
@@ -363,7 +393,8 @@ class ToolCallingManager:
         message_obj = choice["message"]
         tool_calls = MessageProcessor.extract_tool_calls_from_response(message_obj)
         logger.info(
-            f"LLM iteration {self._iteration_count} returned {len(tool_calls) if tool_calls else 0} tool calls"
+            f"LLM iteration {self._iteration_count} returned "
+            f"{len(tool_calls) if tool_calls else 0} tool calls"
         )
 
         if tool_calls:
@@ -435,13 +466,13 @@ class ToolCallingManager:
         db_ops: DatabaseOperations | None
     ) -> list[dict[str, str]]:
         """Prepare messages for LLM including conversation history.
-        
+
         Args:
-            user_id: User ID 
+            user_id: User ID
             chat_id: Chat ID
             message: Current message
             db_ops: Database operations
-            
+
         Returns:
             List of message dicts
         """
@@ -489,15 +520,20 @@ class ToolCallingManager:
 
     def cleanup_old_entries(self, max_age_hours: int = 24) -> None:
         """Clean up old entries from the global tracker to prevent memory leaks.
-        
+
         Args:
             max_age_hours: Maximum age of entries to keep (default: 24 hours)
         """
         # Simple cleanup: remove empty user entries to prevent memory growth
         global _tool_call_tracker
-        empty_users = [user_key for user_key, calls in _tool_call_tracker.items() if len(calls) == 0]
+        empty_users = [
+            user_key for user_key, calls in _tool_call_tracker.items()
+            if len(calls) == 0
+        ]
         for user_key in empty_users:
             del _tool_call_tracker[user_key]
 
         if empty_users:
-            logger.info(f"Cleaned up {len(empty_users)} empty user entries from tracker")
+            logger.info(
+                f"Cleaned up {len(empty_users)} empty user entries from tracker"
+            )

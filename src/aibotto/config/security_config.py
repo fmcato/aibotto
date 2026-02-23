@@ -76,7 +76,7 @@ class SecurityConfig:
             print(f"Warning: Could not reload security config from file: {e}")
 
     @classmethod
-    def get_security_rules_summary(cls) -> dict:
+    def get_security_rules_summary(cls) -> dict[str, object]:
         """Get summary of current security rules."""
         return {
             "max_command_length": cls.MAX_COMMAND_LENGTH,

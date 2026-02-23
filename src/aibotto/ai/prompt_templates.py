@@ -47,7 +47,8 @@ class SystemPrompts:
 
     **CRITICAL BEHAVIOR RULES:**
     - Execute each tool ONCE and provide the best answer you can
-    - NEVER retry the same tool with the same parameters to "verify" or "get more details"
+    - NEVER retry the same tool with the same parameters to "verify" or
+      "get more details"
     - If results are incomplete, try a DIFFERENT tool or approach
     - Complex calculations should be executed once, not multiple times
     - Web searches should be done once per topic, not repeated
@@ -103,16 +104,20 @@ class SystemPrompts:
     IMPORTANT GUIDELINES:
     - **CRITICAL**: Do NOT call the same tool with the same parameters multiple times
     - **CRITICAL**: Do NOT fetch the same URL more than once
-    - If a tool result is not useful, try a DIFFERENT approach instead of repeating
-    - **For calculations**: Once you get a result, provide your answer. Don't retry to "verify" or get "more details"
+    - If a tool result is not useful, try a DIFFERENT approach instead of
+      repeating
+    - **For calculations**: Once you get a result, provide your answer. Don't
+      retry to "verify" or get "more details"
     - **For complex operations**: Execute once and provide the best answer you can
-    - **For web searches**: Use search_web once, then provide your answer. Don't re-search the same topic
+    - **For web searches**: Use search_web once, then provide your answer.
+      Don't re-search the same topic
     - **For CLI commands**: Execute once and move on. Don't repeat the same command
     - Start with web search for news/current events, then fetch specific URLs if needed
     - Provide your best answer based on available information, even if incomplete
 
-    You have a maximum of {max_turns} tool-calling turns to complete your task.
-    Use them wisely - each turn should provide new information, not repeat the same work."""
+    You have a maximum of {max_turns} tool-calling turns to complete your
+    task. Use them wisely - each turn should provide new information, not
+    repeat the same work."""
 
     # Fallback response
     FALLBACK_RESPONSE = """I don't have access to the specific tools needed

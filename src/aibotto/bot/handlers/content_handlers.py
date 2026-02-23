@@ -182,7 +182,7 @@ class ContentHandlerFactory:
     def get_handler(cls, content_type: str) -> ContentHandler | None:
         """Get appropriate handler for content type."""
         handler_class = cls._handlers.get(content_type.upper())
-        return handler_class() if handler_class else None
+        return handler_class() if handler_class else None  # type: ignore
 
     @classmethod
     def get_supported_types(cls) -> list[str]:

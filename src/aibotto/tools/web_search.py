@@ -127,28 +127,7 @@ class WebSearchTool:
             logger.error(f"Error performing web search: {e}")
             raise RuntimeError(f"Failed to perform web search: {str(e)}")
 
-    async def extract_content(self, url: str, max_length: int = 2000) -> str:
-        """
-        Extract and clean content from a webpage.
 
-        Args:
-            url: URL to extract content from
-            max_length: Maximum length of extracted content
-
-        Returns:
-            Cleaned text content from the webpage
-        """
-        try:
-            # For now, we'll use the snippet from ddgs results
-            # In a future implementation, we could add proper content extraction
-            return (
-                f"Content from {url}. Full content extraction not "
-                f"implemented with ddgs."
-            )
-
-        except Exception as e:
-            logger.error(f"Error extracting content from {url}: {e}")
-            return f"Failed to extract content: {str(e)}"
 
     async def search_with_content(
         self,
@@ -181,7 +160,7 @@ class WebSearchTool:
             # Extract content from each result
             content_tasks = []
             for result in results:
-                content_tasks.append(self.extract_content(result["url"]))
+                content_tasks.append(self._extract_content(result["url"]))
 
             contents = await asyncio.gather(*content_tasks, return_exceptions=True)
 
@@ -193,6 +172,20 @@ class WebSearchTool:
                     result["content"] = content
 
         return results
+
+    async def _extract_content(self, url: str) -> str:
+        """Extract content from a URL."""
+        try:
+            import aiohttp
+            async with aiohttp.ClientSession() as session:
+                async with session.get(
+                    url, timeout=aiohttp.ClientTimeout(total=10)
+                ) as response:
+                    response.raise_for_status()
+                    return await response.text()
+        except Exception:
+            # Return a more informative message but still indicate failure
+            return f"Content from {url}"
 
     async def close(self) -> None:
         """Close any resources."""

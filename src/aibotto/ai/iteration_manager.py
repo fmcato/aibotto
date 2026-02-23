@@ -66,9 +66,17 @@ class IterationManager:
                     ),
                 })
 
-            result = await llm_processor._process_llm_iteration(
-                messages, user_id, chat_id, db_ops
-            )
+            try:
+                result = await llm_processor._process_llm_iteration(
+                    messages, user_id, chat_id, db_ops
+                )
+            except Exception as e:
+                # Handle LLM API errors gracefully
+                error_msg = f"Error communicating with AI service: {str(e)}"
+                logger.error(error_msg)
+                if db_ops:
+                    await db_ops.save_message(user_id, chat_id, 0, "system", error_msg)
+                return error_msg
 
             # Handle the case where result might be None or a tuple
             if result is not None:

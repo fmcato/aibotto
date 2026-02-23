@@ -13,10 +13,10 @@ logger = logging.getLogger(__name__)
 class BotSetupService:
     """Handles bot setup and initialization."""
 
-    def __init__(self):
-        self.application: Application | None = None
+    def __init__(self) -> None:
+        self.application: Any = None
 
-    async def initialize_application(self, token: str) -> Application:
+    async def initialize_application(self, token: str) -> Any:
         """Initialize the Telegram application."""
         try:
             self.application = Application.builder().token(token).build()
@@ -61,6 +61,6 @@ class BotSetupService:
         logger.info("🤖 Bot started. Polling for updates...")
         self.application.run_polling(drop_pending_updates=True)
 
-    def get_application(self) -> Application | None:
+    def get_application(self) -> Any:
         """Get the initialized application."""
         return self.application

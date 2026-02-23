@@ -51,8 +51,6 @@ class Config:
     THINKING_MESSAGE: str = os.getenv("THINKING_MESSAGE", "🤔 Thinking...")
 
     # Web Search Configuration
-    # SEARXNG_BASE_URL: str = os.getenv("SEARXNG_BASE_URL", "http://localhost:8080")
-    # SEARXNG_TIMEOUT: int = int(os.getenv("SEARXNG_TIMEOUT", "30"))
     DDGS_TIMEOUT: int = int(os.getenv("DDGS_TIMEOUT", "30"))
 
     # LLM Configuration

@@ -63,7 +63,8 @@ class TelegramBot:
             "Type /clear to reset our conversation."
         )
 
-        await update.message.reply_text(welcome_text)
+        if update.message:
+            await update.message.reply_text(welcome_text)
 
     async def _handle_help(
         self, update: Update, context: ContextTypes.DEFAULT_TYPE
@@ -110,7 +111,8 @@ I provide factual information using safe system tools. Here's what I can help wi
 ⚠️ **Security Note:** I only execute safe, pre-approved commands for your security.
         """
 
-        await update.message.reply_text(help_text, parse_mode="Markdown")
+        if update.message:
+            await update.message.reply_text(help_text, parse_mode="Markdown")
 
     async def _handle_clear(
         self, update: Update, context: ContextTypes.DEFAULT_TYPE
@@ -128,15 +130,17 @@ I provide factual information using safe system tools. Here's what I can help wi
             await self.db_ops.clear_conversation_history(user_id, chat_id)
 
             # Send confirmation message
-            await update.message.reply_text(
-                "✅ Conversation history cleared! I've forgotten our "
-                "previous conversation.\n\n"
+            if update.message:
+                await update.message.reply_text(
+                    "✅ Conversation history cleared! I've forgotten our "
+                    "previous conversation.\n\n"
                 "You can start fresh with any question you'd like to ask."
             )
 
         except Exception as e:
             error_msg = BotError(f"Failed to clear conversation history: {str(e)}")
-            await update.message.reply_text(error_msg.get_fallback_message())
+            if update.message:
+                await update.message.reply_text(error_msg.get_fallback_message())
             logger.error(f"Error clearing conversation history: {e}")
 
     async def _handle_thinking_indicator(
@@ -145,7 +149,9 @@ I provide factual information using safe system tools. Here's what I can help wi
         """Send and return thinking indicator message."""
         if not MessageUtils.safe_update_data(update)["has_message"]:
             return None
-        return await update.message.reply_text(Config.THINKING_MESSAGE)
+        if update.message:
+            return await update.message.reply_text(Config.THINKING_MESSAGE)
+        return None
 
     async def _handle_message(
         self, update: Update, context: ContextTypes.DEFAULT_TYPE
@@ -171,7 +177,10 @@ I provide factual information using safe system tools. Here's what I can help wi
             )
 
             # Send response using the response sender
-            await self.response_sender.send_single_response(response, thinking_message)
+            if self.response_sender:
+                await self.response_sender.send_single_response(
+                    response, thinking_message
+                )
 
         except Exception as e:
             error_msg = BotError(f"Error: {str(e)}")

@@ -40,7 +40,7 @@ class BotAvailabilityChecker:
         chat_id: int,
         content: str,
         fallback_message: str,
-        **kwargs
+        **kwargs: Any
     ) -> bool:
         """Send message with fallback handling."""
         try:
