@@ -101,6 +101,7 @@ from aibotto.bot.telegram_bot import TelegramBot
 ## Development Workflow
 
 ### Test-Driven Development (TDD)
+Use red/green TDD
 
 **ALWAYS write tests before implementation.** This is required for:
 - New features

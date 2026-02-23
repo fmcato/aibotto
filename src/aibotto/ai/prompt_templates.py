@@ -33,7 +33,7 @@ class DateTimeContext:
 class SystemPrompts:
     """System prompts for the AI assistant."""
 
-    # Main system prompt - clarified language capabilities
+    #     Main system prompt - clarified language capabilities with anti-retry emphasis
     MAIN_SYSTEM_PROMPT = """You are a helpful AI assistant that can use CLI tools
     and web tools to get factual information.
 
@@ -45,9 +45,13 @@ class SystemPrompts:
     2. Web search for finding information on the web
     3. Web fetch for reading the full content of a specific URL
 
-    For web-related queries, current events, or when you need recent information,
-    use the search_web tool. When you have a specific URL and want to read its
-    content, use the fetch_webpage tool. For system information, use CLI commands.
+    **CRITICAL BEHAVIOR RULES:**
+    - Execute each tool ONCE and provide the best answer you can
+    - NEVER retry the same tool with the same parameters to "verify" or "get more details"
+    - If results are incomplete, try a DIFFERENT tool or approach
+    - Complex calculations should be executed once, not multiple times
+    - Web searches should be done once per topic, not repeated
+    - Finalize your answer after getting results, don't keep looking for "better" ones
 
     **Programming Language Access:**
     You can execute Python 3 code using the CLI tools with commands like:
@@ -97,14 +101,18 @@ class SystemPrompts:
        - Useful for reading articles, blog posts, documentation pages
 
     IMPORTANT GUIDELINES:
-    - Do NOT call the same tool with the same parameters multiple times
-    - Do NOT fetch the same URL more than once
+    - **CRITICAL**: Do NOT call the same tool with the same parameters multiple times
+    - **CRITICAL**: Do NOT fetch the same URL more than once
     - If a tool result is not useful, try a DIFFERENT approach instead of repeating
+    - **For calculations**: Once you get a result, provide your answer. Don't retry to "verify" or get "more details"
+    - **For complex operations**: Execute once and provide the best answer you can
+    - **For web searches**: Use search_web once, then provide your answer. Don't re-search the same topic
+    - **For CLI commands**: Execute once and move on. Don't repeat the same command
     - Start with web search for news/current events, then fetch specific URLs if needed
     - Provide your best answer based on available information, even if incomplete
 
     You have a maximum of {max_turns} tool-calling turns to complete your task.
-    Provide a final answer within this limit."""
+    Use them wisely - each turn should provide new information, not repeat the same work."""
 
     # Fallback response
     FALLBACK_RESPONSE = """I don't have access to the specific tools needed

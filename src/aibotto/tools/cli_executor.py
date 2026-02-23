@@ -44,7 +44,9 @@ def _sanitize_args(args: list[str]) -> list[str]:
     """
     sanitized = []
     for arg in args:
-        # Remove any shell metacharacters that could be dangerous
+        # Only remove dangerous shell metacharacters that could lead to command injection
+        # Be very conservative to avoid breaking legitimate commands
+        # Restore original security - block dangerous shell metacharacters
         sanitized_arg = "".join(c for c in arg if c not in r'`$(){}[];&|*?<>~"\\')
         if sanitized_arg:  # Only add non-empty arguments
             sanitized.append(sanitized_arg)
@@ -56,6 +58,7 @@ class CLIExecutor:
 
     def __init__(self) -> None:
         self.security_manager = SecurityManager()
+        self.calculation_optimizer = None  # Lazy load to avoid circular imports
 
     async def execute_command(self, command: str) -> str:
         """Execute CLI command safely and return output."""
@@ -82,17 +85,37 @@ class CLIExecutor:
                 logger.error(f"Command parsing error: {e}")
                 return f"Error: Invalid command format: {e}"
 
-            # Execute command in a controlled environment using subprocess_exec
+# Execute command in a controlled environment using subprocess_exec
             logger.info(
-                    f"Starting subprocess for executable: {executable}"
-                    f" with args: {cmd_args}"
-                )
-            process = await asyncio.create_subprocess_exec(
-                executable, *cmd_args,
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE
+                f"Starting subprocess for executable: {executable}"
+                f" with args: {cmd_args}"
             )
-            stdout, stderr = await process.communicate()
+            
+            process = None
+            try:
+                process = await asyncio.create_subprocess_exec(
+                    executable, *cmd_args,
+                    stdout=asyncio.subprocess.PIPE,
+                    stderr=asyncio.subprocess.PIPE
+                )
+                # Timeout on communicate as well
+                stdout, stderr = await asyncio.wait_for(
+                    process.communicate(),
+                    timeout=30.0
+                )
+            except asyncio.TimeoutError:
+                logger.error(f"Command timed out after 30 seconds: {command}")
+                # Kill the process to prevent it from continuing
+                if process:
+                    process.kill()
+                    await process.wait()
+                return f"Error: Command timed out after 30 seconds. This might be a complex calculation that needs optimization."
+            except asyncio.CancelledError:
+                logger.error(f"Command execution cancelled: {command}")
+                if process:
+                    process.kill()
+                    await process.wait()
+                return f"Error: Command execution was cancelled."
 
             if process.returncode == 0:
                 result = stdout.decode("utf-8", errors="ignore")
