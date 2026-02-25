@@ -281,6 +281,6 @@ Pre-configured mock with `execute_command` returning "Mock output".
 
 ## Quality Metrics
 
-- **Test Count**: 121 tests
-- **Coverage**: 83%
+- **Test Count**: 135 tests
+- **Coverage**: 66% (cleaned up by removing unused code)
 - **All tests must pass** before committing

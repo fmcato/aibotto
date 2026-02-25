@@ -125,12 +125,7 @@ class TestToolCallingEdgeCases:
             # Should handle unknown function gracefully
             assert "Unknown tool function" in response or "Error:" in response or "I encountered an error" in response
 
-    @pytest.mark.asyncio
-    async def test_fact_check_response_method(self, tool_manager):
-        """Test the fact_check_response method."""
-        from src.aibotto.ai.fact_checker import FactChecker
-        result = await FactChecker.fact_check_response("test query", "test response")
-        assert "verify this information" in result
+    # Removed fact_checker test as the module was deleted for being unnecessary
 
     @pytest.mark.asyncio
     async def test_process_user_request_general_error(self, tool_manager):
