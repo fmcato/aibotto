@@ -54,10 +54,14 @@ class LLMClient:
                 "model": Config.OPENAI_MODEL,
                 "messages": messages,
                 "tools": tools,
-                "tool_choice": tool_choice,
                 "stream": False,
                 **kwargs,
             }
+
+            # Set tool_choice appropriately for GLM compatibility
+            if tools:
+                params["tool_choice"] = tool_choice if tool_choice is not None else "auto"
+            # Note: When tools is None, tool_choice is not set (GLM validation error)
 
             # Add max_tokens if configured (can speed up reasoning models)
             if Config.LLM_MAX_TOKENS is not None:
