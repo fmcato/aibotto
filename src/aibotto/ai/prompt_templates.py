@@ -279,32 +279,6 @@ class ToolDescriptions:
         },
     }
 
-    SUMMARIZE_TOOL_DESCRIPTION = {
-        "type": "function",
-        "function": {
-            "name": "summarize_conversation",
-            "description": (
-                "Generate a summary of the current conversation history. "
-                "Use this when the user asks to summarize the conversation. "
-                "Returns a concise summary of the key points discussed."
-            ),
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "max_length": {
-                        "type": "integer",
-                        "description": (
-                            "Maximum summary length in characters "
-                            "(default: 1000)"
-                        ),
-                        "default": 1000,
-                    },
-                },
-                "required": [],
-            },
-        },
-    }
-
     @classmethod
     def get_tool_definitions(cls) -> list[dict[str, Any]]:
         """Get all available tool definitions."""
@@ -312,7 +286,6 @@ class ToolDescriptions:
             cls.CLI_TOOL_DESCRIPTION,
             cls.WEB_SEARCH_TOOL_DESCRIPTION,
             cls.WEB_FETCH_TOOL_DESCRIPTION,
-            cls.SUMMARIZE_TOOL_DESCRIPTION,
         ]
 
 
