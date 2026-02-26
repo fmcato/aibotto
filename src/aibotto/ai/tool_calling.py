@@ -502,9 +502,15 @@ class ToolCallingManager:
         Returns:
             The assistant's response
         """
-        # Reset tracking for stateless processing
+        # Reset tracking for stateless processing - this is critical for CLI usage
         self._iteration_count = 0
         self._executed_tool_calls.clear()
+
+        # Also reset the global tracker to prevent cross-session duplicates
+        global _tool_call_tracker
+        user_key = "user_cli_session"
+        if user_key in _tool_call_tracker:
+            _tool_call_tracker[user_key].clear()
 
         # Prepare messages with system prompt (no history for stateless)
         messages = SystemPrompts.get_base_prompt(max_turns=self.max_iterations)

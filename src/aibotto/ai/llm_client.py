@@ -64,7 +64,7 @@ class LLMClient:
                 params["max_tokens"] = Config.LLM_MAX_TOKENS
 
             response = await self.client.chat.completions.create(**params)
-            
+
             # Record successful request and reset backoff counter
             self._backoff_handler.record_success()
             return cast(dict[str, Any], response.model_dump())
@@ -101,7 +101,7 @@ class LLMClient:
                 if hasattr(error, 'response')
                 else {}
             )
-            
+
             # Get reset time from headers if available
             reset_timestamp = headers.get('x-ratelimit-reset')
             if reset_timestamp:
@@ -121,8 +121,9 @@ class LLMClient:
                     self._backoff_handler.record_retry()
                     wait_time = self._backoff_handler.calculate_backoff()
                     logger.info(
-                        f"Rate limit reset time in past, using exponential backoff with "
-                        f"jitter: {wait_time:.1f}s (attempt {self._backoff_handler.get_retry_count()})"
+                        f"Rate limit reset time in past, using exponential backoff "
+                        f"with jitter: {wait_time:.1f}s "
+                        f"(attempt {self._backoff_handler.get_retry_count()})"
                     )
                     self._rate_limit_reset_time = time.time() + wait_time
             else:
@@ -130,8 +131,9 @@ class LLMClient:
                 self._backoff_handler.record_retry()
                 wait_time = self._backoff_handler.calculate_backoff()
                 logger.info(
-                    f"No rate limit headers found, using exponential backoff with jitter: "
-                    f"{wait_time:.1f}s (attempt {self._backoff_handler.get_retry_count()})"
+                    f"No rate limit headers found, using exponential backoff "
+                    f"with jitter: {wait_time:.1f}s "
+                    f"(attempt {self._backoff_handler.get_retry_count()})"
                 )
                 self._rate_limit_reset_time = time.time() + wait_time
 
@@ -140,8 +142,9 @@ class LLMClient:
             self._backoff_handler.record_retry()
             wait_time = self._backoff_handler.calculate_backoff()
             logger.warning(
-                f"Error parsing rate limit headers: {e}, using exponential backoff with jitter: "
-                f"{wait_time:.1f}s (attempt {self._backoff_handler.get_retry_count()})"
+                f"Error parsing rate limit headers: {e}, using exponential backoff "
+                f"with jitter: {wait_time:.1f}s "
+                f"(attempt {self._backoff_handler.get_retry_count()})"
             )
             self._rate_limit_reset_time = time.time() + wait_time
 
