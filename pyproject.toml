@@ -29,6 +29,8 @@ dependencies = [
     "ddgs>=9.10.0",
     "trafilatura>=2.0.0",
     "telegramify-markdown>=1.0.0rc4",
+    "fastapi>=0.104.0",
+    "uvicorn>=0.24.0",
 ]
 
 [project.optional-dependencies]
@@ -85,7 +87,7 @@ exclude_lines = [
     "def __repr__",
     "raise AssertionError",
     "raise NotImplementedError",
-    "if __name__ == .__main__.:",
+    "if __name__ == '__main__':",
     "if TYPE_CHECKING:",
 ]
 

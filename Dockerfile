@@ -39,8 +39,8 @@ RUN mkdir -p /app/data && chown -R aibotto:aibotto /app/data
 
 USER aibotto
 
-# Expose port (if needed for future web interface)
-EXPOSE 8080
+# Expose ports (for future web interface and API)
+EXPOSE 8001 8080
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
