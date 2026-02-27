@@ -64,7 +64,10 @@ class TelegramBot:
         )
 
         if update.message:
-            await update.message.reply_text(welcome_text)
+            await update.message.reply_text(
+                welcome_text,
+                disable_web_page_preview=True
+            )
 
     async def _handle_help(
         self, update: Update, context: ContextTypes.DEFAULT_TYPE

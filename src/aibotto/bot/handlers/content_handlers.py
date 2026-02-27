@@ -65,13 +65,15 @@ class TextContentHandler(ContentHandler):
                 await application.bot.send_message(
                     chat_id=chat_id,
                     text=text_content,
-                    entities=entity_dicts
+                    entities=entity_dicts,
+                    disable_web_page_preview=True
                 )
             else:
                 # Send without entities - no parse_mode needed for plain text
                 await application.bot.send_message(
                     chat_id=chat_id,
-                    text=text_content
+                    text=text_content,
+                    disable_web_page_preview=True
                 )
             return True
         except Exception as e:
