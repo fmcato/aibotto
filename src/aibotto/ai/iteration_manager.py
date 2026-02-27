@@ -19,7 +19,7 @@ class LLMProcessor(Protocol):
         user_id: int = 0,
         chat_id: int = 0,
         db_ops: Any = None,
-    ) -> tuple[str | None, list[dict[str, Any]] | None]:
+    ) -> tuple[str | None, list[dict[str, Any]] | None, list[Any] | None]:
         """Process a single LLM iteration."""
         ...
 
@@ -80,12 +80,19 @@ class IterationManager:
 
             # Handle the case where result might be None or a tuple
             if result is not None:
-                final_response, tool_results = result
+                final_response, tool_results, tool_calls = result
                 if final_response is not None:
                     return final_response
 
                 if tool_results is not None:
-                    # Add tool results to messages
+                    # Add assistant message with tool_calls FIRST
+                    if tool_calls is not None:
+                        messages.append({
+                            "role": "assistant",
+                            "tool_calls": tool_calls,
+                        })
+
+                    # Then add tool results
                     for tool_result in tool_results:
                         messages.append({
                             "role": "tool",

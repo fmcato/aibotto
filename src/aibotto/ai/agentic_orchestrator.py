@@ -47,7 +47,7 @@ class AgenticOrchestrator:
         user_id: int = 0,
         chat_id: int = 0,
         db_ops: DatabaseOperations | None = None,
-    ) -> tuple[str | None, list[dict[str, Any]] | None]:
+    ) -> tuple[str | None, list[dict[str, Any]] | None, list[Any] | None]:
         """Process a single LLM iteration.
 
         Args:
@@ -57,9 +57,10 @@ class AgenticOrchestrator:
             db_ops: Database operations for saving results (optional)
 
         Returns:
-            Tuple of (final_response, tool_results)
+            Tuple of (final_response, tool_results, tool_calls)
             - If final_response is not None, it's the final response
             - If tool_results is not None, they should be added to messages
+            - If tool_calls is not None, it should be added to messages before tool_results
         """
         # Track iteration number
         self.tracker.increment_iteration()
@@ -80,7 +81,7 @@ class AgenticOrchestrator:
                 await db_ops.save_message(
                     user_id, chat_id, 0, "system", error_msg
                 )
-            return error_msg, None
+            return error_msg, None, None
 
         choice = response["choices"][0]
         if "message" not in choice or not choice["message"]:
@@ -90,7 +91,7 @@ class AgenticOrchestrator:
                 await db_ops.save_message(
                     user_id, chat_id, 0, "system", error_msg
                 )
-            return error_msg, None
+            return error_msg, None, None
 
         message_obj = choice["message"]
         tool_calls = MessageProcessor.extract_tool_calls_from_response(message_obj)
@@ -116,7 +117,8 @@ class AgenticOrchestrator:
                 f"Tool execution completed for iteration {self.tracker._iteration_count}, "
                 f"results: {len(tool_results)} tool results"
             )
-            return None, tool_results
+            # Return tool_results and tool_calls so both can be added to messages
+            return None, tool_results, tool_calls
         else:
             # Final response
             final_content = MessageProcessor.extract_response_content(message_obj)
@@ -128,7 +130,7 @@ class AgenticOrchestrator:
                 f"Final response received in iteration {self.tracker._iteration_count}: "
                 f"{len(final_content)} chars"
             )
-            return final_content, None
+            return final_content, None, None
 
     async def process_user_request(
         self,
