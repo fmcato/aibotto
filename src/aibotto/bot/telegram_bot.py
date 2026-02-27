@@ -8,7 +8,7 @@ from typing import Any
 from telegram import Update
 from telegram.ext import CommandHandler, ContextTypes, MessageHandler, filters
 
-from ..ai.tool_calling import ToolCallingManager
+from ..ai.tool_calling import AgenticOrchestrator
 from ..config.settings import Config
 from ..db.operations import DatabaseOperations
 from .handlers.content_handlers import ContentHandlerFactory
@@ -24,7 +24,7 @@ class TelegramBot:
 
     def __init__(self) -> None:
         self.db_ops = DatabaseOperations()
-        self.tool_manager = ToolCallingManager()
+        self.tool_manager = AgenticOrchestrator()
         self.setup_service = BotSetupService()
         self.response_sender: ResponseSender | None = None
         self.content_handler_factory = ContentHandlerFactory()

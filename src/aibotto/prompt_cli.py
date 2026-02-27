@@ -7,7 +7,7 @@ import asyncio
 import logging
 import sys
 
-from aibotto.ai.tool_calling import ToolCallingManager
+from aibotto.ai.tool_calling import AgenticOrchestrator
 from aibotto.config.settings import Config
 from aibotto.utils.logging import setup_logging
 
@@ -36,7 +36,7 @@ def parse_args() -> argparse.Namespace:
 
 async def run_prompt(prompt: str) -> str:
     """Run a single prompt through the tool calling manager."""
-    manager = ToolCallingManager()
+    manager = AgenticOrchestrator()
     return await manager.process_prompt_stateless(prompt)
 
 
