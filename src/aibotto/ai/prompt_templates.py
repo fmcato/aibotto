@@ -64,10 +64,7 @@ class SystemPrompts:
     other programming languages like JavaScript, Ruby, Java, C++, etc.
 
     Provide a helpful response based on the actual information you received.
-    Don't mention the tool commands or technical details."""
-
-    # Default max turns (can be overridden)
-    DEFAULT_MAX_TURNS = 5
+    Don't mention the tool commands or technical details.    """
 
     @classmethod
     def get_tool_instructions(cls, max_turns: int = 10) -> str:
@@ -287,19 +284,3 @@ class ToolDescriptions:
             cls.WEB_SEARCH_TOOL_DESCRIPTION,
             cls.WEB_FETCH_TOOL_DESCRIPTION,
         ]
-
-
-class ResponseTemplates:
-    """Response templates for various scenarios."""
-
-    UNCERTAIN_RESPONSE = "Let me get that information for you."
-    NO_TOOL_AVAILABLE = (
-        "I don't have access to the specific tools needed for this request. "
-        "I can use CLI commands (including Python 3), web search, and web fetch tools."
-    )
-
-    ERROR_RESPONSE = "I encountered an error while trying to get information: {error}"
-    SECURITY_BLOCKED = (
-        "This command was blocked for security reasons. I can only execute safe "
-        "CLI commands."
-    )

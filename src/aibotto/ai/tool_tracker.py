@@ -21,8 +21,9 @@ class ToolTracker:
     def _generate_tool_call_hash(self, function_name: str, arguments: str) -> str:
         """Generate a unique hash for a tool call to detect duplicates."""
         # Create a deterministic hash of function name and arguments
+        # Using usedforsecurity=False since this is not for cryptographic purposes
         call_data = f"{function_name}:{arguments}"
-        return hashlib.md5(call_data.encode()).hexdigest()
+        return hashlib.md5(call_data.encode(), usedforsecurity=False).hexdigest()
 
     def is_duplicate_tool_call(
         self, function_name: str, arguments: str, user_id: int, chat_id: int = 0
@@ -175,7 +176,9 @@ class ToolTracker:
         for user_key in empty_users:
             del _tool_call_tracker[user_key]
 
-        if empty_users:
-            logger.info(
-                f"Cleaned up {len(empty_users)} empty user entries from tracker"
-            )
+    @staticmethod
+    def clear_global_tracker() -> None:
+        """Clear the entire global tracker - useful for tests."""
+        global _tool_call_tracker
+        _tool_call_tracker.clear()
+        logger.debug("Cleared global tool call tracker")

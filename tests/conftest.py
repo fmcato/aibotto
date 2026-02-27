@@ -13,7 +13,7 @@ from src.aibotto.ai.llm_client import LLMClient
 from src.aibotto.config.settings import Config
 from src.aibotto.db.operations import DatabaseOperations
 from src.aibotto.tools.cli_executor import CLIExecutor
-from src.aibotto.ai import tool_calling
+from tests.config_helpers import backup_config, restore_config
 
 
 @pytest.fixture(scope="session")
@@ -53,10 +53,7 @@ def temp_database():
 @pytest.fixture
 def mock_config():
     """Mock configuration for testing."""
-    original_config = {}
-    for key in dir(Config):
-        if not key.startswith('_'):
-            original_config[key] = getattr(Config, key)
+    original_config = backup_config()
 
     # Override with test values
     Config.TELEGRAM_TOKEN = "test_token"
@@ -72,8 +69,7 @@ def mock_config():
     yield Config
 
     # Restore original values
-    for key, value in original_config.items():
-        setattr(Config, key, value)
+    restore_config(original_config)
 
 
 @pytest.fixture
@@ -162,10 +158,7 @@ def real_llm_client():
 @pytest.fixture
 def e2e_test_config():
     """Configuration specifically for e2e tests."""
-    original_config = {}
-    for key in dir(Config):
-        if not key.startswith('_'):
-            original_config[key] = getattr(Config, key)
+    original_config = backup_config()
 
     # Override with e2e test values
     Config.TELEGRAM_TOKEN = "test_e2e_token"
@@ -181,8 +174,7 @@ def e2e_test_config():
     yield Config
 
     # Restore original values
-    for key, value in original_config.items():
-        setattr(Config, key, value)
+    restore_config(original_config)
 
 
 @pytest.fixture
@@ -532,11 +524,12 @@ def mock_llm_client_direct_response():
 @pytest.fixture
 def reset_tool_call_tracker():
     """Reset the global tool call tracker before each test."""
+    from src.aibotto.ai.tool_tracker import ToolTracker
     # Clear the global tracker
-    tool_calling._tool_call_tracker.clear()
+    ToolTracker.clear_global_tracker()
     yield
     # Clean up after test
-    tool_calling._tool_call_tracker.clear()
+    ToolTracker.clear_global_tracker()
 
 
 @pytest.fixture

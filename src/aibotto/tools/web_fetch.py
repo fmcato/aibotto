@@ -117,61 +117,26 @@ class WebFetchTool:
         max_length = max_length or self.max_content_length
 
         # Retry logic with exponential backoff
+        last_error: Exception | None = None
         for attempt in range(self.max_retries):
             try:
                 html = await self._fetch_url_with_retry(url, attempt)
                 extracted = self._extract_content(html, url, include_links)
+                return self._finalize_content(extracted, max_length)
 
-                # Truncate if needed
-                if len(extracted["content"]) > max_length:
-                    extracted["content"] = (
-                        extracted["content"][:max_length] +
-                        "\n\n[Content truncated...]"
-                    )
-                    extracted["truncated"] = True
-                else:
-                    extracted["truncated"] = False
-
-                extracted["content_length"] = len(extracted["content"])
-                return extracted
-
-            except aiohttp.ClientError as e:
+            except (aiohttp.ClientError, Exception) as e:
+                last_error = e
                 if attempt == self.max_retries - 1:
-                    logger.error(
-                        f"HTTP error fetching {url} after "
-                        f"{self.max_retries} attempts: {e}"
-                    )
-                    raise RuntimeError(
-                        f"Failed to fetch URL after {self.max_retries} "
-                        f"attempts: {str(e)}"
-                    )
+                    # This is the last attempt, break out to raise final error
+                    break
                 else:
-                    delay = self.retry_delay * (2 ** attempt) + random.uniform(0, 1)
-                    logger.warning(
-                        f"Attempt {attempt + 1} failed for {url}, "
-                        f"retrying in {delay:.2f}s: {e}"
-                    )
-                    await asyncio.sleep(delay)
-
-            except Exception as e:
-                if attempt == self.max_retries - 1:
-                    logger.error(
-                        f"Error fetching {url} after "
-                        f"{self.max_retries} attempts: {e}"
-                    )
-                    raise RuntimeError(
-                        f"Failed to fetch URL after {self.max_retries} "
-                        f"attempts: {str(e)}"
-                    )
-                else:
-                    delay = self.retry_delay * (2 ** attempt) + random.uniform(0, 1)
-                    logger.warning(
-                        f"Attempt {attempt + 1} failed for {url}, "
-                        f"retrying in {delay:.2f}s: {e}"
-                    )
-                    await asyncio.sleep(delay)
-
-        # This should never be reached due to the raise in the loop
+                    await self._handle_retry_error(url, e, attempt)
+        
+        # All retries exhausted, raise final error
+        if last_error:
+            await self._handle_final_error(url, last_error)
+        
+        # Should never reach here, but just in case
         raise RuntimeError(
             f"Failed to fetch URL after {self.max_retries} attempts"
         )
@@ -292,6 +257,44 @@ class WebFetchTool:
             },
         }
 
+    def _finalize_content(
+        self, extracted: dict[str, Any], max_length: int
+    ) -> dict[str, Any]:
+        """Finalize content by truncating if needed and setting length."""
+        # Truncate if needed
+        if len(extracted["content"]) > max_length:
+            extracted["content"] = (
+                extracted["content"][:max_length] +
+                "\n\n[Content truncated...]"
+            )
+            extracted["truncated"] = True
+        else:
+            extracted["truncated"] = False
+
+        extracted["content_length"] = len(extracted["content"])
+        return extracted
+
+    async def _handle_final_error(self, url: str, error: Exception) -> None:
+        """Handle the final error after all retry attempts."""
+        error_type = "HTTP error" if isinstance(error, aiohttp.ClientError) else "Error"
+        logger.error(
+            f"{error_type} fetching {url} after {self.max_retries} attempts: {error}"
+        )
+        raise RuntimeError(
+            f"Failed to fetch URL after {self.max_retries} attempts: {str(error)}"
+        )
+
+    async def _handle_retry_error(
+        self, url: str, error: Exception, attempt: int
+    ) -> None:
+        """Handle retry error by logging and waiting with exponential backoff."""
+        delay = self.retry_delay * (2 ** attempt) + random.uniform(0, 1)
+        logger.warning(
+            f"Attempt {attempt + 1} failed for {url}, "
+            f"retrying in {delay:.2f}s: {error}"
+        )
+        await asyncio.sleep(delay)
+
     async def close(self) -> None:
         """Close any resources."""
         pass
@@ -322,10 +325,6 @@ async def fetch_webpage(
 
         # Format output for LLM
         output_parts = []
-
-        # Handle case where result might be an error message
-        if isinstance(result, str) and result.startswith("Error:"):
-            return result
 
         output_parts = [
             f"# {result['title']}",

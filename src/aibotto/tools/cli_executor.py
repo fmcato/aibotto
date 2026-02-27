@@ -59,7 +59,6 @@ class CLIExecutor:
 
     def __init__(self) -> None:
         self.security_manager = SecurityManager()
-        self.calculation_optimizer = None  # Lazy load to avoid circular imports
 
     async def execute_command(self, command: str) -> str:
         """Execute CLI command safely and return output."""

@@ -17,7 +17,7 @@ class TestTelegramBot:
         """Create a TelegramBot instance for testing."""
         with patch('src.aibotto.bot.telegram_bot.Config.TELEGRAM_TOKEN', 'test_token'):
             with patch('src.aibotto.bot.telegram_bot.DatabaseOperations') as mock_db:
-                with patch('src.aibotto.bot.telegram_bot.ToolCallingManager') as mock_tool:
+                with patch('src.aibotto.bot.telegram_bot.AgenticOrchestrator') as mock_tool:
                     with patch('src.aibotto.bot.telegram_bot.BotSetupService') as mock_setup:
                         bot = TelegramBot()
                         bot.db_ops = mock_db.return_value

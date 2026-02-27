@@ -53,16 +53,10 @@ class SecurityManager:
     async def _check_command_length(self, command: str) -> dict[str, object] | None:
         """Check if command length exceeds maximum."""
         if len(command) > self.max_command_length:
-            result = {
-                "allowed": False,
-                "message": (
-                    f"Error: Command too long (max {self.max_command_length} "
-                    "characters)"
-                )
-            }
+            message = f"Error: Command too long (max {self.max_command_length} characters)"
             if self.enable_audit_logging:
                 logger.warning(f"Command blocked for length: {command[:50]}...")
-            return result
+            return self._create_blocked_result_dict(message)
         return None
 
     async def _check_blocked_commands(self, command: str) -> dict[str, object] | None:
@@ -71,23 +65,23 @@ class SecurityManager:
         command_parts = command.strip().split()
 
         for danger in self.blocked_commands:
-            if danger in [
-                "rm -rf", "sudo", "dd", "mkfs", "fdisk", "shutdown",
-                "reboot", "poweroff", "halt"
-            ]:
-                # These are dangerous commands that should be blocked exactly
+            # Most dangerous commands should be blocked exactly
+            if danger in ["rm -rf", "sudo", "dd", "mkfs", "fdisk", "shutdown", "reboot", "poweroff", "halt"]:
                 if danger in command_lower:
                     return self._create_blocked_result(
                         f"Blocked dangerous command: {command}", danger
                     )
+            # Special handling for format-related commands
             elif danger in ["format ", "format=", "format/"]:
-                # Special handling for format-related commands
-                if any(
-                    part.startswith(("format", "/format")) for part in command_parts
-                ):
+                if any(part.startswith(("format", "/format")) for part in command_parts):
                     return self._create_blocked_result(
                         f"Blocked format command: {command}", "format"
                     )
+            # All other blocked commands - check if contained in command
+            elif danger in command_lower:
+                return self._create_blocked_result(
+                    f"Blocked command: {command}", danger
+                )
 
         return None
 
@@ -97,15 +91,10 @@ class SecurityManager:
 
         for pattern in self.custom_blocked_patterns:
             if pattern and pattern in command_lower:
-                result = {
-                    "allowed": False,
-                    "message": (
-                        "Error: Command matches blocked pattern for security reasons"
-                    )
-                }
+                message = "Error: Command matches blocked pattern for security reasons"
                 if self.enable_audit_logging:
                     logger.warning(f"Blocked custom pattern '{pattern}': {command}")
-                return result
+                return self._create_blocked_result_dict(message)
 
         return None
 
@@ -118,27 +107,27 @@ class SecurityManager:
         if not any(
             allowed in command_parts[0] for allowed in self.allowed_commands
         ):
-            result = {
-                "allowed": False,
-                "message": "Error: Command not in allowed list"
-            }
+            message = "Error: Command not in allowed list"
             if self.enable_audit_logging:
                 logger.warning(f"Command not in whitelist: {command}")
-            return result
+            return self._create_blocked_result_dict(message)
 
         return None
+
+    def _create_blocked_result_dict(self, message: str) -> dict[str, object]:
+        """Create a standard blocked command result dict."""
+        return {
+            "allowed": False,
+            "message": message
+        }
 
     def _create_blocked_result(
         self, log_message: str, danger_type: str
     ) -> dict[str, object]:
         """Create a standard blocked command result."""
-        result = {
-            "allowed": False,
-            "message": "Error: Command not allowed for security reasons"
-        }
         if self.enable_audit_logging:
             logger.warning(log_message)
-        return result
+        return self._create_blocked_result_dict("Error: Command not allowed for security reasons")
 
     def reload_security_rules(self, config_file: str = "security_config.json") -> None:
         """Reload security rules from configuration file."""

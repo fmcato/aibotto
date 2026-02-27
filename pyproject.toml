@@ -68,6 +68,10 @@ addopts = [
 ]
 asyncio_mode = "auto"
 
+[tool.mypy]
+# Ignore missing type stubs for third-party libraries
+ignore_missing_imports = true
+
 [tool.coverage.run]
 source = ["src"]
 omit = [

@@ -24,10 +24,6 @@ class AgenticOrchestrator:
         self.tracker = ToolTracker()
         self.max_iterations = Config.MAX_TOOL_ITERATIONS
         self.iteration_manager = IterationManager(self.max_iterations)
-        
-        # Track executed tool calls in current session
-        self._executed_tool_calls: set[str] = set()
-        self._recent_tool_calls: set[str] = set()
     
     def _get_tool_definitions(self) -> list[dict[str, Any]]:
         """Get tool definitions for the LLM."""
@@ -154,8 +150,6 @@ class AgenticOrchestrator:
         """
         # Reset tracking for new request
         self.tracker.reset_tracking()
-        self._executed_tool_calls.clear()
-        self._recent_tool_calls.clear()
 
         # Prepare messages with conversation history
         messages = await self._prepare_messages(user_id, chat_id, message, db_ops)
@@ -210,7 +204,6 @@ class AgenticOrchestrator:
         """
         # Reset tracking for stateless processing - this is critical for CLI usage
         self.tracker.reset_stateless_tracking()
-        self._executed_tool_calls.clear()
 
         # Prepare messages with system prompt (no history for stateless)
         messages = SystemPrompts.get_base_prompt(max_turns=self.max_iterations)
