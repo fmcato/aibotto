@@ -8,7 +8,7 @@ from typing import Any
 from telegram import Update
 from telegram.ext import CommandHandler, ContextTypes, MessageHandler, filters
 
-from ..ai.tool_calling import AgenticOrchestrator
+from ..ai.agentic_orchestrator import AgenticOrchestrator
 from ..config.settings import Config
 from ..db.operations import DatabaseOperations
 from .handlers.content_handlers import ContentHandlerFactory

@@ -189,7 +189,7 @@ def conversation_data():
 
 
 @pytest.fixture
-def tool_calling_data():
+def agentic_orchestrator_data():
     """Sample tool calling data for testing."""
     return {
         "type": "function",

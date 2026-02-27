@@ -12,7 +12,7 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from src.aibotto.ai.tool_calling import ToolCallingManager
+from src.aibotto.ai.agentic_orchestrator import ToolCallingManager
 
 
 @pytest.mark.asyncio

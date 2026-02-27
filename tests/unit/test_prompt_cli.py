@@ -6,7 +6,7 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from aibotto.ai.tool_calling import ToolCallingManager
+from aibotto.ai.agentic_orchestrator import ToolCallingManager
 from aibotto.prompt_cli import main, parse_args, run_prompt
 
 

@@ -6,7 +6,7 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from src.aibotto.ai.tool_calling import ToolCallingManager
+from src.aibotto.ai.agentic_orchestrator import ToolCallingManager
 
 
 class TestToolCallingEdgeCases:
@@ -15,7 +15,7 @@ class TestToolCallingEdgeCases:
     @pytest.fixture
     def tool_manager(self):
         """Create a ToolCallingManager instance for testing."""
-        with patch('src.aibotto.ai.tool_calling.LLMClient') as mock_llm:
+        with patch('src.aibotto.ai.agentic_orchestrator.LLMClient') as mock_llm:
             manager = ToolCallingManager()
             manager.llm_client = AsyncMock()
 
@@ -65,7 +65,7 @@ class TestToolCallingEdgeCases:
             cli_executor.execute = AsyncMock(side_effect=Exception("Command not found"))
 
         # Mock database operations
-        with patch('src.aibotto.ai.tool_calling.DatabaseOperations') as mock_db:
+        with patch('src.aibotto.ai.agentic_orchestrator.DatabaseOperations') as mock_db:
             mock_db_instance = AsyncMock()
             mock_db.return_value = mock_db_instance
             mock_db_instance.get_conversation_history.return_value = []
@@ -111,7 +111,7 @@ class TestToolCallingEdgeCases:
         tool_manager.llm_client.chat_completion.side_effect = [mock_response, mock_final_response]
 
         # Mock database operations
-        with patch('src.aibotto.ai.tool_calling.DatabaseOperations') as mock_db:
+        with patch('src.aibotto.ai.agentic_orchestrator.DatabaseOperations') as mock_db:
             mock_db_instance = AsyncMock()
             mock_db.return_value = mock_db_instance
             mock_db_instance.get_conversation_history.return_value = []
@@ -134,7 +134,7 @@ class TestToolCallingEdgeCases:
         tool_manager.llm_client.chat_completion.side_effect = Exception("API Error")
 
         # Mock database operations
-        with patch('src.aibotto.ai.tool_calling.DatabaseOperations') as mock_db:
+        with patch('src.aibotto.ai.agentic_orchestrator.DatabaseOperations') as mock_db:
             mock_db_instance = AsyncMock()
             mock_db.return_value = mock_db_instance
             mock_db_instance.get_conversation_history.return_value = []

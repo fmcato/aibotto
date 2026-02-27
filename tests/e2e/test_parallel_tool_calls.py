@@ -8,7 +8,7 @@ import pytest
 from telegram import Update
 from telegram.ext import ContextTypes
 
-from src.aibotto.ai.tool_calling import ToolCallingManager
+from src.aibotto.ai.agentic_orchestrator import ToolCallingManager
 
 
 class TestParallelToolCalling:

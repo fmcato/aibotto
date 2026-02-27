@@ -8,7 +8,7 @@ import pytest
 from telegram import Message, Update
 from telegram.ext import ContextTypes
 
-from src.aibotto.ai.tool_calling import ToolCallingManager
+from src.aibotto.ai.agentic_orchestrator import ToolCallingManager
 
 
 class TestToolCallingVisibility:
@@ -49,7 +49,7 @@ class TestToolCallingVisibility:
         yield manager
 
     @pytest.mark.asyncio
-    async def test_tool_calling_flow_hides_intermediate_steps(self, tool_manager, real_db_ops):
+    async def test_agentic_orchestrator_flow_hides_intermediate_steps(self, tool_manager, real_db_ops):
         """Test that tool calling flow doesn't expose intermediate steps to users."""
         # Mock the first LLM response (contains tool call)
         mock_first_response = {
@@ -125,7 +125,7 @@ class TestToolCallingVisibility:
         assert tool_manager.llm_client.chat_completion.call_count == 1
 
     @pytest.mark.asyncio
-    async def test_error_handling_in_tool_calling(self, tool_manager, real_db_ops):
+    async def test_error_handling_in_agentic_orchestrator(self, tool_manager, real_db_ops):
         """Test that errors in tool calling are handled gracefully."""
         # Mock the first LLM response (contains tool call)
         mock_first_response = {

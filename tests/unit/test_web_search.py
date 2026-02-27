@@ -2,7 +2,7 @@ from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
 import pytest
 
-from src.aibotto.ai.tool_calling import ToolCallingManager
+from src.aibotto.ai.agentic_orchestrator import ToolCallingManager
 from src.aibotto.db.operations import DatabaseOperations
 
 
@@ -10,7 +10,7 @@ class TestWebSearchIntegration:
     """Test web search integration with the tool calling system."""
 
     @pytest.mark.asyncio
-    async def test_web_search_tool_calling(self):
+    async def test_web_search_agentic_orchestrator(self):
         """Test that web search tool can be called through the tool calling system."""
         # Mock the web search function
         with patch('src.aibotto.tools.web_search.search_web') as mock_search:

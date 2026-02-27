@@ -7,7 +7,7 @@ import asyncio
 import logging
 import sys
 
-from aibotto.ai.tool_calling import AgenticOrchestrator
+from aibotto.ai.agentic_orchestrator import AgenticOrchestrator
 from aibotto.config.settings import Config
 from aibotto.utils.logging import setup_logging
 

@@ -7,7 +7,7 @@ from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 
-from src.aibotto.ai.tool_calling import ToolCallingManager
+from src.aibotto.ai.agentic_orchestrator import ToolCallingManager
 from src.aibotto.config.settings import Config
 
 
@@ -28,7 +28,7 @@ class TestBasicToolInteractions:
         return settings
 
     @pytest.fixture
-    def tool_calling_manager(self, mock_settings, mock_llm_client_with_responses, mock_cli_executor):
+    def agentic_orchestrator_manager(self, mock_settings, mock_llm_client_with_responses, mock_cli_executor):
         """Create tool calling manager with mocked dependencies."""
         manager = ToolCallingManager()
         manager.llm_client = mock_llm_client_with_responses
@@ -44,7 +44,7 @@ class TestBasicToolInteractions:
         return db_ops
 
     @pytest.mark.asyncio
-    async def test_time_query_uses_date_command(self, tool_calling_manager, mock_db_ops):
+    async def test_time_query_uses_date_command(self, agentic_orchestrator_manager, mock_db_ops):
         """Test that time queries use the date command."""
         user_query = "What day is today?"
 
@@ -55,7 +55,7 @@ class TestBasicToolInteractions:
         with patch.object(cli_executor, 'execute') as mock_execute:
             mock_execute.return_value = "Today is Monday, February 3, 2025."
 
-            response = await tool_calling_manager.process_user_request(1, 1, user_query, mock_db_ops)
+            response = await agentic_orchestrator_manager.process_user_request(1, 1, user_query, mock_db_ops)
 
             # Verify the response contains factual information
             assert "Monday" in response
@@ -66,7 +66,7 @@ class TestBasicToolInteractions:
             mock_execute.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_weather_query_uses_curl_command(self, tool_calling_manager, mock_db_ops):
+    async def test_weather_query_uses_curl_command(self, agentic_orchestrator_manager, mock_db_ops):
         """Test that weather queries use curl command."""
         user_query = "What's the weather in London?"
 
@@ -77,7 +77,7 @@ class TestBasicToolInteractions:
         with patch.object(cli_executor, 'execute') as mock_execute:
             mock_execute.return_value = "The weather in London is partly cloudy with a temperature of 15°C."
 
-            response = await tool_calling_manager.process_user_request(1, 1, user_query, mock_db_ops)
+            response = await agentic_orchestrator_manager.process_user_request(1, 1, user_query, mock_db_ops)
 
             # Verify the response contains weather information
             assert "London" in response
@@ -88,7 +88,7 @@ class TestBasicToolInteractions:
             mock_execute.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_system_info_query_uses_uname_command(self, tool_calling_manager, mock_db_ops):
+    async def test_system_info_query_uses_uname_command(self, agentic_orchestrator_manager, mock_db_ops):
         """Test that system info queries use uname command."""
         user_query = "What system information do you have?"
 
@@ -99,7 +99,7 @@ class TestBasicToolInteractions:
         with patch.object(cli_executor, 'execute') as mock_execute:
             mock_execute.return_value = "Linux Ubuntu 5.15.0-88-generic x86_64"
 
-            response = await tool_calling_manager.process_user_request(1, 1, user_query, mock_db_ops)
+            response = await agentic_orchestrator_manager.process_user_request(1, 1, user_query, mock_db_ops)
 
             # Verify the response contains system information
             assert "Linux" in response
@@ -109,7 +109,7 @@ class TestBasicToolInteractions:
             mock_execute.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_file_list_query_uses_ls_command(self, tool_calling_manager, mock_db_ops):
+    async def test_file_list_query_uses_ls_command(self, agentic_orchestrator_manager, mock_db_ops):
         """Test that file list queries use ls command."""
         user_query = "List files in current directory"
 
@@ -120,7 +120,7 @@ class TestBasicToolInteractions:
         with patch.object(cli_executor, 'execute') as mock_execute:
             mock_execute.return_value = "total 16\ndrwxr-xr-x 2 user user 4096 Feb  3 10:00 .\ndrwxr-xr-x 5 user user 4096 Feb  3 10:00 ..\n-rw-r--r-- 1 user user 123 Feb  3 10:00 test.txt"
 
-            response = await tool_calling_manager.process_user_request(1, 1, user_query, mock_db_ops)
+            response = await agentic_orchestrator_manager.process_user_request(1, 1, user_query, mock_db_ops)
 
             # Verify the response contains file information
             assert "test.txt" in response
@@ -129,30 +129,30 @@ class TestBasicToolInteractions:
             mock_execute.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_general_knowledge_no_tool_calls(self, tool_calling_manager, mock_db_ops):
+    async def test_general_knowledge_no_tool_calls(self, agentic_orchestrator_manager, mock_db_ops):
         """Test that general knowledge queries don't use tool calls."""
         user_query = "What is the capital of France?"
 
-        response = await tool_calling_manager.process_user_request(1, 1, user_query, mock_db_ops)
+        response = await agentic_orchestrator_manager.process_user_request(1, 1, user_query, mock_db_ops)
 
         # Verify the response contains factual information
         assert "Paris" in response
 
     @pytest.mark.asyncio
-    async def test_uncertainty_detection(self, tool_calling_manager, mock_db_ops, mock_llm_client_direct_response):
+    async def test_uncertainty_detection(self, agentic_orchestrator_manager, mock_db_ops, mock_llm_client_direct_response):
         """Test that uncertainty is properly handled."""
         user_query = "What will be the stock price tomorrow?"
 
         # Use the direct response mock for this test
-        tool_calling_manager.llm_client = mock_llm_client_direct_response
+        agentic_orchestrator_manager.llm_client = mock_llm_client_direct_response
 
-        response = await tool_calling_manager.process_user_request(1, 1, user_query, mock_db_ops)
+        response = await agentic_orchestrator_manager.process_user_request(1, 1, user_query, mock_db_ops)
 
         # Verify the response indicates uncertainty
         assert "don't have access" in response.lower() or "cannot predict" in response.lower()
 
     @pytest.mark.asyncio
-    async def test_command_execution_error_handling(self, tool_calling_manager, mock_db_ops, reset_tool_call_tracker):
+    async def test_command_execution_error_handling(self, agentic_orchestrator_manager, mock_db_ops, reset_tool_call_tracker):
         """Test that command execution errors are handled properly."""
         user_query = "What day is today?"
 
@@ -163,13 +163,13 @@ class TestBasicToolInteractions:
         with patch.object(cli_executor, 'execute') as mock_execute:
             mock_execute.side_effect = Exception("Command not found")
 
-            response = await tool_calling_manager.process_user_request(1, 1, user_query, mock_db_ops)
+            response = await agentic_orchestrator_manager.process_user_request(1, 1, user_query, mock_db_ops)
 
             # Verify the response contains error information
             assert "error" in response.lower() or "failed" in response.lower()
 
     @pytest.mark.asyncio
-    async def test_multiple_tool_calls(self, tool_calling_manager, mock_db_ops, reset_tool_call_tracker):
+    async def test_multiple_tool_calls(self, agentic_orchestrator_manager, mock_db_ops, reset_tool_call_tracker):
         """Test that multiple tool calls are handled properly."""
         user_query = "What is the current date and time?"
 
@@ -180,7 +180,7 @@ class TestBasicToolInteractions:
         with patch.object(cli_executor, 'execute') as mock_execute:
             mock_execute.return_value = "Date: Mon Feb  3 14:30:45 UTC 2026\nTime: 14:30:45"
 
-            response = await tool_calling_manager.process_user_request(1, 1, user_query, mock_db_ops)
+            response = await agentic_orchestrator_manager.process_user_request(1, 1, user_query, mock_db_ops)
 
             # Verify the response contains both date and time
             assert "Mon" in response or "February" in response
@@ -190,29 +190,29 @@ class TestBasicToolInteractions:
             mock_execute.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_tool_calling_manager_initialization(self, tool_calling_manager):
+    async def test_agentic_orchestrator_manager_initialization(self, agentic_orchestrator_manager):
         """Test that tool calling manager initializes properly."""
-        assert tool_calling_manager is not None
-        assert tool_calling_manager.cli_executor is not None
-        assert hasattr(tool_calling_manager, 'process_user_request')
+        assert agentic_orchestrator_manager is not None
+        assert agentic_orchestrator_manager.cli_executor is not None
+        assert hasattr(agentic_orchestrator_manager, 'process_user_request')
 
     @pytest.mark.asyncio
-    async def test_empty_query_handling(self, tool_calling_manager, mock_db_ops):
+    async def test_empty_query_handling(self, agentic_orchestrator_manager, mock_db_ops):
         """Test that empty queries are handled properly."""
         user_query = ""
 
-        response = await tool_calling_manager.process_user_request(1, 1, user_query, mock_db_ops)
+        response = await agentic_orchestrator_manager.process_user_request(1, 1, user_query, mock_db_ops)
 
         # Verify the response is not empty and handles the empty input
         assert response is not None
         assert len(response) > 0
 
     @pytest.mark.asyncio
-    async def test_long_query_handling(self, tool_calling_manager, mock_db_ops):
+    async def test_long_query_handling(self, agentic_orchestrator_manager, mock_db_ops):
         """Test that long queries are handled properly."""
         user_query = "What is the current date and time and system information and weather and file listing?"
 
-        response = await tool_calling_manager.process_user_request(1, 1, user_query, mock_db_ops)
+        response = await agentic_orchestrator_manager.process_user_request(1, 1, user_query, mock_db_ops)
 
         # Verify the response is not empty
         assert response is not None
