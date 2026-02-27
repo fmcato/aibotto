@@ -24,68 +24,78 @@ class TestExponentialBackoffHandler:
         assert handler.get_retry_count() == 0
 
     def test_calculate_backoff_initial(self) -> None:
-        """Test initial backoff calculation (no retries yet)."""
+        """Test initial backoff calculation (first retry, no retries recorded yet)."""
         handler = ExponentialBackoffHandler()
-        
+
         delay = handler.calculate_backoff()
-        
-        # Should be around 1.0s with jitter
-        assert 0.5 <= delay <= 1.5  # ±50% tolerance for initial jitter
+
+        # Should be 1.0s with jitter (retry_count is 0, so index is 0)
+        assert 0.8 <= delay <= 1.2  # ±20% tolerance
 
     def test_exponential_progression(self) -> None:
-        """Test that delays follow exponential progression."""
+        """Test that delays follow fixed interval progression (1s, 10s, 30s)."""
         handler = ExponentialBackoffHandler()
-        
-        # Test progression: 1s → 2s → 4s → 8s → 16s → 32s → 60s (capped)
-        expected_base_delays = [1.0, 2.0, 4.0, 8.0, 16.0, 32.0, 60.0]
-        actual_delays = []
-        
-        # Record retries to trigger progression
-        for _ in expected_base_delays:
-            actual_delays.append(handler.calculate_backoff())
-            handler.record_retry()
-        
-        # Verify each delay is within reasonable range of expected
-        for actual, expected in zip(actual_delays, expected_base_delays):
-            # Allow ±25% tolerance for jitter
-            assert expected * 0.75 <= actual <= expected * 1.25
+
+        # Simulate LLM client: record_retry then calculate_backoff
+        # retry_count=1 -> index 0 -> 1.0s (first retry)
+        # retry_count=2 -> index 1 -> 10.0s (second retry)
+        # retry_count=3 -> index 2 -> 30.0s (third retry)
+        # retry_count=4+ -> 60.0s (capped)
+
+        handler.record_retry()
+        delay1 = handler.calculate_backoff()
+
+        handler.record_retry()
+        delay2 = handler.calculate_backoff()
+
+        handler.record_retry()
+        delay3 = handler.calculate_backoff()
+
+        handler.record_retry()
+        delay4 = handler.calculate_backoff()
+
+        # Verify progression: 1s → 10s → 30s → 60s
+        assert 0.8 <= delay1 <= 1.2
+        assert 8.0 <= delay2 <= 12.0
+        assert 24.0 <= delay3 <= 36.0
+        assert 48.0 <= delay4 <= 72.0
 
     def test_max_delay_cap(self) -> None:
         """Test that maximum delay is properly capped."""
         handler = ExponentialBackoffHandler()
-        
+
         # Force many retries to trigger cap
         for _ in range(10):  # More than enough to exceed 60s
             handler.record_retry()
-        
+
         delay = handler.calculate_backoff()
-        
+
         # Should be capped at 60s with jitter
-        assert delay <= 60.0 * 1.25  # Upper bound with jitter
-        assert delay >= 60.0 * 0.75  # Lower bound with jitter
+        assert delay <= 60.0 * 1.2  # Upper bound with jitter
+        assert delay >= 60.0 * 0.8  # Lower bound with jitter
 
     def test_jitter_distribution(self) -> None:
         """Test that jitter provides proper distribution."""
         handler = ExponentialBackoffHandler()
-        handler.record_retry()  # Set to first retry (base 2.0s)
-        
+        handler.record_retry()  # retry_count=1 -> index 0 -> 1.0s
+
         delays = []
         sample_size = 1000
-        
+
         # Collect many samples to verify distribution
         for _ in range(sample_size):
             delay = handler.calculate_backoff()
             delays.append(delay)
-        
-        # All delays should be within 25% range of base (2.0s)
-        min_expected = 2.0 * 0.75
-        max_expected = 2.0 * 1.25
-        
+
+        # All delays should be within 20% range of base (1.0s)
+        min_expected = 1.0 * 0.8
+        max_expected = 1.0 * 1.2
+
         for delay in delays:
             assert min_expected <= delay <= max_expected
-        
+
         # Verify we actually have variation (not all the same)
-        assert max(delays) - min(delays) > 0.1  # Should have meaningful variation
+        assert max(delays) - min(delays) > 0.05  # Should have meaningful variation
 
     def test_counter_reset_on_success(self) -> None:
         """Test that counter resets on successful requests."""
@@ -151,55 +161,57 @@ class TestExponentialBackoffHandler:
     def test_pseudo_random_jitter(self) -> None:
         """Test that jitter provides pseudo-random distribution."""
         handler = ExponentialBackoffHandler()
-        handler.record_retry()  # Set to 2.0s base
-        
+        handler.record_retry()  # retry_count=1 -> index 0 -> 1.0s base
+
         # Use fixed seed for reproducible test
         with patch('random.seed', return_value=None):
             with patch('random.uniform') as mock_uniform:
                 # Mock uniform to return predictable values
                 mock_uniform.side_effect = [0.8, 1.2, 0.9, 1.1, 1.0]
-                
+
                 delays = []
                 for _ in range(5):
                     delays.append(handler.calculate_backoff())
-                
-                # Verify jitter is applied
-                expected_delays = [2.0 * 0.8, 2.0 * 1.2, 2.0 * 0.9, 2.0 * 1.1, 2.0 * 1.0]
+
+                # Verify jitter is applied (base is 1.0s with retry_count=1)
+                expected_delays = [1.0 * 0.8, 1.0 * 1.2, 1.0 * 0.9, 1.0 * 1.1, 1.0 * 1.0]
                 assert delays == expected_delays
-                
+
                 # Verify random.uniform was called correctly
                 assert mock_uniform.call_count == 5
-                mock_uniform.assert_any_call(0.75, 1.25)
+                mock_uniform.assert_any_call(0.8, 1.2)
 
     def test_integration_workflow(self) -> None:
-        """Test typical workflow of handler usage."""
+        """Test typical workflow of handler usage.
+
+        Note: In LLM client, we call record_retry() BEFORE calculate_backoff().
+        """
         handler = ExponentialBackoffHandler()
-        
+
         # Simulate successful request
         handler.record_success()
         assert handler.get_retry_count() == 0
-        
-        # Simulate rate limiting - first retry
-        delay1 = handler.calculate_backoff()
-        handler.record_retry()
+
+        # Simulate rate limiting - first retry (LLM client pattern)
+        handler.record_retry()  # Now retry_count=1
+        delay1 = handler.calculate_backoff()  # Uses wait_times[0] = 1.0s
         assert handler.get_retry_count() == 1
-        
-        # Simulate rate limiting - second retry
-        delay2 = handler.calculate_backoff()
-        handler.record_retry()
+
+        # Simulate rate limiting - second retry (LLM client pattern)
+        handler.record_retry()  # Now retry_count=2
+        delay2 = handler.calculate_backoff()  # Uses wait_times[1] = 10.0s
         assert handler.get_retry_count() == 2
-        
-        # Verify exponential progression
-        assert delay2 > delay1  # Should increase
-        
+
+        # Verify progression (10s > 1s)
+        assert delay2 > delay1 * 5  # Should increase significantly
+
         # Simulate successful request after retries
         handler.record_success()
         assert handler.get_retry_count() == 0
-        
-        # Back to initial state
+
+        # Back to initial state (still uses wait_times[0] when retry_count=0)
         delay3 = handler.calculate_backoff()
-        # Both should be in the same ballpark (with jitter variation)
-        assert 0.75 <= delay3 <= 1.25  # Should be in initial range
+        assert 0.8 <= delay3 <= 1.2  # Should be initial range
 
     def test_edge_cases(self) -> None:
         """Test edge cases and boundary conditions."""

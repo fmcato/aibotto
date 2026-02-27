@@ -26,21 +26,25 @@ class ExponentialBackoffHandler:
         self.reset_on_success: bool = True
 
     def calculate_backoff(self) -> float:
-        """Calculate backoff delay with exponential growth and jitter.
+        """Calculate backoff delay with fixed intervals and jitter.
 
         Returns:
             Delay in seconds with jitter applied
         """
-        # Configuration constants
-        base_delay = 1.0  # Base delay in seconds
-        max_delay = 60.0  # Maximum delay cap in seconds
+        # Configuration constants - 1s, 10s, 30s progression
+        # Wait times indexed by (retry_count - 1): 1, 10, 30, 60, 60, 60
+        wait_times = [1.0, 10.0, 30.0]
 
-        # Calculate exponential delay
-        exponential_delay = base_delay * (2 ** self.retry_count)
-        wait_time = min(exponential_delay, max_delay)
+        # Get wait time based on retry count (retry_count is already incremented)
+        index = self.retry_count - 1 if self.retry_count > 0 else 0
+        if index < len(wait_times):
+            wait_time = wait_times[index]
+        else:
+            # After first 3 retries, cap at 60s
+            wait_time = 60.0
 
-        # Add jitter (±25%) to avoid thundering herd
-        jitter_factor = random.uniform(0.75, 1.25)
+        # Add jitter (±20%) to avoid thundering herd
+        jitter_factor = random.uniform(0.8, 1.2)
         final_wait_time: float = wait_time * float(jitter_factor)
 
         return final_wait_time

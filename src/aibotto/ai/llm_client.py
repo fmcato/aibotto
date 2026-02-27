@@ -41,63 +41,88 @@ class LLMClient:
         **kwargs: Any,
     ) -> dict[str, Any]:
         """Create chat completion with optional tool calling."""
-        # Check if we're in a rate limit cooldown period
-        if self._rate_limit_reset_time and time.time() < self._rate_limit_reset_time:
-            remaining_wait = self._rate_limit_reset_time - time.time()
-            logger.info(f"Rate limited, waiting {remaining_wait:.1f}s before retrying")
-            await asyncio.sleep(remaining_wait)
-            self._rate_limit_reset_time = None  # Reset after waiting
+        max_retries = Config.LLM_MAX_RETRIES
 
-        try:
-            # Build request params
-            params: dict[str, Any] = {
-                "model": Config.OPENAI_MODEL,
-                "messages": messages,
-                "tools": tools,
-                "stream": False,
-                **kwargs,
-            }
-
-            # Set tool_choice appropriately for GLM compatibility
-            if tools:
-                params["tool_choice"] = tool_choice if tool_choice is not None else "auto"
-            # Note: When tools is None, tool_choice is not set (GLM validation error)
-
-            # Add max_tokens if configured (can speed up reasoning models)
-            if Config.LLM_MAX_TOKENS is not None:
-                params["max_tokens"] = Config.LLM_MAX_TOKENS
-
-            response = await self.client.chat.completions.create(**params)
-
-            # Record successful request and reset backoff counter
-            self._backoff_handler.record_success()
-            return cast(dict[str, Any], response.model_dump())
-
-        except RateLimitError as e:
-            # Parse rate limit headers to determine reset time
-            self._handle_rate_limit_error(e)
-
-            # Wait for the calculated delay with proper exponential backoff and jitter
-            if (
-                self._rate_limit_reset_time
-                and time.time() < self._rate_limit_reset_time
-            ):
+        for attempt in range(max_retries):
+            # Check if we're in a rate limit cooldown period
+            if self._rate_limit_reset_time and time.time() < self._rate_limit_reset_time:
                 remaining_wait = self._rate_limit_reset_time - time.time()
-                logger.info(
-                    f"Waiting {remaining_wait:.1f}s for rate limit to reset "
-                    f"(retry attempt {self._backoff_handler.get_retry_count()})"
-                )
+                logger.info(f"Rate limited, waiting {remaining_wait:.1f}s before retrying")
                 await asyncio.sleep(remaining_wait)
-                self._rate_limit_reset_time = None
+                self._rate_limit_reset_time = None  # Reset after waiting
 
-            raise
+            try:
+                # Build request params
+                params: dict[str, Any] = {
+                    "model": Config.OPENAI_MODEL,
+                    "messages": messages,
+                    "tools": tools,
+                    "stream": False,
+                    **kwargs,
+                }
 
-        except Exception as e:
-            logger.error(f"LLM API error: {e}")
-            raise
+                # Set tool_choice appropriately for GLM compatibility
+                if tools:
+                    params["tool_choice"] = tool_choice if tool_choice is not None else "auto"
+                # Note: When tools is None, tool_choice is not set (GLM validation error)
 
-    def _handle_rate_limit_error(self, error: RateLimitError) -> None:
-        """Handle rate limit error with proper exponential backoff and jitter."""
+                # Add max_tokens if configured (can speed up reasoning models)
+                if Config.LLM_MAX_TOKENS is not None:
+                    params["max_tokens"] = Config.LLM_MAX_TOKENS
+
+                response = await self.client.chat.completions.create(**params)
+
+                # Record successful request and reset backoff counter
+                self._backoff_handler.record_success()
+                return cast(dict[str, Any], response.model_dump())
+
+            except RateLimitError as e:
+                # If this was our last retry attempt, raise the error
+                if attempt == max_retries - 1:
+                    logger.error(f"Max retries ({max_retries}) reached, giving up")
+                    raise
+
+                # Parse rate limit headers to determine reset time
+                reset_time = self._get_rate_limit_reset_time(e)
+
+                # Increment retry counter for backoff calculation
+                self._backoff_handler.record_retry()
+
+                # Wait for the calculated delay
+                if reset_time and time.time() < reset_time:
+                    # Use server-provided reset time
+                    remaining_wait = reset_time - time.time()
+                    logger.info(
+                        f"Rate limited until {reset_time}, waiting {remaining_wait:.1f}s "
+                        f"(retry {attempt + 1}/{max_retries})"
+                    )
+                    await asyncio.sleep(remaining_wait)
+                    self._rate_limit_reset_time = None
+                else:
+                    # Use backoff handler (1s, 10s, 30s progression)
+                    backoff_delay = self._backoff_handler.calculate_backoff()
+                    logger.info(
+                        f"Rate limited, waiting {backoff_delay:.1f}s "
+                        f"(retry {attempt + 1}/{max_retries})"
+                    )
+                    await asyncio.sleep(backoff_delay)
+
+            except Exception as e:
+                logger.error(f"LLM API error: {e}")
+                raise
+
+        # Should never reach here, but for type safety
+        raise RuntimeError("Unexpected end of retry loop")
+
+    def _get_rate_limit_reset_time(self, error: RateLimitError) -> float | None:
+        """Extract rate limit reset time from error headers.
+
+        Args:
+            error: RateLimitError from OpenAI API
+
+        Returns:
+            Unix timestamp of reset time, or None if not available
+        """
         try:
             # Extract headers from the error response
             headers = (
@@ -111,46 +136,13 @@ class LLMClient:
             if reset_timestamp:
                 # Convert to seconds and add a small buffer
                 reset_time = float(reset_timestamp) / 1000 + 1.0
-                current_time = time.time()
+                return reset_time
 
-                if reset_time > current_time:
-                    # Use server-provided reset time
-                    wait_time = reset_time - current_time
-                    logger.info(
-                        f"Rate limited until {reset_time}, waiting {wait_time:.1f}s"
-                    )
-                    self._rate_limit_reset_time = reset_time
-                else:
-                    # Reset time is in the past, use exponential backoff with jitter
-                    self._backoff_handler.record_retry()
-                    wait_time = self._backoff_handler.calculate_backoff()
-                    logger.info(
-                        f"Rate limit reset time in past, using exponential backoff "
-                        f"with jitter: {wait_time:.1f}s "
-                        f"(attempt {self._backoff_handler.get_retry_count()})"
-                    )
-                    self._rate_limit_reset_time = time.time() + wait_time
-            else:
-                # No headers, use exponential backoff with jitter
-                self._backoff_handler.record_retry()
-                wait_time = self._backoff_handler.calculate_backoff()
-                logger.info(
-                    f"No rate limit headers found, using exponential backoff "
-                    f"with jitter: {wait_time:.1f}s "
-                    f"(attempt {self._backoff_handler.get_retry_count()})"
-                )
-                self._rate_limit_reset_time = time.time() + wait_time
+            return None
 
-        except Exception as e:
-            # Fallback to exponential backoff with jitter if header parsing fails
-            self._backoff_handler.record_retry()
-            wait_time = self._backoff_handler.calculate_backoff()
-            logger.warning(
-                f"Error parsing rate limit headers: {e}, using exponential backoff "
-                f"with jitter: {wait_time:.1f}s "
-                f"(attempt {self._backoff_handler.get_retry_count()})"
-            )
-            self._rate_limit_reset_time = time.time() + wait_time
+        except Exception:
+            # Return None on any parsing error
+            return None
 
     async def simple_chat(self, messages: list[dict[str, str]]) -> str:
         """Simple chat completion without tool calling."""
