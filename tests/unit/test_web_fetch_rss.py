@@ -64,9 +64,9 @@ class TestWebFetchRSS:
                 </item>
             </channel>
         </rss>"""
-        
-        result = web_fetch_tool._extract_rss_content(rss_content, "https://example.com/rss")
-        
+
+        result = web_fetch_tool.rss_extractor.extract_rss_content(rss_content, "https://example.com/rss")
+
         assert result["title"] == "Test Feed"
         assert "First Item" in result["content"]
         assert "Second Item" in result["content"]
@@ -86,9 +86,9 @@ class TestWebFetchRSS:
                 <updated>2026-02-27T10:00:00Z</updated>
             </entry>
         </feed>"""
-        
-        result = web_fetch_tool._extract_rss_content(atom_content, "https://example.com/atom")
-        
+
+        result = web_fetch_tool.rss_extractor.extract_rss_content(atom_content, "https://example.com/atom")
+
         assert result["title"] == "Atom Feed"
         assert "Atom Entry 1" in result["content"]
         assert "First atom summary" in result["content"]
@@ -154,9 +154,9 @@ class TestWebFetchRSS:
     async def test_malformed_rss_fallback(self, web_fetch_tool):
         """Test handling of malformed RSS feeds."""
         malformed_rss = "<rss><channel><title>Broken</title>"
-        
-        result = web_fetch_tool._extract_rss_content(malformed_rss, "https://example.com")
-        
+
+        result = web_fetch_tool.rss_extractor.extract_rss_content(malformed_rss, "https://example.com")
+
         assert "parse failed" in result["title"]
         assert "Broken" in result["content"][:100]
 
@@ -172,7 +172,7 @@ class TestWebFetchRSS:
                     <description>Description {i}</description>
                     <link>https://example.com/{i}</link>
                 </item>"""
-        
+
         rss_content = f"""<?xml version="1.0" encoding="UTF-8"?>
         <rss version="2.0">
             <channel>
@@ -180,9 +180,9 @@ class TestWebFetchRSS:
                 {items_xml}
             </channel>
         </rss>"""
-        
-        result = web_fetch_tool._extract_rss_content(rss_content, "https://example.com")
-        
+
+        result = web_fetch_tool.rss_extractor.extract_rss_content(rss_content, "https://example.com")
+
         # Should have at most 20 items
         item_count = result["content"].count("📌")
         assert item_count <= 20
