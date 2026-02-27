@@ -28,7 +28,7 @@ class WebFetchExecutor(ToolExecutor):
 
             url = args.get("url", "")
             max_length = args.get("max_length")
-            include_links = args.get("include_links", False)
+            no_citations = args.get("no_citations", False)
 
             if not url:
                 raise ValueError("URL is required")
@@ -41,7 +41,7 @@ class WebFetchExecutor(ToolExecutor):
             result = await fetch_webpage(
                 url=url,
                 max_length=max_length,
-                include_links=include_links,
+                no_citations=no_citations,
             )
 
             logger.info(

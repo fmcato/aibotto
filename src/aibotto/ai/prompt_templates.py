@@ -243,7 +243,8 @@ class ToolDescriptions:
             "description": (
                 "Fetch and extract readable text content from a specific URL. "
                 "Use this when you have a URL and want to read its full content. "
-                "Returns the page title, content, and metadata."
+                "Returns the page title, content, and metadata. "
+                "Link citations are included in markdown format [text](url) by default."
             ),
             "parameters": {
                 "type": "object",
@@ -262,11 +263,11 @@ class ToolDescriptions:
                         ),
                         "default": 10000,
                     },
-                    "include_links": {
+                    "no_citations": {
                         "type": "boolean",
                         "description": (
-                            "Whether to include link URLs in the output "
-                            "(default: false)"
+                            "Whether to exclude link citations from the output "
+                            "(default: false, includes markdown links)"
                         ),
                         "default": False,
                     },

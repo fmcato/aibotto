@@ -5,13 +5,15 @@ Web fetch tool for extracting readable content from URLs.
 import asyncio
 import logging
 import random
-import xml.etree.ElementTree as ET
 from typing import Any
+from urllib.parse import urlparse
 
 import aiohttp
 import trafilatura
+from trafilatura import extract
 
 from ..config.settings import Config
+from .rss_extractor import RSSExtractor
 
 logger = logging.getLogger(__name__)
 
@@ -25,6 +27,7 @@ class WebFetchTool:
         self.max_retries = Config.WEB_FETCH_MAX_RETRIES
         self.retry_delay = Config.WEB_FETCH_RETRY_DELAY
         self.strict_content_type = Config.WEB_FETCH_STRICT_CONTENT_TYPE
+        self.rss_extractor = RSSExtractor()
 
         # Multiple user agents to rotate through
         self.user_agents = [
@@ -95,7 +98,7 @@ class WebFetchTool:
         self,
         url: str,
         max_length: int | None = None,
-        include_links: bool = False,
+        no_citations: bool = False,
     ) -> dict[str, Any]:
         """
         Fetch a URL and extract readable text content with retry logic.
@@ -103,7 +106,7 @@ class WebFetchTool:
         Args:
             url: URL to fetch
             max_length: Maximum content length (default: 10000)
-            include_links: Whether to include link URLs in output
+            no_citations: Whether to exclude link citations (default: False, includes citations)
 
         Returns:
             Dictionary with title, content, url, and metadata
@@ -123,7 +126,7 @@ class WebFetchTool:
             try:
                 content_result = await self._fetch_url_with_retry(url, attempt)
                 html, content_type = content_result
-                extracted = self._extract_content(html, url, include_links, content_type)
+                extracted = self._extract_content(html, url, no_citations, content_type)
                 return self._finalize_content(extracted, max_length)
 
             except (aiohttp.ClientError, Exception) as e:
@@ -208,68 +211,53 @@ class WebFetchTool:
 
     def _is_rss_feed(self, content: str, content_type: str = "") -> bool:
         """Check if content is an RSS feed."""
-        # Check by content type
-        if content_type:
-            content_type_lower = content_type.lower()
-            if any(ct in content_type_lower for ct in ["application/rss+xml", "text/xml", "application/xml"]):
-                # Need to verify it's actually RSS by checking the content
-                try:
-                    root = ET.fromstring(content)
-                    # Check for RSS or Atom root elements
-                    return root.tag in ["rss", "feed", "rdf:RDF"]
-                except ET.ParseError:
-                    pass
-        
-        # Check by content structure (common RSS patterns)
-        try:
-            # Look for common RSS elements
-            lower_content = content.lower()
-            rss_indicators = [
-                "<rss", "<channel>", "<item>", "<atom:", 
-                "<feed>", "<entry>", "xmlns:rdf=", "<rdf:rdf"
-            ]
-            return any(indicator in lower_content for indicator in rss_indicators)
-        except Exception:
-            return False
+        return self.rss_extractor.is_rss_feed(content, content_type)
     
     def _extract_content(
         self,
         html: str,
         url: str,
-        include_links: bool,
+        no_citations: bool,
         content_type: str = "",
     ) -> dict[str, Any]:
         """Extract readable content from HTML or RSS feed."""
         # Check if this is an RSS feed first
         if self._is_rss_feed(html, content_type):
-            return self._extract_rss_content(html, url)
-        
-        # Regular HTML content extraction
-        # Use trafilatura for extraction
-        # include_links=True will preserve links in the output
-        extracted = trafilatura.extract(
-            html,
-            url=url,
-            include_links=include_links,
-            include_comments=False,
-            include_images=False,
-            output_format="txt",
-            favor_precision=True,  # Prefer precision over recall
-        )
+            return self.rss_extractor.extract_rss_content(html, url)
 
-        if not extracted:
-            # Fallback: try with less precision if nothing found
+        # Regular HTML content extraction
+        # Use markdown format for citations by default
+        if no_citations:
+            # Plain text extraction without citations
             extracted = trafilatura.extract(
                 html,
                 url=url,
-                include_links=include_links,
+                include_links=False,
                 include_comments=False,
                 include_images=False,
                 output_format="txt",
-                favor_precision=False,
+                favor_precision=True,
             )
 
-        content = extracted or ""
+            if not extracted:
+                # Fallback: try with less precision if nothing found
+                extracted = trafilatura.extract(
+                    html,
+                    url=url,
+                    include_links=False,
+                    include_comments=False,
+                    include_images=False,
+                    output_format="txt",
+                    favor_precision=False,
+                )
+
+            content = extracted or ""
+        else:
+            # Use trafilatura's built-in markdown link generation
+            content = self._convert_html_to_markdown_with_links(html, url)
+
+            # Filter unwanted links (anchors, javascript:, mailto:, etc.)
+            content = self._filter_unwanted_links(content)
 
         # Extract metadata using trafilatura
         metadata = trafilatura.extract_metadata(html, default_url=url)
@@ -291,205 +279,120 @@ class WebFetchTool:
                 "published_date": metadata.date if metadata else None,
             },
         }
-    
-    def _extract_rss_content(self, content: str, url: str) -> dict[str, Any]:
-        """Extract content from RSS/Atom feed."""
-        try:
-            root = ET.fromstring(content)
-            
-            # Handle namespace-qualified tags
-            tag_name = root.tag.split('}')[-1] if '}' in root.tag else root.tag
-            
-            # Handle different feed types
-            if tag_name == "rss":
-                return self._extract_rss_2_0(root, url)
-            elif tag_name == "feed":
-                return self._extract_atom(root, url)
-            elif tag_name == "RDF":  # rdf:RDF
-                return self._extract_rss_1_0(root, url)
+
+    def _filter_unwanted_links(self, markdown_text: str) -> str:
+        """Remove unwanted link types from markdown text.
+        
+        Filters out:
+        - Anchor-only links: [text](#section) -> text
+        - Pure anchor pages: [text](http://example.com#anchor) -> text (if no path)
+        - Non-HTTP/HTTPS protocol links: [text](mailto:), [text](tel:), etc -> text
+        
+        Keeps:
+        - Full HTTP/HTTPS links: [text](https://example.com)
+        - URLs with path and fragments: [text](https://example.com/page#section)
+        """
+        if not markdown_text:
+            return markdown_text
+        
+        result = []
+        i = 0
+        text_len = len(markdown_text)
+        
+        while i < text_len:
+            if markdown_text[i] == '[':
+                bracket_end = markdown_text.find(']', i)
+                if bracket_end == -1:
+                    result.append(markdown_text[i:])
+                    break
+                
+                if bracket_end + 1 >= text_len or markdown_text[bracket_end + 1] != '(':
+                    result.append(markdown_text[i:bracket_end + 1])
+                    i = bracket_end + 1
+                    continue
+                
+                parens_start = bracket_end + 1  # Position of opening '('
+                parens_count = 1  # We already have one opening paren
+                parens_end = -1
+                
+                for j in range(parens_start + 1, text_len):
+                    char = markdown_text[j]
+                    if char == '(':
+                        parens_count += 1
+                    elif char == ')':
+                        parens_count -= 1
+                        if parens_count == 0:
+                            parens_end = j
+                            break
+                
+                if parens_end == -1:
+                    result.append(markdown_text[i:])
+                    break
+                
+                link_text = markdown_text[i + 1:bracket_end]
+                url = markdown_text[parens_start + 1:parens_end]
+                
+                if self._should_keep_link(url):
+                    result.append(f"[{link_text}]({url})")
+                else:
+                    result.append(link_text)
+                
+                i = parens_end + 1
             else:
-                # Try to find feed elements anywhere
-                if root.find(".//channel") is not None:
-                    return self._extract_rss_2_0(root, url)
-                elif root.find(".//entry") is not None:
-                    return self._extract_atom(root, url)
-        except ET.ParseError as e:
-            logger.error(f"Failed to parse RSS feed: {e}")
+                result.append(markdown_text[i])
+                i += 1
         
-        # Fallback to basic text extraction if parsing fails
-        return {
-            "title": "RSS Feed (parse failed)",
-            "content": content[:5000],  # Limit content for failed parses
-            "url": url,
-            "metadata": {
-                "description": "RSS feed content (parsing may be incomplete)",
-                "author": None,
-                "published_date": None,
-            },
-        }
-    
-    def _extract_rss_2_0(self, root: ET.Element, url: str) -> dict[str, Any]:
-        """Extract content from RSS 2.0 feed."""
-        channel = root.find("channel")
-        title = channel.findtext("title", "").strip() if channel is not None else "RSS Feed"
-        description = channel.findtext("description", "").strip() if channel is not None else ""
-        
-        items = []
-        item_count = 0
-        max_items = 20  # Limit number of items to fetch
-        
-        for item in root.findall(".//item"):
-            if item_count >= max_items:
-                break
-            
-            item_title = item.findtext("title", "").strip()
-            item_desc = item.findtext("description", "").strip()
-            item_link = item.findtext("link", "").strip()
-            pub_date = item.findtext("pubDate", "").strip()
-            
-            # Clean HTML from description
-            if item_desc:
-                import re
-                item_desc = re.sub(r'<[^>]+>', ' ', item_desc)
-                item_desc = ' '.join(item_desc.split())  # Clean whitespace
-            
-            item_text = f"\n📌 {item_title or 'No title'}"
-            if item_link:
-                item_text += f"\n   Link: {item_link}"
-            if pub_date:
-                item_text += f"\n   Date: {pub_date}"
-            if item_desc:
-                item_text += f"\n   Summary: {item_desc[:500]}{'...' if len(item_desc) > 500 else ''}"
-            
-            items.append(item_text)
-            item_count += 1
-        
-        content = f"Feed Description: {description}\n\nLatest Entries:\n" + "\n\n".join(items)
-        
-        return {
-            "title": title,
-            "content": content,
-            "url": url,
-            "metadata": {
-                "description": description,
-                "author": None,
-                "published_date": None,
-            },
-        }
-    
-    def _extract_atom(self, root: ET.Element, url: str) -> dict[str, Any]:
-        """Extract content from Atom feed."""
-        # Atom namespace handling
-        if '}' in root.tag:
-            # Extract namespace from the root tag
-            ns_uri = root.tag.split('}')[0][1:]
-            ns = {"atom": ns_uri}
-        else:
-            ns = {}
-        
-        # Try both namespaced and non-namespaced lookups
-        title = (root.findtext("title", "") or 
-                 root.findtext("atom:title", "", ns)).strip() or "Atom Feed"
-        subtitle = (root.findtext("subtitle", "") or 
-                   root.findtext("atom:subtitle", "", ns)).strip() or ""
-        
-        entries = []
-        entry_count = 0
-        max_entries = 20  # Limit number of entries to fetch
-        
-        entry_list = root.findall(".//entry") if not ns else root.findall(".//atom:entry", ns)
-        for entry in entry_list:
-            if entry_count >= max_entries:
-                break
-            
-            entry_title = (entry.findtext("title", "") or entry.findtext("atom:title", "", ns)).strip()
-            
-            # Link element in Atom is an attribute
-            link_elem = entry.find("link") if not ns else entry.find("atom:link", ns)
-            entry_link = link_elem.get("href", "").strip() if link_elem is not None else ""
-            
-            entry_summary = (entry.findtext("summary", "") or entry.findtext("atom:summary", "", ns)).strip()
-            entry_content = (entry.findtext("content", "") or entry.findtext("atom:content", "", ns)).strip()
-            entry_updated = (entry.findtext("updated", "") or entry.findtext("atom:updated", "", ns)).strip()
-            
-            # Use summary or content, clean HTML if necessary
-            entry_text = f"\n📌 {entry_title or 'No title'}"
-            if entry_link:
-                entry_text += f"\n   Link: {entry_link}"
-            if entry_updated:
-                entry_text += f"\n   Date: {entry_updated}"
-            
-            # Prefer summary, fallback to content, limit length
-            text_content = entry_summary or entry_content or ""
-            if text_content:
-                import re
-                text_content = re.sub(r'<[^>]+>', ' ', text_content)
-                text_content = ' '.join(text_content.split())
-                text_content = text_content[:500] + ('...' if len(text_content) > 500 else '')
-                entry_text += f"\n   Summary: {text_content}"
-            
-            entries.append(entry_text)
-            entry_count += 1
-        
-        content = f"Feed Description: {subtitle or title}\n\nLatest Entries:\n" + "\n\n".join(entries)
-        
-        return {
-            "title": title,
-            "content": content,
-            "url": url,
-            "metadata": {
-                "description": subtitle or title,
-                "author": None,
-                "published_date": None,
-            },
-        }
-    
-    def _extract_rss_1_0(self, root: ET.Element, url: str) -> dict[str, Any]:
-        """Extract content from RSS 1.0 feed."""
-        # RSS 1.0 uses RDF
-        channel = root.find(".//channel")
-        title = channel.findtext("title", "").strip() if channel is not None else "RSS 1.0 Feed"
-        description = channel.findtext("description", "").strip() if channel is not None else ""
-        
-        items = []
-        item_count = 0
-        max_items = 20
-        
-        for item in root.findall(".//item"):
-            if item_count >= max_items:
-                break
-            
-            item_title = item.findtext("title", "").strip()
-            item_desc = item.findtext("description", "").strip()
-            item_link = item.findtext("link", "").strip()
-            
-            # Clean HTML from description
-            if item_desc:
-                import re
-                item_desc = re.sub(r'<[^>]+>', ' ', item_desc)
-                item_desc = ' '.join(item_desc.split())
-            
-            item_text = f"\n📌 {item_title or 'No title'}"
-            if item_link:
-                item_text += f"\n   Link: {item_link}"
-            if item_desc:
-                item_text += f"\n   Summary: {item_desc[:500]}{'...' if len(item_desc) > 500 else ''}"
-            
-            items.append(item_text)
-            item_count += 1
-        
-        content = f"Feed Description: {description}\n\nLatest Entries:\n" + "\n\n".join(items)
-        
-        return {
-            "title": title,
-            "content": content,
-            "url": url,
-            "metadata": {
-                "description": description,
-                "author": None,
-                "published_date": None,
-            },
-        }
+        return ''.join(result)
+
+    def _should_keep_link(self, url: str) -> bool:
+        """Determine if a link URL should be kept in citations."""
+        if not url:
+            return False
+
+        if url.startswith("http://") or url.startswith("https://"):
+            parsed = urlparse(url)
+            if not parsed.path and parsed.fragment:
+                return False
+            return True
+
+        return False
+
+    def _convert_html_to_markdown_with_links(self, html: str, base_url: str) -> str:
+        """Convert HTML to markdown with [text](url) citation format.
+
+        Uses trafilatura's built-in markdown link generation.
+
+        Args:
+            html: HTML content with links
+            base_url: Base URL for resolving relative links
+
+        Returns:
+            Markdown text with citation links
+        """
+        # Try favor_precision first
+        markdown_text = extract(
+            html,
+            url=base_url,
+            include_links=True,
+            include_comments=False,
+            include_images=False,
+            output_format="txt",
+            favor_precision=True,
+        )
+
+        # Fallback to favor_recall if nothing extracted
+        if not markdown_text or markdown_text.strip() == "":
+            markdown_text = extract(
+                html,
+                url=base_url,
+                include_links=True,
+                include_comments=False,
+                include_images=False,
+                output_format="txt",
+                favor_recall=True,
+            )
+
+        return markdown_text or ""
 
     def _finalize_content(
         self, extracted: dict[str, Any], max_length: int
@@ -541,7 +444,7 @@ web_fetch_tool = WebFetchTool()
 async def fetch_webpage(
     url: str,
     max_length: int | None = None,
-    include_links: bool = False,
+    no_citations: bool = False,
 ) -> str:
     """
     Tool function for fetching web page content that can be called by the LLM.
@@ -549,13 +452,13 @@ async def fetch_webpage(
     Args:
         url: URL to fetch
         max_length: Maximum content length (default: 10000 characters)
-        include_links: Whether to include link URLs in output
+        no_citations: Whether to exclude link citations from output (default: False)
 
     Returns:
         Formatted string with page content
     """
     try:
-        result = await web_fetch_tool.fetch(url, max_length, include_links)
+        result = await web_fetch_tool.fetch(url, max_length, no_citations)
 
         # Format output for LLM
         output_parts = []

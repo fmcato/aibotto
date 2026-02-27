@@ -57,7 +57,7 @@ class TestWebFetchTool:
         """
 
         with patch.object(
-            web_fetch_tool, '_fetch_url_with_retry', return_value=html_content
+            web_fetch_tool, '_fetch_url_with_retry', return_value=(html_content, "text/html")
         ):
             result = await web_fetch_tool.fetch("https://example.com")
 
@@ -79,7 +79,7 @@ class TestWebFetchTool:
         """
 
         with patch.object(
-            web_fetch_tool, '_fetch_url_with_retry', return_value=html_content
+            web_fetch_tool, '_fetch_url_with_retry', return_value=(html_content, "text/html")
         ):
             result = await web_fetch_tool.fetch(
                 "https://example.com", max_length=1000
@@ -103,10 +103,10 @@ class TestWebFetchTool:
         """
 
         with patch.object(
-            web_fetch_tool, '_fetch_url_with_retry', return_value=html_content
+            web_fetch_tool, '_fetch_url_with_retry', return_value=(html_content, "text/html")
         ):
             result = await web_fetch_tool.fetch(
-                "https://example.com", include_links=True
+                "https://example.com"
             )
 
             assert "https://example.org" in result["content"]
@@ -134,7 +134,7 @@ class TestWebFetchTool:
         """
 
         with patch.object(
-            web_fetch_tool, '_fetch_url_with_retry', return_value=html_content
+            web_fetch_tool, '_fetch_url_with_retry', return_value=(html_content, "text/html")
         ):
             result = await web_fetch_tool.fetch("https://example.com")
 
@@ -161,7 +161,7 @@ class TestWebFetchTool:
         """
 
         with patch.object(
-            web_fetch_tool, '_fetch_url_with_retry', return_value=html_content
+            web_fetch_tool, '_fetch_url_with_retry', return_value=(html_content, "text/html")
         ):
             result = await web_fetch_tool.fetch("https://example.com")
 
@@ -186,7 +186,7 @@ class TestWebFetchTool:
         """
 
         with patch.object(
-            web_fetch_tool, '_fetch_url_with_retry', return_value=html_content
+            web_fetch_tool, '_fetch_url_with_retry', return_value=(html_content, "text/html")
         ):
             result = await web_fetch_tool.fetch("https://example.com")
 
@@ -213,7 +213,7 @@ class TestWebFetchTool:
         """
 
         with patch.object(
-            web_fetch_tool, '_fetch_url_with_retry', return_value=html_content
+            web_fetch_tool, '_fetch_url_with_retry', return_value=(html_content, "text/html")
         ):
             result = await web_fetch_tool.fetch("https://example.com")
 
@@ -235,7 +235,7 @@ class TestWebFetchTool:
         """
 
         with patch.object(
-            web_fetch_tool, '_fetch_url_with_retry', return_value=html_content
+            web_fetch_tool, '_fetch_url_with_retry', return_value=(html_content, "text/html")
         ):
             result = await web_fetch_tool.fetch("https://example.com")
 
@@ -384,4 +384,4 @@ class TestFetchUrl:
 
             result = await web_fetch_tool._fetch_url_with_retry("https://example.com", 0)
 
-            assert result == html
+            assert result == (html, "text/html")
