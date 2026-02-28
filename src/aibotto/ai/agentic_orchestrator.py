@@ -84,6 +84,7 @@ class AgenticOrchestrator:
             return error_msg, None, None
 
         choice = response["choices"][0]
+        finish_reason = choice.get("finish_reason")
         if "message" not in choice or not choice["message"]:
             error_msg = "Invalid response format: no message found"
             logger.error(error_msg)
@@ -94,6 +95,34 @@ class AgenticOrchestrator:
             return error_msg, None, None
 
         message_obj = choice["message"]
+
+        # Handle non-terminal finish reasons
+        if finish_reason == "length":
+            error_msg = "Response truncated - max token limit reached"
+            logger.error(error_msg)
+            if db_ops:
+                await db_ops.save_message(
+                    user_id, chat_id, 0, "system", error_msg
+                )
+            return error_msg, None, None
+        elif finish_reason == "content_filter":
+            error_msg = "Response blocked by content filter"
+            logger.error(error_msg)
+            if db_ops:
+                await db_ops.save_message(
+                    user_id, chat_id, 0, "system", error_msg
+                )
+            return error_msg, None, None
+        elif finish_reason in ("tool_calls", "function_call"):
+            tool_calls = MessageProcessor.extract_tool_calls_from_response(message_obj)
+            if not tool_calls:
+                error_msg = (
+                    f"Inconsistent response: finish_reason={finish_reason} "
+                    "but no tool_calls found"
+                )
+                logger.error(error_msg)
+                return error_msg, None, None
+
         tool_calls = MessageProcessor.extract_tool_calls_from_response(message_obj)
         logger.info(
             f"LLM iteration {self.tracker._iteration_count} returned "
@@ -120,8 +149,16 @@ class AgenticOrchestrator:
             # Return tool_results and tool_calls so both can be added to messages
             return None, tool_results, tool_calls
         else:
-            # Final response
+            # Final response - validate content first
             final_content = MessageProcessor.extract_response_content(message_obj)
+            if not final_content or not final_content.strip():
+                error_msg = "Empty response from AI service"
+                logger.error(error_msg)
+                if db_ops:
+                    await db_ops.save_message(
+                        user_id, chat_id, 0, "system", error_msg
+                    )
+                return error_msg, None, None
             if db_ops:
                 await db_ops.save_message(
                     user_id, chat_id, 0, "assistant", final_content
