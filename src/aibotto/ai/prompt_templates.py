@@ -9,6 +9,54 @@ from typing import Any
 logger = logging.getLogger(__name__)
 
 
+# Reusable tool description components
+_TOOL_CATEGORIES = """
+1. CLI commands for system information:
+   - Use for date/time, system info, file operations, calculations
+   - Examples: date, uname -a, ls -la, python3 -c "print(2**10)"
+
+2. Web search for finding information:
+   - Use for recent news, current events, weather, and topics not in CLI tools
+   - Returns search results with snippets
+   - You can specify number of results and time range (e.g., last 7 days)
+
+3. Web fetch for reading specific URLs:
+   - Use when you have a specific URL and want to read its full content
+   - Extracts readable text from web pages (not HTML code)
+   - Useful for reading articles, blog posts, documentation pages
+"""
+
+_PYTHON3_LIMITATIONS = """
+**Programming Language Access:**
+You ONLY have access to Python 3 interpreter. You cannot execute code in
+other programming languages like JavaScript, Ruby, Java, C++, etc.
+
+You can execute Python 3 code using the CLI tools with commands like:
+- python3 -c "print('Hello World')"
+- python3 -c "import datetime; print(datetime.datetime.now())"
+- python3 -c "2**10"  # For calculations
+"""
+
+_BEHAVIORAL_RULES = """
+**CRITICAL BEHAVIOR RULES:**
+- Execute each tool ONCE and provide the best answer you can
+- NEVER retry the same tool with the same parameters to "verify" or "get more details"
+- If results are incomplete, try a DIFFERENT tool or approach
+- Complex calculations should be executed once, not multiple times
+- Web searches should be done once per topic, not repeated
+- Finalize your answer after getting results, don't keep looking for "better" ones
+"""
+
+_DETAILED_TOOL_EXAMPLES = """
+- **Python 3 Access**: You can execute Python 3 code using commands like:
+  * python3 -c "import math; print(math.sqrt(16))"
+  * python3 -c "import datetime; print(datetime.datetime.now())"
+  * python3 -c "[x*2 for x in range(5)]"  # List comprehensions
+- **LIMITATION**: You ONLY have access to Python 3. No other languages
+  like JavaScript, Java, C++, Ruby, etc. are available.
+"""
+
+
 class DateTimeContext:
     """Provides current date/time context for the LLM."""
 
@@ -20,7 +68,6 @@ class DateTimeContext:
             A system message dict with current date/time in ISO format.
         """
         now = datetime.now(UTC)
-        # Format: 2025-01-15T14:30:00+00:00 Wednesday
         iso_format = now.isoformat()
         day_name = now.strftime("%A")
 
@@ -33,8 +80,7 @@ class DateTimeContext:
 class SystemPrompts:
     """System prompts for the AI assistant."""
 
-    #     Main system prompt - clarified language capabilities with anti-retry emphasis
-    MAIN_SYSTEM_PROMPT = """You are a helpful AI assistant that can use CLI tools
+    MAIN_SYSTEM_PROMPT = f"""You are a helpful AI assistant that can use CLI tools
     and web tools to get factual information.
 
     When users ask for factual information like date/time, weather, system info,
@@ -44,27 +90,10 @@ class SystemPrompts:
     1. CLI commands for system information (date, weather, files, etc.)
     2. Web search for finding information on the web
     3. Web fetch for reading the full content of a specific URL
-
-    **CRITICAL BEHAVIOR RULES:**
-    - Execute each tool ONCE and provide the best answer you can
-    - NEVER retry the same tool with the same parameters to "verify" or
-      "get more details"
-    - If results are incomplete, try a DIFFERENT tool or approach
-    - Complex calculations should be executed once, not multiple times
-    - Web searches should be done once per topic, not repeated
-    - Finalize your answer after getting results, don't keep looking for "better" ones
-
-    **Programming Language Access:**
-    You can execute Python 3 code using the CLI tools with commands like:
-    - python3 -c "print('Hello World')"
-    - python3 -c "import datetime; print(datetime.datetime.now())"
-    - python3 -c "2**10"  # For calculations
-
-    You ONLY have access to Python 3 interpreter. You cannot execute code in
-    other programming languages like JavaScript, Ruby, Java, C++, etc.
-
+{_BEHAVIORAL_RULES}
+{_PYTHON3_LIMITATIONS}
     Provide a helpful response based on the actual information you received.
-    Don't mention the tool commands or technical details.    """
+    Don't mention the tool commands or technical details."""
 
     @classmethod
     def get_tool_instructions(cls, max_turns: int = 10) -> str:
@@ -77,37 +106,16 @@ class SystemPrompts:
             Tool instructions string with turn limit
         """
         return f"""You have three types of tools available:
-
-    1. CLI commands for system information:
-       - Use for date/time, system info, file operations, calculations
-       - Examples: date, uname -a, ls -la, python3 -c "print(2**10)"
-       - **Python 3 Access**: You can execute Python 3 code using commands like:
-         * python3 -c "import math; print(math.sqrt(16))"
-         * python3 -c "import datetime; print(datetime.datetime.now())"
-         * python3 -c "[x*2 for x in range(5)]"  # List comprehensions
-       - **LIMITATION**: You ONLY have access to Python 3. No other languages
-         like JavaScript, Java, C++, Ruby, etc. are available.
-
-    2. Web search for finding information:
-       - Use for recent news, current events, weather, and topics not in CLI tools
-       - Returns search results with snippets
-       - You can specify number of results and time range (e.g., last 7 days)
-
-    3. Web fetch for reading specific URLs:
-       - Use when you have a specific URL and want to read its full content
-       - Extracts readable text from web pages (not HTML code)
-       - Useful for reading articles, blog posts, documentation pages
+{_TOOL_CATEGORIES}
+{_DETAILED_TOOL_EXAMPLES}
 
     IMPORTANT GUIDELINES:
     - **CRITICAL**: Do NOT call the same tool with the same parameters multiple times
     - **CRITICAL**: Do NOT fetch the same URL more than once
-    - If a tool result is not useful, try a DIFFERENT approach instead of
-      repeating
-    - **For calculations**: Once you get a result, provide your answer. Don't
-      retry to "verify" or get "more details"
+    - If a tool result is not useful, try a DIFFERENT approach instead of repeating
+    - **For calculations**: Once you get a result, provide your answer. Don't retry to "verify" or get "more details"
     - **For complex operations**: Execute once and provide the best answer you can
-    - **For web searches**: Use search_web once, then provide your answer.
-      Don't re-search the same topic
+    - **For web searches**: Use search_web once, then provide your answer. Don't re-search the same topic
     - **For CLI commands**: Execute once and move on. Don't repeat the same command
     - Start with web search for news/current events, then fetch specific URLs if needed
     - Provide your best answer based on available information, even if incomplete
@@ -116,8 +124,7 @@ class SystemPrompts:
     task. Use them wisely - each turn should provide new information, not
     repeat the same work."""
 
-    # Fallback response
-    FALLBACK_RESPONSE = """I don't have access to the specific tools needed
+    FALLBACK_RESPONSE = f"""I don't have access to the specific tools needed
     for this request.
 
     I can help with:
@@ -128,9 +135,7 @@ class SystemPrompts:
     - Python 3 code execution and calculations
     - Web content retrieval
     - News and information gathering
-
-    **Programming Access**: I can only execute Python 3 code. I cannot use
-    other programming languages like JavaScript, Java, C++, Ruby, etc."""
+{_PYTHON3_LIMITATIONS}"""
 
     @classmethod
     def get_base_prompt(cls, max_turns: int = 10) -> list[dict[str, str]]:
@@ -163,7 +168,6 @@ class SystemPrompts:
         """
         messages = cls.get_base_prompt(max_turns)
 
-        # Add conversation history if available
         if conversation_history:
             messages.extend(conversation_history)
 

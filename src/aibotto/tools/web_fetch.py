@@ -13,6 +13,12 @@ import trafilatura
 from trafilatura import extract
 
 from ..config.settings import Config
+from ..config.headers_config import (
+    ACCEPT_LANGUAGES,
+    COMMON_HEADERS,
+    REFERERS,
+    USER_AGENTS,
+)
 from .rss_extractor import RSSExtractor
 
 logger = logging.getLogger(__name__)
@@ -22,56 +28,14 @@ class WebFetchTool:
     """Tool for fetching and extracting readable content from web pages."""
 
     def __init__(self) -> None:
-        self.timeout = Config.DDGS_TIMEOUT  # Reuse timeout config
-        self.max_content_length = 10000  # Max characters to return
+        self.timeout = Config.DDGS_TIMEOUT
+        self.max_content_length = 10000
         self.max_retries = Config.WEB_FETCH_MAX_RETRIES
         self.retry_delay = Config.WEB_FETCH_RETRY_DELAY
         self.strict_content_type = Config.WEB_FETCH_STRICT_CONTENT_TYPE
         self.rss_extractor = RSSExtractor()
-
-        # Multiple user agents to rotate through
-        self.user_agents = [
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-            "AppleWebKit/537.36 (KHTML, like Gecko) "
-            "Chrome/120.0.0.0 Safari/537.36",
-            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
-            "AppleWebKit/537.36 (KHTML, like Gecko) "
-            "Chrome/120.0.0.0 Safari/537.36",
-            "Mozilla/5.0 (X11; Linux x86_64) "
-            "AppleWebKit/537.36 (KHTML, like Gecko) "
-            "Chrome/120.0.0.0 Safari/537.36",
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:121.0) "
-            "Gecko/20100101 Firefox/121.0",
-            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:121.0) "
-            "Gecko/20100101 Firefox/121.0",
-            "Mozilla/5.0 (X11; Linux x86_64; rv:121.0) "
-            "Gecko/20100101 Firefox/121.0",
-            "Mozilla/5.0 (iPhone; CPU iPhone OS 15_6 like Mac OS X) "
-            "AppleWebKit/605.1.15 (KHTML, like Gecko) "
-            "Version/15.6 Mobile/15E148 Safari/604.1",
-            "Mozilla/5.0 (iPad; CPU OS 15_6 like Mac OS X) "
-            "AppleWebKit/605.1.15 (KHTML, like Gecko) "
-            "Version/15.6 Mobile/15E148 Safari/604.1",
-        ]
-
-        # Common browser headers
-        self.common_headers = {
-            "Accept": (
-                "text/html,application/xhtml+xml,application/xml;"
-                "q=0.9,image/avif,image/webp,image/apng,*/*;"
-                "q=0.8,application/signed-exchange;v=b3;q=0.7"
-            ),
-            "Accept-Language": "en-US,en;q=0.9",
-            "Accept-Encoding": "gzip, deflate, br",
-            "DNT": "1",
-            "Connection": "keep-alive",
-            "Upgrade-Insecure-Requests": "1",
-            "Sec-Fetch-Dest": "document",
-            "Sec-Fetch-Mode": "navigate",
-            "Sec-Fetch-Site": "none",
-            "Sec-Fetch-User": "?1",
-            "Cache-Control": "max-age=0",
-        }
+        self.user_agents = USER_AGENTS
+        self.common_headers = COMMON_HEADERS
 
     def _get_random_user_agent(self) -> str:
         """Get a random user agent from the list."""
@@ -83,14 +47,7 @@ class WebFetchTool:
         headers["User-Agent"] = self._get_random_user_agent()
 
         # Add Accept-Language variation
-        languages = [
-            "en-US,en;q=0.9",
-            "en-GB,en;q=0.9",
-            "en-CA,en;q=0.9",
-            "en-AU,en;q=0.9",
-            "en-ZA,en;q=0.9",
-        ]
-        headers["Accept-Language"] = random.choice(languages)
+        headers["Accept-Language"] = random.choice(ACCEPT_LANGUAGES)
 
         return headers
 
@@ -153,19 +110,10 @@ class WebFetchTool:
         # Add some variation to headers on different attempts to avoid detection
         if attempt > 0:
             # Add a random referer
-            referers = [
-                "https://www.google.com/",
-                "https://www.bing.com/",
-                "https://duckduckgo.com/",
-                "https://www.yahoo.com/",
-                "https://www.reddit.com/",
-                "https://news.ycombinator.com/",
-            ]
-            headers["Referer"] = random.choice(referers)
+            headers["Referer"] = random.choice(REFERERS)
 
             # Add Accept-Language variation
-            languages = ["en-US,en;q=0.9", "en-GB,en;q=0.9", "en-CA,en;q=0.9"]
-            headers["Accept-Language"] = random.choice(languages)
+            headers["Accept-Language"] = random.choice(ACCEPT_LANGUAGES)
 
             # Add some additional headers that real browsers send
             if random.random() > 0.5:
@@ -212,7 +160,46 @@ class WebFetchTool:
     def _is_rss_feed(self, content: str, content_type: str = "") -> bool:
         """Check if content is an RSS feed."""
         return self.rss_extractor.is_rss_feed(content, content_type)
-    
+
+    def _extract_with_fallback(
+        self,
+        html: str,
+        url: str,
+        include_links: bool,
+    ) -> str:
+        """Extract content with precision → recall fallback.
+
+        Args:
+            html: HTML content to extract
+            url: Base URL for resolving relative links
+            include_links: Whether to include links in extraction
+
+        Returns:
+            Extracted text content or empty string
+        """
+        extracted = extract(
+            html,
+            url=url,
+            include_links=include_links,
+            include_comments=False,
+            include_images=False,
+            output_format="txt",
+            favor_precision=True,
+        )
+
+        if not extracted or extracted.strip() == "":
+            extracted = extract(
+                html,
+                url=url,
+                include_links=include_links,
+                include_comments=False,
+                include_images=False,
+                output_format="txt",
+                favor_recall=True,
+            )
+
+        return extracted or ""
+
     def _extract_content(
         self,
         html: str,
@@ -226,36 +213,12 @@ class WebFetchTool:
             return self.rss_extractor.extract_rss_content(html, url)
 
         # Regular HTML content extraction
-        # Use markdown format for citations by default
         if no_citations:
             # Plain text extraction without citations
-            extracted = trafilatura.extract(
-                html,
-                url=url,
-                include_links=False,
-                include_comments=False,
-                include_images=False,
-                output_format="txt",
-                favor_precision=True,
-            )
-
-            if not extracted:
-                # Fallback: try with less precision if nothing found
-                extracted = trafilatura.extract(
-                    html,
-                    url=url,
-                    include_links=False,
-                    include_comments=False,
-                    include_images=False,
-                    output_format="txt",
-                    favor_precision=False,
-                )
-
-            content = extracted or ""
+            content = self._extract_with_fallback(html, url, include_links=False)
         else:
-            # Use trafilatura's built-in markdown link generation
-            content = self._convert_html_to_markdown_with_links(html, url)
-
+            # Use trafilatura\'s built-in markdown link generation
+            content = self._extract_with_fallback(html, url, include_links=True)
             # Filter unwanted links (anchors, javascript:, mailto:, etc.)
             content = self._filter_unwanted_links(content)
 
@@ -356,43 +319,6 @@ class WebFetchTool:
             return True
 
         return False
-
-    def _convert_html_to_markdown_with_links(self, html: str, base_url: str) -> str:
-        """Convert HTML to markdown with [text](url) citation format.
-
-        Uses trafilatura's built-in markdown link generation.
-
-        Args:
-            html: HTML content with links
-            base_url: Base URL for resolving relative links
-
-        Returns:
-            Markdown text with citation links
-        """
-        # Try favor_precision first
-        markdown_text = extract(
-            html,
-            url=base_url,
-            include_links=True,
-            include_comments=False,
-            include_images=False,
-            output_format="txt",
-            favor_precision=True,
-        )
-
-        # Fallback to favor_recall if nothing extracted
-        if not markdown_text or markdown_text.strip() == "":
-            markdown_text = extract(
-                html,
-                url=base_url,
-                include_links=True,
-                include_comments=False,
-                include_images=False,
-                output_format="txt",
-                favor_recall=True,
-            )
-
-        return markdown_text or ""
 
     def _finalize_content(
         self, extracted: dict[str, Any], max_length: int
