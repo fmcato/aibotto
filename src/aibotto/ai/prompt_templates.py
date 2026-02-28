@@ -56,6 +56,49 @@ _DETAILED_TOOL_EXAMPLES = """
   like JavaScript, Java, C++, Ruby, etc. are available.
 """
 
+_SOURCE_CREDIBILITY_GUIDELINES = """
+**Source Credibility Guidelines for Web Content:**
+
+When using web search or fetch, ALWAYS evaluate source credibility:
+
+1. **High-Credibility Sources** (prioritize these):
+   - Educational domains (.edu, university websites)
+   - Government domains (.gov, .gov.uk, .eu, etc.)
+   - Established news organizations with editorial standards
+   - Peer-reviewed scientific publications
+   - Official documentation from software/hardware vendors
+
+2. **Medium-Credibility Sources** (use with caution):
+   - .org domains (verify organization's reputation)
+   - Reputable tech publications and documentation
+   - Community-maintained knowledge bases (e.g., Stack Overflow for validated answers)
+
+3. **Low-Credibility Sources** (avoid or verify with multiple sources):
+   - Personal blogs without proven expertise
+   - Unknown or recently created domains
+   - Content farms or heavily AI-generated sites
+
+4. **Red Flags for AI-Generated or Low-Quality Content**:
+   - Generic, vague language with no specific details
+   - Contradictory statements within the same article
+   - No author attribution or publication date
+   - Excessive repetition or filler text
+   - Claims without supporting evidence or citations
+   - Grammar that is too perfect but lacks substance
+   - Topic coverage that seems too broad/shallow
+
+5. **Cross-Checking Requirements**:
+   - For sensitive topics (health, finance, safety): verify with multiple HIGH-credibility sources
+   - If sources contradict each other: cite the disagreement and explain the more credible source
+   - For breaking news: check multiple reputable outlets before presenting as fact
+   - Never present a single low-credibility source as definitive
+
+6. **Reporting to Users**:
+   - If information comes from a questionable source, explicitly mention this limitation
+   - When uncertain about accuracy, acknowledge it and suggest verifying from authoritative sources
+   - Prefer providing partial but reliable information over complete but unreliable information
+"""
+
 
 class DateTimeContext:
     """Provides current date/time context for the LLM."""
@@ -92,6 +135,7 @@ class SystemPrompts:
     3. Web fetch for reading the full content of a specific URL
 {_BEHAVIORAL_RULES}
 {_PYTHON3_LIMITATIONS}
+{_SOURCE_CREDIBILITY_GUIDELINES}
     Provide a helpful response based on the actual information you received.
     Don't mention the tool commands or technical details."""
 
@@ -116,6 +160,9 @@ class SystemPrompts:
     - **For calculations**: Once you get a result, provide your answer. Don't retry to "verify" or get "more details"
     - **For complex operations**: Execute once and provide the best answer you can
     - **For web searches**: Use search_web once, then provide your answer. Don't re-search the same topic
+    - **For web searches**: ALWAYS evaluate source credibility before presenting information. Prioritize authoritative sources (.gov, .edu, established news)
+    - **For web searches**: Cross-check claims when sources differ or the topic is sensitive (health, finance, safety)
+    - **For web searches**: Be cautious with AI-generated content - look for generic language, contradictions, or lack of specifics
     - **For CLI commands**: Execute once and move on. Don't repeat the same command
     - Start with web search for news/current events, then fetch specific URLs if needed
     - Provide your best answer based on available information, even if incomplete
@@ -207,7 +254,12 @@ class ToolDescriptions:
         "type": "function",
         "function": {
             "name": "search_web",
-            "description": "Search the web for current information using DuckDuckGo",
+            "description": (
+                "Search the web for current information using DuckDuckGo. "
+                "Results may vary in reliability - always evaluate source credibility "
+                "and prioritize authoritative sources (.gov, .edu, established news sites). "
+                "Be cautious of AI-generated content and cross-check important claims."
+            ),
             "parameters": {
                 "type": "object",
                 "properties": {
@@ -223,7 +275,7 @@ class ToolDescriptions:
                         "description": (
                         "Maximum number of results to return "
                         "(1-10, default: 5)"
-                    ),
+                        ),
                         "default": 5
                     },
                     "days_ago": {
