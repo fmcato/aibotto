@@ -2,6 +2,43 @@
 
 AI agent communicating via Telegram and using CLI tools.
 
+## Subagent System
+
+### Architecture
+The system uses subagents for specialized tasks with isolated LLM contexts to prevent main context bloat.
+
+### Main Agent Tools
+- `execute_cli_command` - CLI operations (date, system info, calculations)
+- `fetch_webpage` - Fetch known URLs (user-provided URLs)
+- `research_topic` - Delegate web research to subagent (for discovering new information)
+
+### WebResearchAgent
+Specialized subagent for comprehensive web research with isolated LLM context.
+
+**Access:**
+- `research_topic` - Find web sources
+- `fetch_webpage` - Read page content
+
+**Capabilities:**
+- Search strategy refinement
+- Source credibility evaluation (.gov, .edu, established news)
+- Multi-source synthesis
+- Inline citations [Title](URL)
+- 10-iteration limit (hardcoded)
+
+**Flow:**
+1. Main agent calls `research_topic("query")`
+2. WebResearchAgent spawned in isolated context
+3. Agent searches, fetches, synthesizes internally
+4. Returns summary with citations to main agent
+5. Main agent receives only final result (context stays clean)
+
+### Benefits
+- **Context Efficiency**: Main context contains only synthesized results, not every intermediate search/fetch
+- **Specialization**: Web research subagent has specialized prompts for evaluation and synthesis
+- **Isolation**: Subagent failures don't pollute main context
+- **Extensibility**: Easy to add more subagent types (code analysis, data processing, etc.)
+
 ## Build & Quality Commands
 
 ```bash

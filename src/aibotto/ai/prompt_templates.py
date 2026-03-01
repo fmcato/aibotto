@@ -15,12 +15,13 @@ _TOOL_CATEGORIES = """
    - Use for date/time, system info, file operations, calculations
    - Examples: date, uname -a, ls -la, python3 -c "print(2**10)"
 
-2. Web search for finding information:
-   - Use for recent news, current events, weather, and topics not in CLI tools
-   - Returns search results with snippets
-   - You can specify number of results and time range (e.g., last 7 days)
+2. Web research for discovering new information:
+   - Use a specialized subagent to comprehensively research topics
+   - Finds multiple sources, evaluates credibility, synthesizes findings
+   - Returns summary with inline citations [Title](URL)
+   - Examples: "AI developments", "climate change impacts"
 
-3. Web fetch for reading specific URLs:
+3. Web fetch for specific URLs:
    - Use when you have a specific URL and want to read its full content
    - Extracts readable text from web pages (not HTML code)
    - Useful for reading articles, blog posts, documentation pages
@@ -131,11 +132,11 @@ class SystemPrompts:
 
     You have three types of tools available:
     1. CLI commands for system information (date, weather, files, etc.)
-    2. Web search for finding information on the web
+    2. Web research for discovering and synthesizing information from web sources
     3. Web fetch for reading the full content of a specific URL
-{_BEHAVIORAL_RULES}
-{_PYTHON3_LIMITATIONS}
-{_SOURCE_CREDIBILITY_GUIDELINES}
+    {_BEHAVIORAL_RULES}
+    {_PYTHON3_LIMITATIONS}
+    {_SOURCE_CREDIBILITY_GUIDELINES}
     Provide a helpful response based on the actual information you received.
     Don't mention the tool commands or technical details."""
 
@@ -149,22 +150,19 @@ class SystemPrompts:
         Returns:
             Tool instructions string with turn limit
         """
-        return f"""You have three types of tools available:
+        return f"""You have two types of tools available:
 {_TOOL_CATEGORIES}
 {_DETAILED_TOOL_EXAMPLES}
 
     IMPORTANT GUIDELINES:
     - **CRITICAL**: Do NOT call the same tool with the same parameters multiple times
     - **CRITICAL**: Do NOT fetch the same URL more than once
+    - **Use research_topic**: For discovering new information on topics (main agent delegates to subagent)
+    - **Use fetch_webpage**: For URLs the user provides or you already have
     - If a tool result is not useful, try a DIFFERENT approach instead of repeating
     - **For calculations**: Once you get a result, provide your answer. Don't retry to "verify" or get "more details"
     - **For complex operations**: Execute once and provide the best answer you can
-    - **For web searches**: Use search_web once, then provide your answer. Don't re-search the same topic
-    - **For web searches**: ALWAYS evaluate source credibility before presenting information. Prioritize authoritative sources (.gov, .edu, established news)
-    - **For web searches**: Cross-check claims when sources differ or the topic is sensitive (health, finance, safety)
-    - **For web searches**: Be cautious with AI-generated content - look for generic language, contradictions, or lack of specifics
     - **For CLI commands**: Execute once and move on. Don't repeat the same command
-    - Start with web search for news/current events, then fetch specific URLs if needed
     - Provide your best answer based on available information, even if incomplete
 
     You have a maximum of {max_turns} tool-calling turns to complete your
@@ -292,6 +290,38 @@ class ToolDescriptions:
         },
     }
 
+    RESEARCH_TOOL_DESCRIPTION = {
+        "type": "function",
+        "function": {
+            "name": "research_topic",
+            "description": (
+                "Comprehensive web research using a specialized subagent. "
+                "Finds, evaluates, and synthesizes information from multiple web sources. "
+                "Includes source credibility assessment and inline citations. "
+                "Use for investigating topics that require discovering new information. "
+                "Use fetch_webpage for URLs you already have."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "query": {
+                        "type": "string",
+                        "description": (
+                            "Research topic or question to investigate. "
+                            "Use this when you need to find new information."
+                        ),
+                    },
+                    "num_results": {
+                        "type": "integer",
+                        "description": "Number of search results to fetch (1-10, default: 5)",
+                        "default": 5,
+                    },
+                },
+                "required": ["query"],
+            },
+        },
+    }
+
     WEB_FETCH_TOOL_DESCRIPTION = {
         "type": "function",
         "function": {
@@ -338,6 +368,6 @@ class ToolDescriptions:
         """Get all available tool definitions."""
         return [
             cls.CLI_TOOL_DESCRIPTION,
-            cls.WEB_SEARCH_TOOL_DESCRIPTION,
+            cls.RESEARCH_TOOL_DESCRIPTION,
             cls.WEB_FETCH_TOOL_DESCRIPTION,
         ]

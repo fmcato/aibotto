@@ -26,14 +26,13 @@ class TestSystemPrompts:
         assert "ai-generated" in prompt.lower()
 
     def test_tool_instructions_includes_web_search_credibility(self):
-        """Test that get_tool_instructions includes web search credibility rules."""
+        """Test that get_tool_instructions includes web research credibility rules."""
         instructions = SystemPrompts.get_tool_instructions()
 
-        # Check for web search credibility rules
-        assert "evaluate source credibility" in instructions.lower()
-        assert "authoritative sources" in instructions.lower()
-        assert "cross-check" in instructions.lower()
-        assert "ai-generated" in instructions.lower()
+        # Check for web research credibility rules (subagent handles credibility evaluation)
+        # Main agent is now instructed to use research_topic for discovering information
+        assert "research_topic" in instructions or "research" in instructions.lower()
+        assert "fetch_webpage" in instructions
 
     def test_tool_instructions_includes_turn_limit(self):
         """Test that get_tool_instructions includes dynamic turn limit."""
@@ -111,7 +110,7 @@ class TestToolDescriptions:
 
         tool_names = [tool["function"]["name"] for tool in definitions]
         assert "execute_cli_command" in tool_names
-        assert "search_web" in tool_names
+        assert "research_topic" in tool_names
         assert "fetch_webpage" in tool_names
 
     def test_cli_tool_structure(self):
@@ -123,16 +122,15 @@ class TestToolDescriptions:
         assert "command" in tool["function"]["parameters"]["properties"]
         assert "command" in tool["function"]["parameters"]["required"]
 
-    def test_web_search_tool_structure(self):
-        """Test web search tool definition structure."""
-        tool = ToolDescriptions.WEB_SEARCH_TOOL_DESCRIPTION
+    def test_research_tool_structure(self):
+        """Test research tool definition structure."""
+        tool = ToolDescriptions.RESEARCH_TOOL_DESCRIPTION
 
         assert tool["type"] == "function"
-        assert tool["function"]["name"] == "search_web"
+        assert tool["function"]["name"] == "research_topic"
         assert "query" in tool["function"]["parameters"]["properties"]
         assert "query" in tool["function"]["parameters"]["required"]
         assert "num_results" in tool["function"]["parameters"]["properties"]
-        assert "days_ago" in tool["function"]["parameters"]["properties"]
         assert tool["function"]["parameters"]["properties"]["num_results"]["default"] == 5
 
     def test_web_fetch_tool_structure(self):

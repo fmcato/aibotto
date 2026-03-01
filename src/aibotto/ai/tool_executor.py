@@ -18,9 +18,9 @@ logger = logging.getLogger(__name__)
 class ToolExecutor:
     """Orchestrates tool execution with logging and error handling."""
 
-    def __init__(self) -> None:
-        self.tracker = ToolTracker()
-        
+    def __init__(self, tracker: ToolTracker | None = None) -> None:
+        self.tracker = tracker if tracker else ToolTracker()  # Accept external tracker
+
         # Register tool executors
         self._register_tools()
 
@@ -34,10 +34,16 @@ class ToolExecutor:
         from ..tools.executors.cli_executor import CLIExecutor
         from ..tools.executors.web_fetch_executor import WebFetchExecutor
         from ..tools.executors.web_search_executor import WebSearchExecutor
+        from ..tools.research_tool import ResearchExecutor
+        from .subagent import init_subagents
+
+        # Initialize subagents
+        init_subagents()
 
         # Register executors
         tool_registry.register_executor("execute_cli_command", CLIExecutor())
         tool_registry.register_executor("search_web", WebSearchExecutor())
+        tool_registry.register_executor("research_topic", ResearchExecutor())
         tool_registry.register_executor("fetch_webpage", WebFetchExecutor())
 
         logger.info("Registered all tool executors")

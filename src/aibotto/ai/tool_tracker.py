@@ -182,3 +182,92 @@ class ToolTracker:
         global _tool_call_tracker
         _tool_call_tracker.clear()
         logger.debug("Cleared global tool call tracker")
+
+
+class SubAgentTracker(ToolTracker):
+    """Tracker specifically for subagent tool calls with isolated namespace.
+
+    Subagents use instance-based tracking with namespaced keys to prevent
+    cross-contamination between different subagent invocations and main
+    agent tool calls.
+    """
+
+    def __init__(self, instance_id: int) -> None:
+        super().__init__()
+        self._instance_id = instance_id
+        self._namespace_prefix = f"subagent_{instance_id}"
+        logger.info(
+            f"Created SubAgentTracker for instance {instance_id} "
+            f"with namespace prefix: {self._namespace_prefix}"
+        )
+
+    def get_namespace_key(
+        self,
+        function_name: str,
+        arguments: str,
+        user_id: int = 0,
+        chat_id: int = 0
+    ) -> str:
+        """Generate namespaced key with subagent prefix.
+
+        Args:
+            function_name: Name of the function being called
+            arguments: Arguments string
+            user_id: User ID
+            chat_id: Chat ID
+
+        Returns:
+            Namespaced key string: subagent_{id}::{user_id}_{chat_id}
+        """
+        user_key = f"{user_id}_{chat_id}" if chat_id else f"{user_id}"
+        return f"{self._namespace_prefix}::{user_key}"
+
+    def is_duplicate_tool_call(
+        self,
+        function_name: str,
+        arguments: str,
+        user_id: int = 0,
+        chat_id: int = 0
+    ) -> bool:
+        """Check for duplicates using subagent-isolated namespace.
+
+        Args:
+            function_name: Name of the function
+            arguments: Arguments string
+            user_id: User ID
+            chat_id: Chat ID
+
+        Returns:
+            True if duplicate, False otherwise
+        """
+        namespace_key = self.get_namespace_key(
+            function_name,
+            arguments,
+            user_id,
+            chat_id
+        )
+
+        call_hash = self._generate_tool_call_hash(function_name, arguments)
+
+        if namespace_key not in _tool_call_tracker:
+            _tool_call_tracker[namespace_key] = set()
+
+        is_duplicate = call_hash in _tool_call_tracker[namespace_key]
+
+        if is_duplicate:
+            logger.warning(
+                f"SUBAGENT DUPLICATE DETECTED (instance {self._instance_id}): "
+                f"{function_name} with args {arguments[:100]}... "
+                f"Namespace: {namespace_key}, User: {user_id}, Chat: {chat_id}, "
+                f"Iteration: {self._iteration_count}"
+            )
+        else:
+            _tool_call_tracker[namespace_key].add(call_hash)
+            logger.info(
+                f"SUBAGENT NEW TOOL CALL (instance {self._instance_id}): "
+                f"{function_name}, Args: {arguments[:100]}..., "
+                f"Namespace: {namespace_key}, User: {user_id}, Chat: {chat_id}, "
+                f"Iteration: {self._iteration_count}"
+            )
+
+        return is_duplicate
