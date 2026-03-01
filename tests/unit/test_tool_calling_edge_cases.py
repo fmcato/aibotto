@@ -20,7 +20,7 @@ class TestToolCallingEdgeCases:
             manager.llm_client = AsyncMock()
 
             # Get the CLI executor from the tool registry and configure it
-            from src.aibotto.tools.tool_registry import tool_registry
+            from src.aibotto.tools.toolset import tool_registry
             cli_executor = tool_registry.get_executor("execute_cli_command")
             if cli_executor:
                 cli_executor.execute = AsyncMock()
@@ -59,7 +59,7 @@ class TestToolCallingEdgeCases:
         tool_manager.llm_client.chat_completion.side_effect = [mock_response, mock_final_response]
 
         # Mock command execution to raise error
-        from src.aibotto.tools.tool_registry import tool_registry
+        from src.aibotto.tools.toolset import tool_registry
         cli_executor = tool_registry.get_executor("execute_cli_command")
         if cli_executor:
             cli_executor.execute = AsyncMock(side_effect=Exception("Command not found"))
@@ -149,58 +149,4 @@ class TestToolCallingEdgeCases:
             assert "Error:" in response or "error" in response.lower()
             assert "API Error" in response
 
-    @pytest.mark.asyncio
-    async def test_research_topic_tool_call(self, tool_manager):
-        """Test that research_topic can be called through the tool system."""
-        from src.aibotto.tools.tool_registry import tool_registry
 
-        # Mock the research executor
-        research_executor = tool_registry.get_executor("research_topic")
-        if research_executor:
-            research_executor.execute = AsyncMock(return_value="Mock research results")
-
-        mock_tool_call = {
-            "id": "research_call_1",
-            "function": {
-                "name": "research_topic",
-                "arguments": '{"query": "test research", "num_results": 5}'
-            }
-        }
-
-        mock_response = {
-            "choices": [{
-                "message": {
-                    "content": "I'll research this topic for you.",
-                    "tool_calls": [mock_tool_call]
-                }
-            }]
-        }
-
-        mock_final_response = {
-            "choices": [{
-                "message": {
-                    "content": "Research results: Mock research results",
-                    "tool_calls": []
-                }
-            }]
-        }
-
-        tool_manager.llm_client.chat_completion.side_effect = [
-            mock_response,
-            mock_final_response
-        ]
-
-        # Mock database operations
-        with patch('src.aibotto.ai.agentic_orchestrator.DatabaseOperations') as mock_db:
-            mock_db_instance = AsyncMock()
-            mock_db.return_value = mock_db_instance
-            mock_db_instance.get_conversation_history.return_value = []
-            mock_db_instance.save_message.return_value = None
-
-            response = await tool_manager.process_user_request(
-                user_id=789, chat_id=999, message="Research something",
-                db_ops=mock_db_instance
-            )
-
-            # Response should contain our mock results
-            assert "Mock research results" in response

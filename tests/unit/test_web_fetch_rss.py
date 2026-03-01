@@ -1,8 +1,7 @@
 """Unit tests for RSS feed functionality in web fetch tool."""
 
-import aiohttp
 import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, patch
 
 from src.aibotto.tools.web_fetch import WebFetchTool, fetch_webpage
 

@@ -8,7 +8,7 @@ import time
 from typing import Any
 
 from ..db.operations import DatabaseOperations
-from ..tools.tool_registry import tool_registry
+from aibotto.tools.toolset import tool_registry
 from .message_processor import MessageProcessor
 from .tool_tracker import ToolTracker
 
@@ -34,7 +34,7 @@ class ToolExecutor:
         from ..tools.executors.cli_executor import CLIExecutor
         from ..tools.executors.web_fetch_executor import WebFetchExecutor
         from ..tools.executors.web_search_executor import WebSearchExecutor
-        from ..tools.research_tool import ResearchExecutor
+        from ..tools.delegate_tool import DelegateExecutor
         from .subagent import init_subagents
 
         # Initialize subagents
@@ -43,8 +43,8 @@ class ToolExecutor:
         # Register executors
         tool_registry.register_executor("execute_cli_command", CLIExecutor())
         tool_registry.register_executor("search_web", WebSearchExecutor())
-        tool_registry.register_executor("research_topic", ResearchExecutor())
         tool_registry.register_executor("fetch_webpage", WebFetchExecutor())
+        tool_registry.register_executor("delegate_task", DelegateExecutor())
 
         logger.info("Registered all tool executors")
 

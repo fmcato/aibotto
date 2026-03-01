@@ -1,6 +1,5 @@
 """Test cases for GLM model tool calling fix."""
 
-import asyncio
 import pytest
 from unittest.mock import AsyncMock, patch, MagicMock
 from src.aibotto.ai.llm_client import LLMClient

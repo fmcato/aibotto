@@ -5,9 +5,7 @@ These tests verify the exponential progression, jitter range,
 and counter reset behavior of the ExponentialBackoffHandler.
 """
 
-import pytest
 from unittest.mock import patch
-import time
 
 from aibotto.ai.backoff_handler import ExponentialBackoffHandler
 

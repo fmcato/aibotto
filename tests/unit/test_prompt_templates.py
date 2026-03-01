@@ -2,7 +2,6 @@
 Test prompt templates module.
 """
 
-import pytest
 
 from src.aibotto.ai.prompt_templates import (
     DateTimeContext,
@@ -25,13 +24,31 @@ class TestSystemPrompts:
         assert ".gov" in prompt
         assert "ai-generated" in prompt.lower()
 
+    def test_main_system_prompt_includes_temporal_resolution_guidelines(self):
+        """Test that MAIN_SYSTEM_PROMPT includes temporal resolution guidelines."""
+        prompt = SystemPrompts.MAIN_SYSTEM_PROMPT
+
+        # Check for temporal resolution section
+        assert "TEMPORAL REFERENCE RESOLUTION" in prompt
+        assert "CRITICAL" in prompt
+
+        # Check for common temporal patterns
+        assert '"this year"' in prompt
+        assert '"this month"' in prompt
+        assert '"last week"' in prompt
+        assert '"next year"' in prompt
+
+        # Check for key instruction
+        assert "Do NOT use training data" in prompt
+        assert "Always use the provided datetime context" in prompt
+
     def test_tool_instructions_includes_web_search_credibility(self):
         """Test that get_tool_instructions includes web research credibility rules."""
         instructions = SystemPrompts.get_tool_instructions()
 
         # Check for web research credibility rules (subagent handles credibility evaluation)
-        # Main agent is now instructed to use research_topic for discovering information
-        assert "research_topic" in instructions or "research" in instructions.lower()
+        # Main agent can use delegate_task with web_research subagent for discovering information
+        assert "delegate_task" in instructions or "research" in instructions.lower()
         assert "fetch_webpage" in instructions
 
     def test_tool_instructions_includes_turn_limit(self):
@@ -106,12 +123,13 @@ class TestToolDescriptions:
         """Test that get_tool_definitions returns all tools."""
         definitions = ToolDescriptions.get_tool_definitions()
 
-        assert len(definitions) == 3
+        assert len(definitions) == 4
 
         tool_names = [tool["function"]["name"] for tool in definitions]
         assert "execute_cli_command" in tool_names
-        assert "research_topic" in tool_names
+        assert "search_web" in tool_names
         assert "fetch_webpage" in tool_names
+        assert "delegate_task" in tool_names
 
     def test_cli_tool_structure(self):
         """Test CLI tool definition structure."""
@@ -122,16 +140,15 @@ class TestToolDescriptions:
         assert "command" in tool["function"]["parameters"]["properties"]
         assert "command" in tool["function"]["parameters"]["required"]
 
-    def test_research_tool_structure(self):
-        """Test research tool definition structure."""
-        tool = ToolDescriptions.RESEARCH_TOOL_DESCRIPTION
+    def test_web_search_tool_structure(self):
+        """Test web search tool definition structure."""
+        tool = ToolDescriptions.WEB_SEARCH_TOOL_DESCRIPTION
 
         assert tool["type"] == "function"
-        assert tool["function"]["name"] == "research_topic"
+        assert tool["function"]["name"] == "search_web"
         assert "query" in tool["function"]["parameters"]["properties"]
         assert "query" in tool["function"]["parameters"]["required"]
         assert "num_results" in tool["function"]["parameters"]["properties"]
-        assert tool["function"]["parameters"]["properties"]["num_results"]["default"] == 5
 
     def test_web_fetch_tool_structure(self):
         """Test web fetch tool definition structure."""
@@ -143,6 +160,17 @@ class TestToolDescriptions:
         assert "url" in tool["function"]["parameters"]["required"]
         assert "max_length" in tool["function"]["parameters"]["properties"]
         assert "no_citations" in tool["function"]["parameters"]["properties"]
+
+    def test_delegate_task_tool_structure(self):
+        """Test delegate_task tool definition structure."""
+        tool = ToolDescriptions.DELEGATE_TASK_TOOL_DESCRIPTION
+
+        assert tool["type"] == "function"
+        assert tool["function"]["name"] == "delegate_task"
+        assert "subagent_name" in tool["function"]["parameters"]["properties"]
+        assert "task_description" in tool["function"]["parameters"]["properties"]
+        assert "subagent_name" in tool["function"]["parameters"]["required"]
+        assert "task_description" in tool["function"]["parameters"]["required"]
 
 
 class TestDateTimeContext:

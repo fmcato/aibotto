@@ -7,7 +7,7 @@ from aibotto.ai.iteration_manager import IterationManager
 from aibotto.ai.llm_client import LLMClient
 from aibotto.ai.prompt_templates import DateTimeContext
 from aibotto.ai.tool_tracker import SubAgentTracker
-from .tool_registry import SubAgentToolset
+from .toolset import SubAgentToolset
 
 logger = logging.getLogger(__name__)
 

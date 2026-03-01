@@ -8,16 +8,18 @@ AI agent communicating via Telegram and using CLI tools.
 The system uses subagents for specialized tasks with isolated LLM contexts to prevent main context bloat.
 
 ### Main Agent Tools
-- `execute_cli_command` - CLI operations (date, system info, calculations)
+- `execute_cli_command` - CLI operations (date, system info, simple Python one-liners)
+- `search_web` - Quick web search using DuckDuckGo
 - `fetch_webpage` - Fetch known URLs (user-provided URLs)
-- `research_topic` - Delegate web research to subagent (for discovering new information)
+- `delegate_task` - Generic tool for delegating to any registered subagent
 
-### WebResearchAgent
+### Available Subagents
+
+#### WebResearchAgent
 Specialized subagent for comprehensive web research with isolated LLM context.
 
 **Access:**
-- `research_topic` - Find web sources
-- `fetch_webpage` - Read page content
+- `delegate_task` with `subagent_name="web_research"`
 
 **Capabilities:**
 - Search strategy refinement
@@ -27,17 +29,45 @@ Specialized subagent for comprehensive web research with isolated LLM context.
 - 5-iteration limit (hardcoded)
 
 **Flow:**
-1. Main agent calls `research_topic("query")`
+1. Main agent calls `delegate_task(subagent_name="web_research", task_description="query")`
 2. WebResearchAgent spawned in isolated context
 3. Agent searches, fetches, synthesizes internally
 4. Returns summary with citations to main agent
 5. Main agent receives only final result (context stays clean)
 
+#### PythonScriptAgent
+Specialized subagent for creating and executing Python scripts with isolated LLM context.
+
+**Access:**
+- `delegate_task` with `subagent_name="python_script"`
+
+**Capabilities:**
+- Python script creation for complex tasks
+- Multi-iteration debugging (3 iterations max)
+- 45-second execution timeout
+- Unlimited script size
+- Natural language results with execution output
+- Error handling and code fixes
+
+**Flow:**
+1. Main agent calls `delegate_task(subagent_name="python_script", task_description="task description")`
+2. PythonScriptAgent spawned in isolated context
+3. Agent creates Python code, executes via CLI tool
+4. If errors, agent reads error messages and fixes code (up to 3 iterations)
+5. Returns natural language results to main agent
+
+**Usage Guidelines:**
+- Simple one-liners: Use `execute_cli_command` with `python3 -c`
+- Complex scripts: Use `delegate_task` with `subagent_name="python_script"`
+- 45-second total execution limit
+- Unlimited script size, 3-iteration debugging
+
 ### Benefits
-- **Context Efficiency**: Main context contains only synthesized results, not every intermediate search/fetch
-- **Specialization**: Web research subagent has specialized prompts for evaluation and synthesis
+- **Context Efficiency**: Main context contains only synthesized results, not every intermediate operation
+- **Specialization**: Each subagent has specialized prompts for its domain
 - **Isolation**: Subagent failures don't pollute main context
-- **Extensibility**: Easy to add more subagent types (code analysis, data processing, etc.)
+- **Extensibility**: Easy to add more subagent types via `delegate_task` tool
+- **Flexibility**: Generic `delegate_task` means no need to update main agent tools for new subagents
 
 ## Build & Quality Commands
 

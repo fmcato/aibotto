@@ -5,7 +5,7 @@ End-to-end tests for parallel tool calling functionality.
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
-from telegram import Update
+from telegram import Update, Message
 from telegram.ext import ContextTypes
 
 from src.aibotto.ai.agentic_orchestrator import ToolCallingManager

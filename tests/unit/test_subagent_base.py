@@ -1,7 +1,7 @@
 """Unit tests for subagent base class."""
 
 import pytest
-from unittest.mock import AsyncMock, patch
+from unittest.mock import patch
 
 from src.aibotto.ai.subagent.base import SubAgent
 

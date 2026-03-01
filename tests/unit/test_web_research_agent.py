@@ -1,7 +1,7 @@
 """Unit tests for web research subagent."""
 
 import pytest
-from unittest.mock import AsyncMock, patch
+from unittest.mock import patch
 
 from src.aibotto.ai.subagent.web_research_agent import WebResearchAgent
 

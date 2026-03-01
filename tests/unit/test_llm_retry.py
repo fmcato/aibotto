@@ -2,13 +2,11 @@
 
 import pytest
 
-import asyncio
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock, patch
 
 from openai import RateLimitError
 
 from aibotto.ai.llm_client import LLMClient
-from aibotto.config.settings import Config
 
 
 @pytest.mark.asyncio

@@ -5,7 +5,6 @@ from unittest.mock import AsyncMock, patch
 
 from aibotto.ai.subagent.base import SubAgent
 from aibotto.ai.subagent.web_research_agent import WebResearchAgent
-from aibotto.ai.prompt_templates import DateTimeContext
 
 
 class TestSubAgentDateTime:
