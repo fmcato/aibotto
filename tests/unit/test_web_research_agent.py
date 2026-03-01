@@ -16,7 +16,7 @@ class TestWebResearchAgent:
 
     def test_init(self, research_agent):
         """Test initialization."""
-        assert research_agent.max_iterations == 10
+        assert research_agent.max_iterations == 5
 
     def test_system_prompt_content(self, research_agent):
         """Test system prompt contains research-specific content."""

@@ -12,8 +12,9 @@ from src.aibotto.tools.web_search import WebSearchTool, search_web
 
 # AI/LLM
 from src.aibotto.ai.llm_client import LLMClient
-from src.aibotto.ai.tool_calling import ToolCallingManager
+from src.aibotto.ai.agentic_orchestrator import AgenticOrchestrator
 from src.aibotto.ai.prompt_templates import SystemPrompts, ToolDescriptions
+from src.aibotto.ai.subagent import SubAgent, WebResearchAgent, init_subagents
 
 # Other modules
 from src.aibotto.config.settings import Config
@@ -149,6 +150,9 @@ with patch('src.aibotto.tools.security.SecurityManager') as mock:
 |---------------------|-----------------|
 | Tool (CLI, web search) | `tests/unit/test_cli.py` or `tests/unit/test_web_search.py` |
 | Tool calling logic | `tests/unit/test_tool_calling_edge_cases.py` |
+| Subagent system | `tests/unit/test_subagent_*.py` |
+| Research tools | `tests/unit/test_research_tool.py` |
+| Web research subagent | `tests/unit/test_web_research_agent.py` |
 | Telegram bot | `tests/unit/test_bot.py` |
 | CLI prompt interface | `tests/unit/test_prompt_cli.py` |
 | Database operations | `tests/unit/test_db.py` |
@@ -242,18 +246,31 @@ uv run pytest tests/e2e/
 tests/
 ├── conftest.py                    # Fixtures (DO NOT MODIFY without review)
 ├── unit/                          # Unit tests (mocked dependencies)
+│   ├── test_backoff_handler.py    # Exponential backoff tests
 │   ├── test_bot.py               # Telegram bot tests
 │   ├── test_clear_command.py     # /clear command tests
 │   ├── test_cli.py               # CLI executor tests
 │   ├── test_config.py            # Config module tests
 │   ├── test_db.py                # Database module tests
-│   ├── test_factual_responses.py # Factual response system tests
+│   ├── test_glm_fix.py           # LLM client fixes tests
 │   ├── test_llm_client.py        # LLM client tests
+│   ├── test_llm_retry.py         # LLM retry logic tests
 │   ├── test_main.py              # Main entry point tests
 │   ├── test_message_splitter.py  # Message splitting tests
 │   ├── test_prompt_cli.py        # CLI prompt interface tests
+│   ├── test_research_tool.py     # Research tool tests (subagent system)
 │   ├── test_safe_commands.py     # Security validation tests
+│   ├── test_setup_service.py     # Setup service tests
+│   ├── test_subagent_base.py     # Subagent base class tests
+│   ├── test_subagent_datetime.py # Subagent datetime tests
+│   ├── test_subagent_executor.py # Subagent executor tests
+│   ├── test_subagent_registry.py # Subagent registry tests
+│   ├── test_subagent_web_search.py # Subagent web search tests
 │   ├── test_tool_calling_edge_cases.py  # Tool calling edge cases
+│   ├── test_web_fetch.py         # Web fetch tests
+│   ├── test_web_fetch_citations.py # Citation extraction tests
+│   ├── test_web_fetch_rss.py     # RSS feed tests
+│   ├── test_web_research_agent.py # Web research subagent tests
 │   └── test_web_search.py        # Web search unit tests
 ├── e2e/                          # End-to-end tests (real infrastructure)
 │   ├── test_basic_tool_interactions.py
@@ -261,7 +278,7 @@ tests/
 │   ├── test_parallel_tool_calls.py
 │   ├── test_tool_calling_visibility.py
 │   └── test_web_search_real.py
-└── fixtures/                      # Test fixtures and data
+└── config_helpers.py             # Test configuration helpers
 ```
 
 ## Key Fixtures in conftest.py
@@ -272,6 +289,7 @@ The most important fixture for tool calling tests. Returns different responses b
 - "weather" queries → triggers `execute_cli_command` with curl
 - "system"/"uname" queries → triggers `execute_cli_command` with `uname -a`
 - "capital of France" → direct response without tool calls
+- "research"/"web research" queries → triggers `research_topic` with appropriate arguments
 
 ### `temp_database`
 Creates a real SQLite file, yields `DatabaseOperations` instance, cleans up after test.
@@ -281,6 +299,6 @@ Pre-configured mock with `execute_command` returning "Mock output".
 
 ## Quality Metrics
 
-- **Test Count**: 135 tests
-- **Coverage**: 66% (cleaned up by removing unused code)
+- **Test Count**: 240 tests (211 unit + 29 e2e)
+- **Coverage**: 72% (current with subagent system)
 - **All tests must pass** before committing

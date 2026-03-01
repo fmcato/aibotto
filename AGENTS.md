@@ -24,7 +24,7 @@ Specialized subagent for comprehensive web research with isolated LLM context.
 - Source credibility evaluation (.gov, .edu, established news)
 - Multi-source synthesis
 - Inline citations [Title](URL)
-- 10-iteration limit (hardcoded)
+- 5-iteration limit (hardcoded)
 
 **Flow:**
 1. Main agent calls `research_topic("query")`
@@ -41,26 +41,52 @@ Specialized subagent for comprehensive web research with isolated LLM context.
 
 ## Build & Quality Commands
 
+### Development Setup
 ```bash
-uv sync                                # Install deps
-uv run pytest                         # Run all tests
-uv run pytest tests/unit/test_cli.py  # Run single file
-uv run pytest tests/unit/test_cli.py::TestCLIExecutor::test_execute_command_success
-uv run pytest tests/unit/ --ignore=tests/e2e/
-uv run pytest -k "web_fetch" -v
+uv sync                                # Install all dependencies
+uv sync --dev                          # Install dev dependencies
+```
 
+### Testing Commands
+```bash
+uv run pytest                         # Run all tests
+uv run pytest tests/unit/test_cli.py  # Run specific test file
+uv run pytest tests/unit/test_cli.py::TestCLIExecutor::test_execute_command_success  # Single test
+uv run pytest tests/unit/ --ignore=tests/e2e/  # Unit tests only
+uv run pytest -k "web_fetch" -v       # Tests matching pattern
+uv run pytest --cov=src --cov-report=html  # Coverage report
+```
+
+### Linting & Code Quality
+```bash
 uv run ruff check src/                 # Linting
-uv run ruff check --fix src/           # Auto-fix
+uv run ruff check --fix src/           # Auto-fix linting
+uv run ruff format src/                # Format code
 uv run mypy src/                       # Type checking
 uv run bandit -r src/                  # Security scan
 ```
 
-### Pre-commit Hooks
-- Ruff linting
-- MyPy type checking
-- Bandit security scanning
-- pytest (all tests must pass)
+### Pre-commit Quality Checks
+```bash
+# First stage your changes
+git add <files>
 
+# Run quality checks (requires staged changes)
+./pre-commit-checks.sh
+
+# If checks pass, commit:
+git commit -m 'your commit message'
+```
+
+**Check order:**
+1. Ruff linting
+2. MyPy type checking  
+3. Bandit security scanning
+4. pytest (all tests must pass)
+5. TODO comment check in production code
+
+
+## Code Style Guidelines
 
 ## Code Style Guidelines
 
@@ -130,10 +156,13 @@ Iteration 2: LLM sees complete interchange, no duplicates
 ```python
 from aibotto.tools.web_fetch import fetch_webpage
 from aibotto.tools.web_search import search_web
+from aibotto.tools.research_tool import ResearchExecutor
 from aibotto.tools.security import SecurityManager
+from aibotto.tools.tool_registry import tool_registry
 from aibotto.ai.agentic_orchestrator import AgenticOrchestrator
 from aibotto.ai.llm_client import LLMClient
 from aibotto.ai.prompt_templates import SystemPrompts
+from aibotto.ai.subagent import SubAgent, WebResearchAgent, init_subagents
 from aibotto.config.settings import Config
 from aibotto.db.operations import DatabaseOperations
 ```
@@ -160,4 +189,12 @@ from aibotto.db.operations import DatabaseOperations
 - E2E tests hang: `uv run pytest tests/unit/ --ignore=tests/e2e/`
 - Failed search_replace twice: Use write tool to overwrite entire file
 - Tool message issues: Ensure assistant messages include `tool_calls` before `tool` results
+
+### Testing Patterns
+- Unit tests go in `tests/unit/`
+- E2E tests go in `tests/e2e/` 
+- Use `@pytest.mark.asyncio` for async tests
+- Mock external dependencies (APIs, databases)
+- Follow patterns in existing tests for consistency
+- **Detailed test guidelines**: See `tests/AGENTS.md` for comprehensive testing patterns, fixtures, and examples
 
