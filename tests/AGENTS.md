@@ -6,7 +6,7 @@ Quick reference for writing tests in the AIBOTTO project.
 
 ```python
 # Tools (LLM-callable)
-from src.aibotto.tools.cli_executor import CLIExecutor
+from src.aibotto.tools.executors.cli_executor import CLIExecutor
 from src.aibotto.tools.security import SecurityManager
 from src.aibotto.tools.web_search import WebSearchTool, search_web
 
@@ -66,12 +66,12 @@ async def test_async_operation(mock_cli_executor):
 ### Testing with Mock CLI Executor
 
 ```python
-from src.aibotto.tools.cli_executor import CLIExecutor
+from src.aibotto.tools.executors.cli_executor import CLIExecutor
 
 @pytest.fixture
 def executor(self):
     """Create a CLIExecutor instance for testing."""
-    with patch('src.aibotto.tools.cli_executor.SecurityManager') as mock_security:
+    with patch('src.aibotto.tools.executors.cli_executor.SecurityManager') as mock_security:
         executor = CLIExecutor()
         executor.security_manager = MagicMock()
         return executor
@@ -136,7 +136,7 @@ Patch at the **usage location**, not the definition:
 
 ```python
 # CORRECT: Patch where it's imported
-with patch('src.aibotto.tools.cli_executor.SecurityManager') as mock:
+with patch('src.aibotto.tools.executors.cli_executor.SecurityManager') as mock:
     ...
 
 # WRONG: Patching the original module
@@ -189,7 +189,7 @@ with patch('src.aibotto.tools.security.SecurityManager'):
     ...
 
 # CORRECT - patches where it's used
-with patch('src.aibotto.tools.cli_executor.SecurityManager'):
+with patch('src.aibotto.tools.executors.cli_executor.SecurityManager'):
     ...
 ```
 

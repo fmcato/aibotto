@@ -8,7 +8,7 @@ This module contains all tools that the LLM can call:
 - Task delegation to specialized subagents
 """
 
-from .cli_executor import CLIExecutor
+from .executors.cli_executor import CLIExecutor
 from .security import SecurityManager
 from .web_fetch import WebFetchTool, fetch_webpage
 from .web_search import WebSearchTool, search_web

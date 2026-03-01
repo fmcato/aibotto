@@ -12,7 +12,7 @@ import pytest
 from src.aibotto.ai.llm_client import LLMClient
 from src.aibotto.config.settings import Config
 from src.aibotto.db.operations import DatabaseOperations
-from src.aibotto.tools.cli_executor import CLIExecutor
+from src.aibotto.tools.executors.cli_executor import CLIExecutor
 from tests.config_helpers import backup_config, restore_config
 
 

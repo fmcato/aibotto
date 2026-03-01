@@ -7,7 +7,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from src.aibotto.config.settings import Config
-from src.aibotto.tools.cli_executor import CLIExecutor
+from src.aibotto.tools.executors.cli_executor import CLIExecutor
 from src.aibotto.tools.security import SecurityManager
 
 
@@ -17,7 +17,7 @@ class TestCLIExecutor:
     @pytest.fixture
     def executor(self):
         """Create a CLIExecutor instance for testing."""
-        with patch('src.aibotto.tools.cli_executor.SecurityManager') as mock_security:
+        with patch('src.aibotto.tools.executors.cli_executor.SecurityManager') as mock_security:
             executor = CLIExecutor()
             executor.security_manager = MagicMock()
             return executor
@@ -33,7 +33,8 @@ class TestCLIExecutor:
             mock_process.communicate = AsyncMock(return_value=(b"hello\n", b""))
             mock_subprocess.return_value = mock_process
 
-            result = await executor.execute_command("echo hello")
+            arguments = '{"command": "echo hello"}'
+            result = await executor.execute(arguments, 0, None, 0)
 
             assert result == "hello\n"
             executor.security_manager.validate_command.assert_called_once_with("echo hello")
@@ -45,7 +46,8 @@ class TestCLIExecutor:
             return_value={"allowed": False, "message": "Command blocked"}
         )
 
-        result = await executor.execute_command("rm -rf /")
+        arguments = '{"command": "rm -rf /"}'
+        result = await executor.execute(arguments, 0, None, 0)
 
         assert result == "Command blocked"
         executor.security_manager.validate_command.assert_called_once_with("rm -rf /")

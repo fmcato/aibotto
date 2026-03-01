@@ -64,7 +64,7 @@ IMPORTANT: You can only execute Python 3 code using the CLI tool. No other progr
 
     def _register_tools(self) -> None:
         """Register CLI tool for Python execution."""
-        from aibotto.tools.cli_executor import CLIExecutor
+        from aibotto.tools.executors.cli_executor import CLIExecutor
 
         # Register CLI tool for Python execution
         cli_executor = CLIExecutor()
