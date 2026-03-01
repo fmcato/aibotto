@@ -50,8 +50,8 @@ class TestBasicToolInteractions:
         user_query = "What day is today?"
 
         # Mock the CLI executor to simulate successful command execution
-        from src.aibotto.tools.toolset import tool_registry
-        cli_executor = tool_registry.get_executor("execute_cli_command")
+        from src.aibotto.tools.toolset import toolset
+        cli_executor = toolset.get_executor("execute_cli_command")
 
         with patch.object(cli_executor, 'execute') as mock_execute:
             mock_execute.return_value = "Today is Monday, February 3, 2025."
@@ -73,8 +73,8 @@ class TestBasicToolInteractions:
         user_query = "What's the weather in London?"
 
         # Mock the CLI executor to simulate successful weather API call
-        from src.aibotto.tools.toolset import tool_registry
-        cli_executor = tool_registry.get_executor("execute_cli_command")
+        from src.aibotto.tools.toolset import toolset
+        cli_executor = toolset.get_executor("execute_cli_command")
 
         with patch.object(cli_executor, 'execute') as mock_execute:
             mock_execute.return_value = "The weather in London is partly cloudy with a temperature of 15°C."
@@ -96,8 +96,8 @@ class TestBasicToolInteractions:
         user_query = "What system information do you have?"
 
         # Mock the CLI executor to simulate successful command execution
-        from src.aibotto.tools.toolset import tool_registry
-        cli_executor = tool_registry.get_executor("execute_cli_command")
+        from src.aibotto.tools.toolset import toolset
+        cli_executor = toolset.get_executor("execute_cli_command")
 
         with patch.object(cli_executor, 'execute') as mock_execute:
             mock_execute.return_value = "Linux Ubuntu 5.15.0-88-generic x86_64"
@@ -118,8 +118,8 @@ class TestBasicToolInteractions:
         user_query = "List files in current directory"
 
         # Mock the CLI executor to simulate successful command execution
-        from src.aibotto.tools.toolset import tool_registry
-        cli_executor = tool_registry.get_executor("execute_cli_command")
+        from src.aibotto.tools.toolset import toolset
+        cli_executor = toolset.get_executor("execute_cli_command")
 
         with patch.object(cli_executor, 'execute') as mock_execute:
             mock_execute.return_value = "total 16\ndrwxr-xr-x 2 user user 4096 Feb  3 10:00 .\ndrwxr-xr-x 5 user user 4096 Feb  3 10:00 ..\n-rw-r--r-- 1 user user 123 Feb  3 10:00 test.txt"
@@ -162,8 +162,8 @@ class TestBasicToolInteractions:
         user_query = "What day is today?"
 
         # Mock the CLI executor to simulate command execution error
-        from src.aibotto.tools.toolset import tool_registry
-        cli_executor = tool_registry.get_executor("execute_cli_command")
+        from src.aibotto.tools.toolset import toolset
+        cli_executor = toolset.get_executor("execute_cli_command")
 
         with patch.object(cli_executor, 'execute') as mock_execute:
             mock_execute.side_effect = Exception("Command not found")
@@ -180,8 +180,8 @@ class TestBasicToolInteractions:
         user_query = "What is the current date and time?"
 
         # Mock the CLI executor to simulate successful command execution
-        from src.aibotto.tools.toolset import tool_registry
-        cli_executor = tool_registry.get_executor("execute_cli_command")
+        from src.aibotto.tools.toolset import toolset
+        cli_executor = toolset.get_executor("execute_cli_command")
 
         with patch.object(cli_executor, 'execute') as mock_execute:
             mock_execute.return_value = "Date: Mon Feb  3 14:30:45 UTC 2026\nTime: 14:30:45"

@@ -20,8 +20,8 @@ class TestToolCallingEdgeCases:
             manager.llm_client = AsyncMock()
 
             # Get the CLI executor from the tool registry and configure it
-            from src.aibotto.tools.toolset import tool_registry
-            cli_executor = tool_registry.get_executor("execute_cli_command")
+            from src.aibotto.tools.toolset import toolset
+            cli_executor = toolset.get_executor("execute_cli_command")
             if cli_executor:
                 cli_executor.execute = AsyncMock()
 
@@ -59,8 +59,8 @@ class TestToolCallingEdgeCases:
         tool_manager.llm_client.chat_completion.side_effect = [mock_response, mock_final_response]
 
         # Mock command execution to raise error
-        from src.aibotto.tools.toolset import tool_registry
-        cli_executor = tool_registry.get_executor("execute_cli_command")
+        from src.aibotto.tools.toolset import toolset
+        cli_executor = toolset.get_executor("execute_cli_command")
         if cli_executor:
             cli_executor.execute = AsyncMock(side_effect=Exception("Command not found"))
 

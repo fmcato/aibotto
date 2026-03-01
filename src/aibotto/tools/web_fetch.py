@@ -36,6 +36,11 @@ class WebFetchTool:
         self.rss_extractor = RSSExtractor()
         self.user_agents = USER_AGENTS
         self.common_headers = COMMON_HEADERS
+        
+        # Error handling configuration
+        self.immediate_error_codes = {401, 403, 404, 405, 410}  # Don't retry these
+        self.rate_limit_error_codes = {429}  # Retry with backoff
+        self.server_error_codes = {500, 502, 503, 504}  # Retry with exponential backoff
 
     def _get_random_user_agent(self) -> str:
         """Get a random user agent from the list."""
@@ -50,6 +55,63 @@ class WebFetchTool:
         headers["Accept-Language"] = random.choice(ACCEPT_LANGUAGES)
 
         return headers
+
+    def _should_retry_error(self, error: Exception) -> bool:
+        """Determine if an error should be retried based on error type and status code."""
+        
+        if isinstance(error, aiohttp.ClientResponseError):
+            status_code = error.status
+            
+            # Don't retry permanent client errors (4xx)
+            if status_code in self.immediate_error_codes:
+                return False
+            
+            # Rate limiting (429) - retry with special handling
+            if status_code in self.rate_limit_error_codes:
+                return True
+            
+            # Server errors (5xx) - retry with exponential backoff
+            if status_code in self.server_error_codes:
+                return True
+            
+            # Other HTTP errors - don't retry
+            return False
+        
+        # Network-related errors - retry
+        network_errors = (
+            aiohttp.ClientConnectorError,
+            aiohttp.ServerTimeoutError,
+            aiohttp.ServerDisconnectedError,
+            ConnectionResetError,
+            asyncio.TimeoutError,
+            aiohttp.ClientOSError,
+            aiohttp.ClientPayloadError
+        )
+        
+        return isinstance(error, network_errors)
+
+    def _get_retry_delay_for_error(self, error: Exception, attempt: int) -> float:
+        """Calculate retry delay based on error type."""
+        
+        if isinstance(error, aiohttp.ClientResponseError):
+            status_code = error.status
+            
+            # Faster retry for network errors
+            if status_code in self.server_error_codes:
+                return self.retry_delay * (1.5 ** attempt) + random.uniform(0, 0.5)
+            
+            # Rate limiting - use Retry-After if available
+            if status_code == 429:
+                retry_after = getattr(error, 'headers', {}).get('Retry-After')
+                if retry_after:
+                    try:
+                        return float(retry_after)
+                    except (ValueError, TypeError):
+                        pass
+                return min(self.retry_delay * (1.5 ** attempt), 30.0)  # Cap at 30s
+        
+        # Default exponential backoff
+        return self.retry_delay * (2 ** attempt) + random.uniform(0, 1)
 
     async def fetch(
         self,
@@ -77,7 +139,7 @@ class WebFetchTool:
 
         max_length = max_length or self.max_content_length
 
-        # Retry logic with exponential backoff
+        # Retry logic with intelligent error handling
         last_error: Exception | None = None
         for attempt in range(self.max_retries):
             try:
@@ -86,13 +148,18 @@ class WebFetchTool:
                 extracted = self._extract_content(html, url, no_citations, content_type)
                 return self._finalize_content(extracted, max_length)
 
-            except (aiohttp.ClientError, Exception) as e:
+            except Exception as e:
                 last_error = e
                 if attempt == self.max_retries - 1:
                     # This is the last attempt, break out to raise final error
                     break
                 else:
-                    await self._handle_retry_error(url, e, attempt)
+                    # Check if error is retryable
+                    if self._should_retry_error(e):
+                        await self._handle_retry_error(url, e, attempt)
+                    else:
+                        # Non-retryable error - raise immediately
+                        raise
         
         # All retries exhausted, raise final error
         if last_error:

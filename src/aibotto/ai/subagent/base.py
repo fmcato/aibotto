@@ -1,5 +1,6 @@
 """Base subagent class with isolated LLM context and iteration management."""
 
+import asyncio
 import logging
 from typing import Any
 
@@ -7,6 +8,7 @@ from aibotto.ai.iteration_manager import IterationManager
 from aibotto.ai.llm_client import LLMClient
 from aibotto.ai.prompt_templates import DateTimeContext
 from aibotto.ai.tool_tracker import SubAgentTracker
+from aibotto.config.settings import Config
 from .toolset import SubAgentToolset
 
 logger = logging.getLogger(__name__)
@@ -133,12 +135,10 @@ class SubAgent:
                 user_id: int = 0,
                 chat_id: int = 0,
             ) -> list[dict[str, Any]]:
-                """Execute tool calls using subagent-specific toolset."""
+                """Execute tool calls in parallel using subagent-specific toolset."""
                 from aibotto.ai.message_processor import MessageProcessor
                 
-                results = []
-                
-                for tool_call in tool_calls:
+                async def execute_single_tool_call(tool_call: Any) -> dict[str, Any]:
                     tool_call_id, function_name, arguments = (
                         MessageProcessor.extract_tool_call_info(tool_call)
                     )
@@ -153,32 +153,44 @@ class SubAgent:
                     if not tool_executor:
                         error_result = f"Unknown tool function: {function_name}"
                         logger.warning(f"SubAgent {self.tracker._instance_id}: Unknown tool - {function_name}")
-                        results.append({
+                        return {
                             "tool_call_id": tool_call_id,
                             "content": error_result,
-                        })
-                        continue
+                        }
                     
                     try:
                         # Execute the tool
                         result = await tool_executor.execute(
                             arguments, user_id, None, chat_id
                         )
-                        results.append({
-                            "tool_call_id": tool_call_id,
-                            "content": result,
-                        })
                         logger.info(
                             f"SubAgent {self.tracker._instance_id}: Tool {function_name} completed "
                             f"successfully for user {user_id}"
                         )
+                        return {
+                            "tool_call_id": tool_call_id,
+                            "content": result,
+                        }
                     except Exception as e:
                         error_result = f"Error executing {function_name}: {str(e)}"
                         logger.error(f"SubAgent {self.tracker._instance_id}: Tool {function_name} failed - {e}")
-                        results.append({
+                        return {
                             "tool_call_id": tool_call_id,
                             "content": error_result,
-                        })
+                        }
+                
+                # Execute tool calls in parallel with concurrency limit
+                max_concurrent = Config.SUBAGENT_MAX_CONCURRENT_TOOLS
+                semaphore = asyncio.Semaphore(max_concurrent)
+                
+                async def execute_with_limit(tool_call: Any) -> dict[str, Any]:
+                    async with semaphore:
+                        return await execute_single_tool_call(tool_call)
+                
+                # Execute all tool calls in parallel
+                results = await asyncio.gather(*[
+                    execute_with_limit(tc) for tc in tool_calls
+                ], return_exceptions=False)
                 
                 return results
 

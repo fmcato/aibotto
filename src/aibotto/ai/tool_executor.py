@@ -8,7 +8,7 @@ import time
 from typing import Any
 
 from ..db.operations import DatabaseOperations
-from aibotto.tools.toolset import tool_registry
+from aibotto.tools.toolset import get_toolset
 from .message_processor import MessageProcessor
 from .tool_tracker import ToolTracker
 
@@ -41,16 +41,18 @@ class ToolExecutor:
         init_subagents()
 
         # Register executors
-        tool_registry.register_executor("execute_cli_command", CLIExecutor())
-        tool_registry.register_executor("search_web", WebSearchExecutor())
-        tool_registry.register_executor("fetch_webpage", WebFetchExecutor())
-        tool_registry.register_executor("delegate_task", DelegateExecutor())
+        global_toolset = get_toolset()
+        global_toolset.register_executor("execute_cli_command", CLIExecutor())
+        global_toolset.register_executor("search_web", WebSearchExecutor())
+        global_toolset.register_executor("fetch_webpage", WebFetchExecutor())
+        global_toolset.register_executor("delegate_task", DelegateExecutor())
 
         logger.info("Registered all tool executors")
 
     def get_executor(self, function_name: str):
         """Get executor for a specific tool function."""
-        return tool_registry.get_executor(function_name)
+        global_toolset = get_toolset()
+        return global_toolset.get_executor(function_name)
 
     async def execute_single_tool(
         self,

@@ -254,8 +254,8 @@ class TestToolCallingManagerStateless:
             side_effect=responses,
         ):
             # Get the CLI executor from the tool registry and configure it
-            from src.aibotto.tools.toolset import tool_registry
-            cli_executor = tool_registry.get_executor("execute_cli_command")
+            from src.aibotto.tools.toolset import toolset
+            cli_executor = toolset.get_executor("execute_cli_command")
             if cli_executor:
                 with patch.object(
                     cli_executor,
@@ -312,8 +312,8 @@ class TestToolCallingManagerStateless:
             side_effect=responses,
         ):
             # Get the web search executor from the tool registry and configure it
-            from src.aibotto.tools.toolset import tool_registry
-            web_executor = tool_registry.get_executor("search_web")
+            from src.aibotto.tools.toolset import toolset
+            web_executor = toolset.get_executor("search_web")
             if web_executor:
                 with patch.object(
                     web_executor,

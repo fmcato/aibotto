@@ -73,6 +73,9 @@ class Config:
     # LLM Retry Configuration
     LLM_MAX_RETRIES: int = int(os.getenv("LLM_MAX_RETRIES", "3"))
     LLM_RETRY_DELAY: float = float(os.getenv("LLM_RETRY_DELAY", "1.0"))
+    
+    # Subagent Configuration  
+    SUBAGENT_MAX_CONCURRENT_TOOLS: int = int(os.getenv("SUBAGENT_MAX_CONCURRENT_TOOLS", "5"))
 
     @classmethod
     def validate_config(cls) -> bool:
