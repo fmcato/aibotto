@@ -27,6 +27,7 @@ class ToolExecutor:
     def _get_tool_definitions(self) -> list[dict[str, Any]]:
         """Get tool definitions for the LLM."""
         from .prompt_templates import ToolDescriptions
+
         return ToolDescriptions.get_tool_definitions()
 
     def _register_tools(self) -> None:
@@ -86,7 +87,9 @@ class ToolExecutor:
             arguments = "{}"
 
         # Check for duplicate tool calls
-        if self.tracker.is_duplicate_tool_call(function_name, arguments, user_id, chat_id):
+        if self.tracker.is_duplicate_tool_call(
+            function_name, arguments, user_id, chat_id
+        ):
             # Return early for duplicates to prevent infinite loops
             logger.warning(f"Skipping duplicate tool call: {function_name}")
             return (
@@ -94,11 +97,13 @@ class ToolExecutor:
                 f"conversation. Skipping to prevent infinite loops."
             )
 
-        # Track this call in recent calls
-        self.tracker.track_tool_call(function_name, arguments)
+        # Track this call in recent calls (silently, after duplicate check)
+        self.tracker.track_tool_call(function_name, arguments, user_id, chat_id)
 
         # Check for similar tool calls that might indicate retry logic issues
-        if self.tracker.is_similar_tool_call(function_name, arguments, user_id, chat_id):
+        if self.tracker.is_similar_tool_call(
+            function_name, arguments, user_id, chat_id
+        ):
             logger.info(f"Implementing smart retry prevention for {function_name}")
             # For complex calculations, suggest optimization instead of retry
             if "python3" in arguments.lower() and "calc" in arguments.lower():
@@ -106,18 +111,6 @@ class ToolExecutor:
                     "🔄 I already attempted a similar calculation. Let me try a "
                     "different approach or provide you with what I found so far."
                 )
-
-        # Check if this call should be prevented due to retry patterns
-        if self.tracker.should_prevent_retry(function_name, arguments, user_id, chat_id):
-            logger.warning(
-                f"Preventing retry of {function_name} - detected unnecessary "
-                "retry pattern"
-            )
-            return (
-                "🚫 I've already attempted this type of operation multiple "
-                "times. Let me try a different approach or provide you with the "
-                "results I have so far."
-            )
 
         # Get executor from registry
         executor = self.get_executor(function_name)
@@ -213,6 +206,4 @@ class ToolExecutor:
                 "content": content,
             }
 
-        return await asyncio.gather(
-            *[execute_single(tc) for tc in tool_calls]
-        )
+        return await asyncio.gather(*[execute_single(tc) for tc in tool_calls])

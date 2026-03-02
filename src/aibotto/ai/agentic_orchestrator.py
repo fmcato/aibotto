@@ -5,9 +5,8 @@ from typing import Any
 
 from ..config.settings import Config
 from ..db.operations import DatabaseOperations
-from .iteration_manager import IterationManager
+from .agentic_loop_processor import BaseAgenticLoopProcessor, ToolExecutionInterface
 from .llm_client import LLMClient
-from .message_processor import MessageProcessor
 from .prompt_templates import SystemPrompts
 from .tool_executor import ToolExecutor
 from .tool_tracker import ToolTracker
@@ -15,159 +14,26 @@ from .tool_tracker import ToolTracker
 logger = logging.getLogger(__name__)
 
 
-class AgenticOrchestrator:
+class AgenticOrchestrator(BaseAgenticLoopProcessor):
     """Main orchestrator for agentic LLM+tool interactions."""
 
     def __init__(self) -> None:
-        self.llm_client = LLMClient()
-        self.tool_executor = ToolExecutor()
-        self.tracker = ToolTracker()
-        self.max_iterations = Config.MAX_TOOL_ITERATIONS
-        self.iteration_manager = IterationManager(self.max_iterations)
-    
+        tracker = ToolTracker()
+        super().__init__(
+            max_iterations=Config.MAX_TOOL_ITERATIONS,
+            llm_client=LLMClient(),
+            tracker=tracker,
+        )
+        self.tool_executor = ToolExecutor(tracker=tracker)  # Share tracker instance
+        logger.info("Initialized AgenticOrchestrator with BaseAgenticLoopProcessor")
+
     def _get_tool_definitions(self) -> list[dict[str, Any]]:
         """Get tool definitions for the LLM."""
         return self.tool_executor._get_tool_definitions()
-    
-    async def _execute_tool_calls(
-        self,
-        tool_calls: list[Any],
-        user_id: int = 0,
-        chat_id: int = 0,
-        db_ops: DatabaseOperations | None = None,
-    ) -> list[dict[str, Any]]:
-        """Execute all tool calls in parallel and return results."""
-        return await self.tool_executor.execute_tool_calls(
-            tool_calls, user_id, chat_id, db_ops
-        )
 
-    async def _process_llm_iteration(
-        self,
-        messages: list[dict[str, Any]],
-        user_id: int = 0,
-        chat_id: int = 0,
-        db_ops: DatabaseOperations | None = None,
-    ) -> tuple[str | None, list[dict[str, Any]] | None, list[Any] | None]:
-        """Process a single LLM iteration.
-
-        Args:
-            messages: Conversation messages
-            user_id: User ID for logging and database
-            chat_id: Chat ID for database operations
-            db_ops: Database operations for saving results (optional)
-
-        Returns:
-            Tuple of (final_response, tool_results, tool_calls)
-            - If final_response is not None, it's the final response
-            - If tool_results is not None, they should be added to messages
-            - If tool_calls is not None, it should be added to messages before tool_results
-        """
-        # Track iteration number
-        self.tracker.increment_iteration()
-        logger.info(
-            f"Starting LLM iteration {self.tracker._iteration_count} for user {user_id}, "
-            f"chat {chat_id}, messages: {len(messages)}"
-        )
-
-        response = await self.llm_client.chat_completion(
-            messages=messages,
-            tools=self._get_tool_definitions(),
-        )
-
-        if "choices" not in response or len(response["choices"]) == 0:
-            error_msg = "Invalid response format: no choices found"
-            logger.error(error_msg)
-            if db_ops:
-                await db_ops.save_message(
-                    user_id, chat_id, 0, "system", error_msg
-                )
-            return error_msg, None, None
-
-        choice = response["choices"][0]
-        finish_reason = choice.get("finish_reason")
-        if "message" not in choice or not choice["message"]:
-            error_msg = "Invalid response format: no message found"
-            logger.error(error_msg)
-            if db_ops:
-                await db_ops.save_message(
-                    user_id, chat_id, 0, "system", error_msg
-                )
-            return error_msg, None, None
-
-        message_obj = choice["message"]
-
-        # Handle non-terminal finish reasons
-        if finish_reason == "length":
-            error_msg = "Response truncated - max token limit reached"
-            logger.error(error_msg)
-            if db_ops:
-                await db_ops.save_message(
-                    user_id, chat_id, 0, "system", error_msg
-                )
-            return error_msg, None, None
-        elif finish_reason == "content_filter":
-            error_msg = "Response blocked by content filter"
-            logger.error(error_msg)
-            if db_ops:
-                await db_ops.save_message(
-                    user_id, chat_id, 0, "system", error_msg
-                )
-            return error_msg, None, None
-        elif finish_reason in ("tool_calls", "function_call"):
-            tool_calls = MessageProcessor.extract_tool_calls_from_response(message_obj)
-            if not tool_calls:
-                error_msg = (
-                    f"Inconsistent response: finish_reason={finish_reason} "
-                    "but no tool_calls found"
-                )
-                logger.error(error_msg)
-                return error_msg, None, None
-
-        tool_calls = MessageProcessor.extract_tool_calls_from_response(message_obj)
-        logger.info(
-            f"LLM iteration {self.tracker._iteration_count} returned "
-            f"{len(tool_calls) if tool_calls else 0} tool calls"
-        )
-
-        if tool_calls:
-            # Execute tool calls
-            tool_results = await self._execute_tool_calls(
-                tool_calls, user_id, chat_id, db_ops
-            )
-
-            # Save assistant message with tool calls to history
-            assistant_message = MessageProcessor.extract_response_content(message_obj)
-            if db_ops:
-                await db_ops.save_message(
-                    user_id, chat_id, 0, "assistant", assistant_message
-                )
-
-            logger.info(
-                f"Tool execution completed for iteration {self.tracker._iteration_count}, "
-                f"results: {len(tool_results)} tool results"
-            )
-            # Return tool_results and tool_calls so both can be added to messages
-            return None, tool_results, tool_calls
-        else:
-            # Final response - validate content first
-            final_content = MessageProcessor.extract_response_content(message_obj)
-            if not final_content or not final_content.strip():
-                error_msg = "Empty response from AI service"
-                logger.error(error_msg)
-                if db_ops:
-                    await db_ops.save_message(
-                        user_id, chat_id, 0, "system", error_msg
-                    )
-                return error_msg, None, None
-            if db_ops:
-                await db_ops.save_message(
-                    user_id, chat_id, 0, "assistant", final_content
-                )
-            logger.info(
-                f"Final response received in iteration {self.tracker._iteration_count}: "
-                f"{len(final_content)} chars"
-            )
-            return final_content, None, None
+    def get_tool_execution_interface(self) -> ToolExecutionInterface:
+        """Get the tool execution interface for this orchestrator."""
+        return self.tool_executor
 
     async def process_user_request(
         self,
@@ -193,8 +59,8 @@ class AgenticOrchestrator:
         # Prepare messages with conversation history
         messages = await self._prepare_messages(user_id, chat_id, message, db_ops)
 
-        return await self.iteration_manager.process_iterations(
-            self, messages, user_id, chat_id, db_ops
+        return await self.process_iterations(
+            messages, user_id=user_id, chat_id=chat_id, db_ops=db_ops
         )
 
     async def _prepare_messages(
@@ -202,7 +68,7 @@ class AgenticOrchestrator:
         user_id: int,
         chat_id: int,
         message: str,
-        db_ops: DatabaseOperations | None
+        db_ops: DatabaseOperations | None,
     ) -> list[dict[str, str]]:
         """Prepare messages for LLM including conversation history.
 
@@ -222,10 +88,7 @@ class AgenticOrchestrator:
         if db_ops:
             history = await db_ops.get_conversation_history(user_id, chat_id)
             for msg in history:
-                messages.append({
-                    "role": msg["role"],
-                    "content": msg["content"]
-                })
+                messages.append({"role": msg["role"], "content": msg["content"]})
 
         # Add current message
         messages.append({"role": "user", "content": message})
@@ -249,9 +112,7 @@ class AgenticOrchestrator:
         messages.append({"role": "user", "content": message})
 
         try:
-            return await self.iteration_manager.process_iterations(
-                self, messages, 0, 0, None
-            )
+            return await self.process_iterations(messages, 0, 0, None)
         except Exception as e:
             logger.error(f"Error in process_prompt_stateless: {e}")
             return f"Error: {e}"
