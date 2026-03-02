@@ -213,39 +213,6 @@ class BaseAgenticLoopProcessor(LLMProcessor):
                     await db_ops.save_message(user_id, chat_id, 0, "system", error_msg)
                 return error_msg, None, None
             
-            # Auto-execution hook for PythonScriptAgent
-            from aibotto.ai.subagent.python_script_agent import PythonScriptAgent
-            if isinstance(self, PythonScriptAgent):
-                python_code = final_content.strip()
-                if python_code:
-                    result = await self._auto_execute_python(
-                        python_code, user_id, chat_id, db_ops
-                    )
-                    
-                    # Check if execution resulted in an error
-                    if result.startswith("Error:") or result.startswith("Timeout:"):
-                        # Return error to LLM for debugging
-                        tool_result = {
-                            "tool_call_id": "auto_python_exec",
-                            "role": "tool",
-                            "content": result
-                        }
-                        logger.info(
-                            f"PythonScriptAgent auto-execution error: {result[:100]}"
-                        )
-                        return None, [tool_result], None
-                    else:
-                        # Success - return result
-                        if db_ops:
-                            await db_ops.save_message(
-                                user_id, chat_id, 0, "assistant", result
-                            )
-                        logger.info(
-                            f"PythonScriptAgent auto-execution success: "
-                            f"{len(result)} chars"
-                        )
-                        return result, None, None
-            
             if db_ops:
                 await db_ops.save_message(
                     user_id, chat_id, 0, "assistant", final_content
@@ -255,39 +222,6 @@ class BaseAgenticLoopProcessor(LLMProcessor):
                 f"{len(final_content)} chars"
             )
             return final_content, None, None
-
-    async def _auto_execute_python(
-        self,
-        code: str,
-        user_id: int,
-        chat_id: int,
-        db_ops: DatabaseOperations | None,
-    ) -> str:
-        """Auto-execute Python code for PythonScriptAgent.
-
-        Args:
-            code: Python code to execute
-            user_id: User ID for logging
-            chat_id: Chat ID for database operations
-            db_ops: Database operations instance
-
-        Returns:
-            Execution result or error message
-        """
-        try:
-            # Get Python executor from subagent's toolset
-            if hasattr(self, '_toolset'):
-                executor = self._toolset.get_executor("execute_python")
-                if not executor:
-                    return "Error: Python executor not available"
-                
-                return await executor.execute(code, user_id, db_ops, chat_id)
-            else:
-                return "Error: Toolset not available"
-        except Exception as e:
-            error_type = type(e).__name__
-            error_msg = str(e)[:100] if str(e) else ""
-            return f"Error: {error_type}: {error_msg}"
 
     async def process_iterations(
         self,

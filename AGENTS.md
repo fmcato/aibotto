@@ -8,7 +8,7 @@ AI agent communicating via Telegram and using CLI tools.
 The system uses subagents for specialized tasks with isolated LLM contexts to prevent main context bloat.
 
 ### Main Agent Tools
-- `execute_cli_command` - CLI operations (date, system info, simple Python one-liners)
+- `execute_cli_command` - CLI operations (date, system info, Python code execution)
 - `search_web` - Quick web search using DuckDuckGo
 - `fetch_webpage` - Fetch known URLs (user-provided URLs)
 - `delegate_task` - Generic tool for delegating to any registered subagent
@@ -34,33 +34,6 @@ Specialized subagent for comprehensive web research with isolated LLM context.
 3. Agent searches, fetches, synthesizes internally
 4. Returns summary with citations to main agent
 5. Main agent receives only final result (context stays clean)
-
-#### PythonScriptAgent
-Specialized subagent for creating and executing Python scripts with isolated LLM context.
-
-**Access:**
-- `delegate_task` with `subagent_name="python_script"`
-
-**Capabilities:**
-- Python script creation for complex tasks
-- Multi-iteration debugging (3 iterations max)
-- 45-second execution timeout
-- Unlimited script size
-- Natural language results with execution output
-- Error handling and code fixes
-
-**Flow:**
-1. Main agent calls `delegate_task(subagent_name="python_script", task_description="task description")`
-2. PythonScriptAgent spawned in isolated context
-3. Agent creates Python code, executes via CLI tool
-4. If errors, agent reads error messages and fixes code (up to 3 iterations)
-5. Returns natural language results to main agent
-
-**Usage Guidelines:**
-- Simple one-liners: Use `execute_cli_command` with `python3 -c`
-- Complex scripts: Use `delegate_task` with `subagent_name="python_script"`
-- 45-second total execution limit
-- Unlimited script size, 3-iteration debugging
 
 ### Benefits
 - **Context Efficiency**: Main context contains only synthesized results, not every intermediate operation

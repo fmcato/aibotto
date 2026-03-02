@@ -9,7 +9,6 @@ This module contains all tools that the LLM can call:
 """
 
 from .executors.cli_executor import CLIExecutor
-from .executors.python_direct_executor import PythonDirectExecutor
 from .security import SecurityManager
 from .web_fetch import WebFetchTool, fetch_webpage
 from .web_search import WebSearchTool, search_web
@@ -17,7 +16,6 @@ from .delegate_tool import DelegateExecutor, delegate_task
 
 __all__ = [
     "CLIExecutor",
-    "PythonDirectExecutor",
     "SecurityManager",
     "WebFetchTool",
     "fetch_webpage",

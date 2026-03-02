@@ -26,17 +26,16 @@ _TOOL_CATEGORIES = """
    - Extracts readable text from web pages (not HTML code)
    - Useful for reading articles, blog posts, documentation pages
 
-4. Python script execution for code-based solutions:
-   - Use a specialized subagent to create and execute Python scripts
-   - Creates Python code to accomplish complex tasks
-   - Executes with 45-second timeout, unlimited script size
-   - Returns natural language results with execution output
-   - Examples: "Calculate statistics", "Process data", "Generate reports"
+ 4. Python code execution via CLI commands:
+    - Simple one-liners: python3 -c "print(2+2)"
+    - Multi-line scripts: python3 << 'EOF' code... EOF
+    - File scripts: python3 /tmp/script.py
+    - Examples: "Calculate statistics", "Process data", "Generate reports"
 
 5. Task delegation to subagents:
-   - Use delegate_task tool for complex tasks requiring specialized subagents
-   - Specificially indicate which subagent: web_research or python_script
-   - More flexible than specific tools, subagent can be chosen dynamically
+    - Use delegate_task tool for web research tasks
+    - Use subagent_name="web_research" for comprehensive research
+    - Returns summary with inline citations [Title](URL)
 """
 
 _PYTHON3_LIMITATIONS = """
@@ -44,17 +43,15 @@ _PYTHON3_LIMITATIONS = """
 You ONLY have access to Python 3 interpreter. You cannot execute code in
 other programming languages like JavaScript, Ruby, Java, C++, etc.
 
-**Python Code Execution Options:**
-1. **Simple one-liners** (use CLI tool):
-   - python3 -c "print('Hello World')"
-   - python3 -c "import datetime; print(datetime.datetime.now())"
-   - python3 -c "2**10"  # For simple calculations
-
-2. **Complex Python scripts** (use Python script subagent via delegate_task):
-   - Multi-line code, functions, classes
-   - Code that needs debugging or iteration
-   - Tasks requiring file I/O, data processing
-   - Use `delegate_task` with subagent_name="python_script" for these cases
+**Python Code Execution:**
+You execute Python 3 code through CLI commands:
+- Simple: python3 -c "print(2+2)"
+- Multi-line: python3 << 'EOF'
+def func():
+    return 42
+print(func())
+EOF
+- With imports: python3 -c "import math; print(math.pi)"
 """
 
 _BEHAVIORAL_RULES = """
@@ -68,19 +65,19 @@ _BEHAVIORAL_RULES = """
 """
 
 _DETAILED_TOOL_EXAMPLES = """
-- **Simple Python 3 Execution**: For one-line calculations and simple operations:
-  * python3 -c "import math; print(math.sqrt(16))"
-  * python3 -c "import datetime; print(datetime.datetime.now())"
-  * python3 -c "[x*2 for x in range(5)]"  # Simple list comprehension
+- **Python one-liners**: python3 -c "import math; print(math.sqrt(16))"
+   * python3 -c "import datetime; print(datetime.datetime.now())"
+   * python3 -c "2**10"
 
-- **Complex Python Scripts**: For multi-line code, debugging, or complex tasks:
-  * Use `delegate_task` with subagent_name="python_script" and a task description
-  * The Python script subagent will create, execute, and debug the code
-  * Maximum 45-second execution time, unlimited script size
-  * Subagent has multiple iterations to fix problems
+- **Python multi-line**: Use heredoc syntax:
+   python3 << 'EOF'
+def factorial(n):
+    return 1 if n<=1 else n*factorial(n-1)
+print(factorial(5))
+EOF
 
 - **LIMITATION**: You ONLY have access to Python 3. No other languages
-  like JavaScript, Java, C++, Ruby, etc. are available.
+   like JavaScript, Java, C++, Ruby, etc. are available.
 """
 
 
@@ -177,16 +174,15 @@ class SystemPrompts:
     news, or web content, use the available tools to get accurate information.
 
     You have these tools available:
-    1. CLI commands for system information (date, weather, files, etc.)
+    1. CLI commands for system information (date, weather, files, Python code execution)
     2. Web research for discovering and synthesizing information from web sources
     3. Web fetch for reading the full content of a specific URL
-    4. Python script execution for creating and running Python code to solve problems
     {_get_temporal_resolution_guidelines()}
     {_BEHAVIORAL_RULES}
     {_PYTHON3_LIMITATIONS}
     {_SOURCE_CREDIBILITY_GUIDELINES}
     Provide a helpful response based on the actual information you received.
-    Don\'t mention the tool commands or technical details."""
+    Don't mention the tool commands or technical details."""
 
     @classmethod
     def get_tool_instructions(cls, max_turns: int = 10) -> str:
@@ -205,7 +201,7 @@ class SystemPrompts:
     IMPORTANT GUIDELINES:
     - **CRITICAL**: Do NOT call the same tool with the same parameters multiple times
     - **CRITICAL**: Do NOT fetch the same URL more than once
-    - **Use delegate_task**: For complex research (web_research) or Python tasks (python_script)
+    - **Use delegate_task**: For complex research (web_research)
     - **Use search_web**: For quick web searches without needing synthesis
     - **Use fetch_webpage**: For URLs the user provides or you already have
     - If a tool result is not useful, try a DIFFERENT approach instead of repeating
@@ -227,7 +223,6 @@ class SystemPrompts:
     - System information
     - File and directory operations
     - Python 3 code execution and calculations
-    - Python script creation and execution (complex tasks)
     - Web content retrieval
     - News and information gathering
 {_PYTHON3_LIMITATIONS}"""
@@ -390,8 +385,7 @@ class ToolDescriptions:
                 "Delegate a task to a specialized subagent with isolated LLM context. "
                 "Use this for complex tasks that benefit from specialized processing and iteration. "
                 "Available subagents: "
-                "- web_research: Comprehensive web search with source evaluation, multi-source synthesis, and inline citations [Title](URL) "
-                "- python_script: Create and execute Python code with 45-second timeout, unlimited script size, and multi-iteration debugging"
+                "- web_research: Comprehensive web search with source evaluation, multi-source synthesis, and inline citations [Title](URL)"
             ),
             "parameters": {
                 "type": "object",
@@ -399,7 +393,7 @@ class ToolDescriptions:
                     "subagent_name": {
                         "type": "string",
                         "description": (
-                            "Name of the subagent to use: 'web_research' or 'python_script'"
+                            "Name of the subagent to use: 'web_research'"
                         ),
                     },
                     "task_description": {

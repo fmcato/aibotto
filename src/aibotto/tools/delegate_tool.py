@@ -70,7 +70,7 @@ async def delegate_task(
     Delegate a task to a specialized subagent.
 
     Args:
-        subagent_name: Name of the subagent to use (e.g., "web_research", "python_script")
+        subagent_name: Name of the subagent to use (e.g., "web_research")
         task_description: Description of the task to accomplish
         method: Subagent method to call (default: "execute_task")
         user_id: User ID for proper tracking (default: 0)
