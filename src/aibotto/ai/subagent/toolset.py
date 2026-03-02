@@ -18,22 +18,31 @@ class SubAgentToolset:
 
     def register_tool(self, tool_name: str, executor: Any) -> None:
         """Register a tool executor for this subagent.
-        
+
         Args:
             tool_name: Name of the tool
             executor: Tool executor instance
         """
         self._executors[tool_name] = executor
-        logger.info(
-            f"SubAgent {self._instance_id}: Registered tool: {tool_name}"
-        )
+        logger.info(f"SubAgent {self._instance_id}: Registered tool: {tool_name}")
 
     def get_tool(self, tool_name: str) -> Optional[Any]:
         """Get a tool executor for this subagent.
-        
+
         Args:
             tool_name: Name of the tool
-            
+
+        Returns:
+            Tool executor instance or None
+        """
+        return self._executors.get(tool_name)
+
+    def get_executor(self, tool_name: str) -> Optional[Any]:
+        """Get a tool executor for this subagent.
+
+        Args:
+            tool_name: Name of the tool
+
         Returns:
             Tool executor instance or None
         """
@@ -41,7 +50,7 @@ class SubAgentToolset:
 
     def get_registered_tools(self) -> List[str]:
         """Get list of all registered tool names.
-        
+
         Returns:
             List of tool names
         """
@@ -49,10 +58,10 @@ class SubAgentToolset:
 
     def has_tool(self, tool_name: str) -> bool:
         """Check if a tool is available.
-        
+
         Args:
             tool_name: Name of the tool
-            
+
         Returns:
             True if tool is available, False otherwise
         """

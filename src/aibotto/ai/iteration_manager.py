@@ -58,13 +58,15 @@ class IterationManager:
 
             # Add warning when running low on turns
             if remaining <= 3:
-                messages.append({
-                    "role": "user",
-                    "content": (
-                        f"Warning: Only {remaining} turn(s) remaining. "
-                        "Provide a final answer now."
-                    ),
-                })
+                messages.append(
+                    {
+                        "role": "user",
+                        "content": (
+                            f"Warning: Only {remaining} turn(s) remaining. "
+                            "Provide a final answer now."
+                        ),
+                    }
+                )
 
             try:
                 result = await llm_processor._process_llm_iteration(
@@ -87,18 +89,22 @@ class IterationManager:
                 if tool_results is not None:
                     # Add assistant message with tool_calls FIRST
                     if tool_calls is not None:
-                        messages.append({
-                            "role": "assistant",
-                            "tool_calls": tool_calls,
-                        })
+                        messages.append(
+                            {
+                                "role": "assistant",
+                                "tool_calls": tool_calls,
+                            }
+                        )
 
                     # Then add tool results
                     for tool_result in tool_results:
-                        messages.append({
-                            "role": "tool",
-                            "tool_call_id": tool_result["tool_call_id"],
-                            "content": tool_result["content"],
-                        })
+                        messages.append(
+                            {
+                                "role": "tool",
+                                "tool_call_id": tool_result["tool_call_id"],
+                                "content": tool_result["content"],
+                            }
+                        )
                     continue
 
         # Max iterations reached

@@ -31,6 +31,7 @@ dependencies = [
     "telegramify-markdown>=1.0.0rc4",
     "fastapi>=0.104.0",
     "uvicorn>=0.24.0",
+    "defusedxml>=0.7.1",
 ]
 
 [project.optional-dependencies]

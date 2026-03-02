@@ -36,15 +36,21 @@ class TelegramMessageSender:
             for item in results:
                 content_type = getattr(item, "content_type", None)
                 if content_type:
-                    handler = self.content_handler_factory.get_handler(content_type.name)
+                    handler = self.content_handler_factory.get_handler(
+                        content_type.name
+                    )
                     if handler:
                         success = await handler.handle_content(
-                            item, chat_id,  # type: ignore[arg-type]
-                            self.application, None
+                            item,
+                            chat_id,  # type: ignore[arg-type]
+                            self.application,
+                            None,
                         )
                         if not success:
                             all_sent = False
-                            logger.warning(f"Failed to send {content_type.name} content")
+                            logger.warning(
+                                f"Failed to send {content_type.name} content"
+                            )
                 else:
                     all_sent = False
                     logger.warning("Item has no content_type attribute")

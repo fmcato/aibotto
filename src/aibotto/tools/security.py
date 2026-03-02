@@ -53,7 +53,9 @@ class SecurityManager:
     async def _check_command_length(self, command: str) -> dict[str, object] | None:
         """Check if command length exceeds maximum."""
         if len(command) > self.max_command_length:
-            message = f"Error: Command too long (max {self.max_command_length} characters)"
+            message = (
+                f"Error: Command too long (max {self.max_command_length} characters)"
+            )
             if self.enable_audit_logging:
                 logger.warning(f"Command blocked for length: {command[:50]}...")
             return self._create_blocked_result_dict(message)
@@ -66,14 +68,26 @@ class SecurityManager:
 
         for danger in self.blocked_commands:
             # Most dangerous commands should be blocked exactly
-            if danger in ["rm -rf", "sudo", "dd", "mkfs", "fdisk", "shutdown", "reboot", "poweroff", "halt"]:
+            if danger in [
+                "rm -rf",
+                "sudo",
+                "dd",
+                "mkfs",
+                "fdisk",
+                "shutdown",
+                "reboot",
+                "poweroff",
+                "halt",
+            ]:
                 if danger in command_lower:
                     return self._create_blocked_result(
                         f"Blocked dangerous command: {command}", danger
                     )
             # Special handling for format-related commands
             elif danger in ["format ", "format=", "format/"]:
-                if any(part.startswith(("format", "/format")) for part in command_parts):
+                if any(
+                    part.startswith(("format", "/format")) for part in command_parts
+                ):
                     return self._create_blocked_result(
                         f"Blocked format command: {command}", "format"
                     )
@@ -104,9 +118,7 @@ class SecurityManager:
             return None
 
         command_parts = command.strip().split()
-        if not any(
-            allowed in command_parts[0] for allowed in self.allowed_commands
-        ):
+        if not any(allowed in command_parts[0] for allowed in self.allowed_commands):
             message = "Error: Command not in allowed list"
             if self.enable_audit_logging:
                 logger.warning(f"Command not in whitelist: {command}")
@@ -116,10 +128,7 @@ class SecurityManager:
 
     def _create_blocked_result_dict(self, message: str) -> dict[str, object]:
         """Create a standard blocked command result dict."""
-        return {
-            "allowed": False,
-            "message": message
-        }
+        return {"allowed": False, "message": message}
 
     def _create_blocked_result(
         self, log_message: str, danger_type: str
@@ -127,7 +136,9 @@ class SecurityManager:
         """Create a standard blocked command result."""
         if self.enable_audit_logging:
             logger.warning(log_message)
-        return self._create_blocked_result_dict("Error: Command not allowed for security reasons")
+        return self._create_blocked_result_dict(
+            "Error: Command not allowed for security reasons"
+        )
 
     def reload_security_rules(self, config_file: str = "security_config.json") -> None:
         """Reload security rules from configuration file."""

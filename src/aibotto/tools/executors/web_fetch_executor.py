@@ -44,9 +44,7 @@ class WebFetchExecutor(ToolExecutor):
                 no_citations=no_citations,
             )
 
-            logger.info(
-                f"Web fetch result for user {user_id}: {result[:200]}..."
-            )
+            logger.info(f"Web fetch result for user {user_id}: {result[:200]}...")
 
             if db_ops:
                 await db_ops.save_message(user_id, chat_id, 0, "system", result)

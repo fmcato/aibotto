@@ -56,9 +56,7 @@ class Config:
     # LLM Configuration
     # Max tokens for LLM responses (None = no limit, lower values = faster responses)
     # For reasoning models, setting this to 1000-2000 can significantly improve speed
-    LLM_MAX_TOKENS: int | None = (
-        int(os.getenv("LLM_MAX_TOKENS", "0")) or None
-    )
+    LLM_MAX_TOKENS: int | None = int(os.getenv("LLM_MAX_TOKENS", "0")) or None
 
     # Tool Calling Configuration
     MAX_TOOL_ITERATIONS: int = int(os.getenv("MAX_TOOL_ITERATIONS", "10"))
@@ -73,9 +71,11 @@ class Config:
     # LLM Retry Configuration
     LLM_MAX_RETRIES: int = int(os.getenv("LLM_MAX_RETRIES", "3"))
     LLM_RETRY_DELAY: float = float(os.getenv("LLM_RETRY_DELAY", "1.0"))
-    
-    # Subagent Configuration  
-    SUBAGENT_MAX_CONCURRENT_TOOLS: int = int(os.getenv("SUBAGENT_MAX_CONCURRENT_TOOLS", "5"))
+
+    # Subagent Configuration
+    SUBAGENT_MAX_CONCURRENT_TOOLS: int = int(
+        os.getenv("SUBAGENT_MAX_CONCURRENT_TOOLS", "5")
+    )
 
     @classmethod
     def validate_config(cls) -> bool:
@@ -89,4 +89,3 @@ class Config:
             return False
 
         return True
-

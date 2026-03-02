@@ -83,6 +83,7 @@ _DETAILED_TOOL_EXAMPLES = """
   like JavaScript, Java, C++, Ruby, etc. are available.
 """
 
+
 def _get_temporal_resolution_guidelines() -> str:
     """Generate temporal resolution guidelines with current year."""
     current_year = datetime.now(UTC).year
@@ -100,6 +101,7 @@ Common references to resolve (extract from provided datetime context):
 
 Do NOT use training data or outdated years. Always use the provided datetime context.
 """
+
 
 _SOURCE_CREDIBILITY_GUIDELINES = """
 **Source Credibility Guidelines for Web Content:**
@@ -161,7 +163,7 @@ class DateTimeContext:
 
         return {
             "role": "system",
-            "content": f"Current date and time: {iso_format} ({day_name}, UTC)"
+            "content": f"Current date and time: {iso_format} ({day_name}, UTC)",
         }
 
 
@@ -321,10 +323,9 @@ class ToolDescriptions:
                     "num_results": {
                         "type": "integer",
                         "description": (
-                        "Maximum number of results to return "
-                        "(1-10, default: 5)"
+                            "Maximum number of results to return (1-10, default: 5)"
                         ),
-                        "default": 5
+                        "default": 5,
                     },
                     "days_ago": {
                         "type": "integer",
@@ -332,8 +333,8 @@ class ToolDescriptions:
                             "Filter results from last N days (optional, "
                             "e.g., 7 for last week, 30 for last month)"
                         ),
-                        "default": None
-                    }
+                        "default": None,
+                    },
                 },
                 "required": ["query"],
             },

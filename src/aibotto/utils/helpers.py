@@ -45,9 +45,9 @@ def escape_markdown_v2(text: str) -> str:
         return text
 
     # MarkdownV2 special characters that need escaping
-    escape_chars = r'_*[]()~`>#+-=|{}.!'
+    escape_chars = r"_*[]()~`>#+-=|{}.!"
     for char in escape_chars:
-        text = text.replace(char, f'\\{char}')
+        text = text.replace(char, f"\\{char}")
 
     return text
 
@@ -61,28 +61,29 @@ def process_file_content(file_obj: Any) -> str:
     Returns:
         Formatted string representation of the file content
     """
-    if not hasattr(file_obj, 'file_data') or not hasattr(file_obj, 'file_name'):
+    if not hasattr(file_obj, "file_data") or not hasattr(file_obj, "file_name"):
         return str(file_obj)
 
-    file_name = getattr(file_obj, 'file_name', 'unknown.txt')
-    file_data = getattr(file_obj, 'file_data', b'')
+    file_name = getattr(file_obj, "file_name", "unknown.txt")
+    file_data = getattr(file_obj, "file_data", b"")
 
     try:
         # Try to decode as UTF-8 first
-        decoded_content = file_data.decode('utf-8')
+        decoded_content = file_data.decode("utf-8")
         # Clean up any encoding artifacts
-        decoded_content = decoded_content.replace('\\n', '\n').replace('\\r', '\r')
+        decoded_content = decoded_content.replace("\\n", "\n").replace("\\r", "\r")
         # Fix UTF-8 box drawing chars
-        decoded_content = decoded_content.replace('nxe2x94x9c', '│')
-        decoded_content = decoded_content.replace('nxe2x94x80', '─')
-        decoded_content = decoded_content.replace('nxe2x94x94', '└')
+        decoded_content = decoded_content.replace("nxe2x94x9c", "│")
+        decoded_content = decoded_content.replace("nxe2x94x80", "─")
+        decoded_content = decoded_content.replace("nxe2x94x94", "└")
 
         # Format as code block with file info
         return f"📄 **File: {file_name}**\n\n```\n{decoded_content}\n```"
     except UnicodeDecodeError:
         # If UTF-8 fails, show as base64 or indicate binary content
         import base64
-        encoded = base64.b64encode(file_data[:2000]).decode('ascii')
+
+        encoded = base64.b64encode(file_data[:2000]).decode("ascii")
         # Show first 2000 bytes
         return (
             f"📄 **File: {file_name}**\n\n⚠️ Binary file content "

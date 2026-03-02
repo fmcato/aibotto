@@ -44,9 +44,7 @@ class WebSearchExecutor(ToolExecutor):
                 days_ago=days_ago,
             )
 
-            logger.info(
-                f"Web search result for user {user_id}: {result[:200]}..."
-            )
+            logger.info(f"Web search result for user {user_id}: {result[:200]}...")
 
             if db_ops:
                 await db_ops.save_message(user_id, chat_id, 0, "system", result)

@@ -49,12 +49,11 @@ class MessageSplitter:
         current_chunk = ""
 
         # First, try to split by natural boundaries
-        for paragraph in message.split('\n\n'):
-            if (len(current_chunk) + len(paragraph) + 2
-                <= max_length):
+        for paragraph in message.split("\n\n"):
+            if len(current_chunk) + len(paragraph) + 2 <= max_length:
                 # Add paragraph to current chunk
                 if current_chunk:
-                    current_chunk += '\n\n'
+                    current_chunk += "\n\n"
                 current_chunk += paragraph
             else:
                 # Current chunk is full, save it
@@ -65,13 +64,12 @@ class MessageSplitter:
                 # If paragraph itself is too long, split it further
                 if len(paragraph) > max_length:
                     # Try to split by sentences first
-                    sentences = re.split(r'(?<=[.!?])\s+', paragraph)
+                    sentences = re.split(r"(?<=[.!?])\s+", paragraph)
 
                     for sentence in sentences:
-                        if (len(current_chunk) + len(sentence) + 1
-                            <= max_length):
+                        if len(current_chunk) + len(sentence) + 1 <= max_length:
                             if current_chunk:
-                                current_chunk += ' '
+                                current_chunk += " "
                             current_chunk += sentence
                         else:
                             if current_chunk:
@@ -80,13 +78,12 @@ class MessageSplitter:
 
                             # If sentence is too long, split by words
                             if len(sentence) > max_length:
-                                words = sentence.split(' ')
+                                words = sentence.split(" ")
 
                                 for word in words:
-                                    if (len(current_chunk) + len(word) + 1
-                                        <= max_length):
+                                    if len(current_chunk) + len(word) + 1 <= max_length:
                                         if current_chunk:
-                                            current_chunk += ' '
+                                            current_chunk += " "
                                         current_chunk += word
                                     else:
                                         if current_chunk:
@@ -118,7 +115,7 @@ class MessageSplitter:
             else:
                 # Split by character limit as last resort
                 for i in range(0, len(chunk), max_length):
-                    final_chunks.append(chunk[i:i + max_length])
+                    final_chunks.append(chunk[i : i + max_length])
 
         logger.info(f"Split message into {len(final_chunks)} chunks for rate limiting")
         return final_chunks
@@ -140,20 +137,21 @@ class MessageSplitter:
             List of message chunks that will be safe to send after escaping
         """
         # Handle File objects
-        if hasattr(message, 'file_data') and hasattr(message, 'file_name'):
+        if hasattr(message, "file_data") and hasattr(message, "file_name"):
             # For files, we want to keep them as single chunks to preserve structure
-            file_name = getattr(message, 'file_name', 'unknown.txt')
-            file_data = getattr(message, 'file_data', b'')
+            file_name = getattr(message, "file_name", "unknown.txt")
+            file_data = getattr(message, "file_data", b"")
 
             try:
                 # Try to decode as UTF-8
-                decoded_content = file_data.decode('utf-8')
+                decoded_content = file_data.decode("utf-8")
                 # Clean up encoding artifacts and format as code block
                 content = f"📄 **File: {file_name}**\n\n```\n{decoded_content}\n```"
             except UnicodeDecodeError:
                 # If UTF-8 fails, show as base64
                 import base64
-                encoded = base64.b64encode(file_data[:2000]).decode('ascii')
+
+                encoded = base64.b64encode(file_data[:2000]).decode("ascii")
                 # Show first 2000 bytes
                 content = (
                     f"📄 **File: {file_name}**\n\n⚠️ Binary file content "
@@ -180,13 +178,12 @@ class MessageSplitter:
 
         chunks = []
         for i in range(0, len(message), conservative_max):
-            chunk = message[i:i + conservative_max]
+            chunk = message[i : i + conservative_max]
             chunks.append(chunk)
 
         logger.info(
-                f"Split message into {len(chunks)} conservative "
-                f"chunks for escaping safety"
-            )
+            f"Split message into {len(chunks)} conservative chunks for escaping safety"
+        )
         return chunks
 
     @staticmethod
@@ -194,7 +191,7 @@ class MessageSplitter:
         chunks: list[str],
         send_func: Callable[[str, str | None], Any],
         delay_between_chunks: float = 1.0,
-        parse_mode: str | None = None
+        parse_mode: str | None = None,
     ) -> None:
         """
         Send message chunks with proper rate limiting.
@@ -221,7 +218,7 @@ class MessageSplitter:
                     await asyncio.sleep(delay_between_chunks)
 
             except Exception as e:
-                logger.error(f"Error sending chunk {i+1}/{len(chunks)}: {e}")
+                logger.error(f"Error sending chunk {i + 1}/{len(chunks)}: {e}")
                 raise
 
     @staticmethod
@@ -260,7 +257,7 @@ class MessageSplitter:
             # if reserve_marker_space was used during splitting)
             if len(marked_chunk) > TELEGRAM_MAX_LENGTH_PER_SECOND:
                 excess = len(marked_chunk) - TELEGRAM_MAX_LENGTH_PER_SECOND
-                marked_chunk = marked_chunk[:-(excess + 3)] + "..."
+                marked_chunk = marked_chunk[: -(excess + 3)] + "..."
 
             marked_chunks.append(marked_chunk)
 

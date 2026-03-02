@@ -18,11 +18,7 @@ class ContentHandler(ABC):
 
     @abstractmethod
     async def handle_content(
-        self,
-        item: Any,
-        chat_id: int,
-        application: Any,
-        thinking_message: Any
+        self, item: Any, chat_id: int, application: Any, thinking_message: Any
     ) -> bool:
         """Handle content item and return True if successful.
 
@@ -42,11 +38,7 @@ class TextContentHandler(ContentHandler):
     """Handler for text content."""
 
     async def handle_content(
-        self,
-        item: Any,
-        chat_id: int,
-        application: Any,
-        thinking_message: Any
+        self, item: Any, chat_id: int, application: Any, thinking_message: Any
     ) -> bool:
         """Handle text content with entities support."""
         if not isinstance(item, Text):
@@ -66,14 +58,12 @@ class TextContentHandler(ContentHandler):
                     chat_id=chat_id,
                     text=text_content,
                     entities=entity_dicts,
-                    disable_web_page_preview=True
+                    disable_web_page_preview=True,
                 )
             else:
                 # Send without entities - no parse_mode needed for plain text
                 await application.bot.send_message(
-                    chat_id=chat_id,
-                    text=text_content,
-                    disable_web_page_preview=True
+                    chat_id=chat_id, text=text_content, disable_web_page_preview=True
                 )
             return True
         except Exception as e:
@@ -85,11 +75,7 @@ class FileContentHandler(ContentHandler):
     """Handler for file content."""
 
     async def handle_content(
-        self,
-        item: Any,
-        chat_id: int,
-        application: Any,
-        thinking_message: Any
+        self, item: Any, chat_id: int, application: Any, thinking_message: Any
     ) -> bool:
         """Handle file content with caption support."""
         if not isinstance(item, File):
@@ -111,14 +97,15 @@ class FileContentHandler(ContentHandler):
             # Convert entities to dict format for Telegram
             entity_dicts = (
                 [entity.to_dict() for entity in caption_entities]
-                if caption_entities else []
+                if caption_entities
+                else []
             )
 
             await application.bot.send_document(
                 chat_id=chat_id,
                 document=input_file,
                 caption=caption_text,
-                caption_entities=entity_dicts
+                caption_entities=entity_dicts,
             )
             return True
         except Exception as e:
@@ -130,11 +117,7 @@ class PhotoContentHandler(ContentHandler):
     """Handler for photo content."""
 
     async def handle_content(
-        self,
-        item: Any,
-        chat_id: int,
-        application: Any,
-        thinking_message: Any
+        self, item: Any, chat_id: int, application: Any, thinking_message: Any
     ) -> bool:
         """Handle photo content with caption support."""
         if not isinstance(item, Photo):
@@ -156,14 +139,15 @@ class PhotoContentHandler(ContentHandler):
             # Convert entities to dict format for Telegram
             entity_dicts = (
                 [entity.to_dict() for entity in caption_entities]
-                if caption_entities else []
+                if caption_entities
+                else []
             )
 
             await application.bot.send_photo(
                 chat_id=chat_id,
                 photo=input_file,
                 caption=caption_text,
-                caption_entities=entity_dicts
+                caption_entities=entity_dicts,
             )
             return True
         except Exception as e:
@@ -175,9 +159,9 @@ class ContentHandlerFactory:
     """Factory for creating content handlers."""
 
     _handlers = {
-        'TEXT': TextContentHandler,
-        'FILE': FileContentHandler,
-        'PHOTO': PhotoContentHandler,
+        "TEXT": TextContentHandler,
+        "FILE": FileContentHandler,
+        "PHOTO": PhotoContentHandler,
     }
 
     @classmethod

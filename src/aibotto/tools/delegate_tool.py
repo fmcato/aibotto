@@ -26,10 +26,10 @@ class DelegateExecutor(ToolExecutor):
             subagent_name = args.get("subagent_name", "")
             method = args.get("method", "execute_task")
             task_description = args.get("task_description", "")
-            
+
             if not subagent_name or not subagent_name.strip():
                 return "Error: subagent_name cannot be empty"
-            
+
             if not task_description or not task_description.strip():
                 return "Error: task_description cannot be empty"
 

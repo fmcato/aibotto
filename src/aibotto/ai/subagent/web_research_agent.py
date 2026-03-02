@@ -57,16 +57,18 @@ Provide a comprehensive, well-sourced summary. Include inline citations:
         """Register web tools for this subagent instance."""
         from aibotto.tools.executors.web_search_executor import WebSearchExecutor
         from aibotto.tools.executors.web_fetch_executor import WebFetchExecutor
-        
+
         # Register web search tool
         search_executor = WebSearchExecutor()
         self._toolset.register_tool("search_web", search_executor)
-        
+
         # Register web fetch tool
         fetch_executor = WebFetchExecutor()
         self._toolset.register_tool("fetch_webpage", fetch_executor)
-        
-        logger.info(f"WebResearchAgent {self._instance_id}: Registered tools: {self._toolset.get_registered_tools()}")
+
+        logger.info(
+            f"WebResearchAgent {self._instance_id}: Registered tools: {self._toolset.get_registered_tools()}"
+        )
 
     async def execute_research(
         self,
@@ -105,7 +107,7 @@ Provide a comprehensive, well-sourced summary. Include inline citations:
                 initial_message=query,
                 task_instructions=task_instructions,
                 user_id=user_id,
-                chat_id=chat_id
+                chat_id=chat_id,
             )
             logger.info(
                 f"WebResearchAgent {self._instance_id}: Research completed "

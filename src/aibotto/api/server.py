@@ -21,9 +21,7 @@ bot_setup_service: BotSetupService | None = None
 orchestrator: AgenticOrchestrator | None = None
 
 
-def set_shared_objects(
-    bot_service: BotSetupService, orch: AgenticOrchestrator
-) -> None:
+def set_shared_objects(bot_service: BotSetupService, orch: AgenticOrchestrator) -> None:
     """Set shared objects for API usage."""
     global bot_setup_service, orchestrator
     bot_setup_service = bot_service
@@ -49,7 +47,9 @@ async def send_prompt(request: PromptRequest) -> dict[str, Any]:
     application = setup_service.get_application()
 
     if not application:
-        raise HTTPException(status_code=500, detail="Telegram bot application not available")
+        raise HTTPException(
+            status_code=500, detail="Telegram bot application not available"
+        )
 
     logger.info(f"Processing API prompt for chat_id={request.chat_id}")
 
@@ -65,7 +65,9 @@ async def send_prompt(request: PromptRequest) -> dict[str, Any]:
             "chat_id": request.chat_id,
         }
     else:
-        raise HTTPException(status_code=500, detail=f"Failed to send response to chat {request.chat_id}")
+        raise HTTPException(
+            status_code=500, detail=f"Failed to send response to chat {request.chat_id}"
+        )
 
 
 @app.get("/api/health")

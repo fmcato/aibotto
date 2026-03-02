@@ -30,7 +30,7 @@ class WebSearchTool:
         query: str,
         num_results: int = 5,
         days_ago: int | None = None,
-        safe_search: str = "moderate"
+        safe_search: str = "moderate",
     ) -> list[dict[str, Any]]:
         """
         Search the web using ddgs API.
@@ -76,7 +76,7 @@ class WebSearchTool:
                 None,
                 lambda: list(
                     self.ddgs.text(query, backend=self.ENGINES, **search_params)
-                )
+                ),
             )
 
             # Convert ddgs results to our format
@@ -87,7 +87,7 @@ class WebSearchTool:
                     "url": item.get("href", ""),
                     "snippet": item.get("body", ""),
                     "source": "DuckDuckGo",
-                    "published_date": None  # ddgs doesn't provide date info
+                    "published_date": None,  # ddgs doesn't provide date info
                 }
                 formatted_results.append(result)
 
@@ -127,15 +127,13 @@ class WebSearchTool:
             logger.error(f"Error performing web search: {e}")
             raise RuntimeError(f"Failed to perform web search: {str(e)}")
 
-
-
     async def search_with_content(
         self,
         query: str,
         num_results: int = 5,
         days_ago: int | None = None,
         safe_search: str = "moderate",
-        extract_content: bool = True
+        extract_content: bool = True,
     ) -> list[dict[str, Any]]:
         """
         Perform web search and optionally extract full content from results.
@@ -177,6 +175,7 @@ class WebSearchTool:
         """Extract content from a URL."""
         try:
             import aiohttp
+
             async with aiohttp.ClientSession() as session:
                 async with session.get(
                     url, timeout=aiohttp.ClientTimeout(total=10)
@@ -201,7 +200,7 @@ async def search_web(
     query: str,
     num_results: int = 5,
     days_ago: int | None = None,
-    safe_search: str = "moderate"
+    safe_search: str = "moderate",
 ) -> str:
     """
     Tool function for web search that can be called by the LLM.
@@ -221,7 +220,7 @@ async def search_web(
             num_results=num_results,
             days_ago=days_ago,
             safe_search=safe_search,
-            extract_content=True
+            extract_content=True,
         )
 
         if not results:
@@ -231,10 +230,10 @@ async def search_web(
         formatted_results = []
         for i, result in enumerate(results, 1):
             formatted_result = f"""
-{i}. **{result.get('title', 'No title')[:100]}**
-   URL: {result.get('url', 'No URL')}
-   Content: {result.get('content', 'No content')[:500]}...
-   Source: {result.get('source', 'Unknown')}
+{i}. **{result.get("title", "No title")[:100]}**
+   URL: {result.get("url", "No URL")}
+   Content: {result.get("content", "No content")[:500]}...
+   Source: {result.get("source", "Unknown")}
 """
             formatted_results.append(formatted_result.strip())
 

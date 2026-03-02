@@ -41,16 +41,16 @@ class BotSetupService:
             return
 
         # Add command handlers
-        if 'start' in handlers:
-            self.application.add_handler(handlers['start'])
-        if 'help' in handlers:
-            self.application.add_handler(handlers['help'])
-        if 'clear' in handlers:
-            self.application.add_handler(handlers['clear'])
+        if "start" in handlers:
+            self.application.add_handler(handlers["start"])
+        if "help" in handlers:
+            self.application.add_handler(handlers["help"])
+        if "clear" in handlers:
+            self.application.add_handler(handlers["clear"])
 
         # Add message handler
-        if 'message' in handlers:
-            self.application.add_handler(handlers['message'])
+        if "message" in handlers:
+            self.application.add_handler(handlers["message"])
 
     def start_polling(self) -> None:
         """Start bot polling."""

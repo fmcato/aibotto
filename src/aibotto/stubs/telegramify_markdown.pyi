@@ -9,4 +9,5 @@ except ImportError:
             pass
         async def telegramify(self, text: str) -> list[Any]:
             return [text]
+
     telegramify = _TelegramifyMarkdown().telegramify

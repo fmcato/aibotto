@@ -10,7 +10,7 @@ class MessageProcessor:
 
     @staticmethod
     def extract_tool_call_info(
-        tool_call: Any
+        tool_call: Any,
     ) -> tuple[str | None, str | None, str | None]:
         """Extract tool call ID, function name, and arguments from a tool call.
 

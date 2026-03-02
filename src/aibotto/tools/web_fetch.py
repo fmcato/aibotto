@@ -36,7 +36,7 @@ class WebFetchTool:
         self.rss_extractor = RSSExtractor()
         self.user_agents = USER_AGENTS
         self.common_headers = COMMON_HEADERS
-        
+
         # Error handling configuration
         self.immediate_error_codes = {401, 403, 404, 405, 410}  # Don't retry these
         self.rate_limit_error_codes = {429}  # Retry with backoff
@@ -58,25 +58,25 @@ class WebFetchTool:
 
     def _should_retry_error(self, error: Exception) -> bool:
         """Determine if an error should be retried based on error type and status code."""
-        
+
         if isinstance(error, aiohttp.ClientResponseError):
             status_code = error.status
-            
+
             # Don't retry permanent client errors (4xx)
             if status_code in self.immediate_error_codes:
                 return False
-            
+
             # Rate limiting (429) - retry with special handling
             if status_code in self.rate_limit_error_codes:
                 return True
-            
+
             # Server errors (5xx) - retry with exponential backoff
             if status_code in self.server_error_codes:
                 return True
-            
+
             # Other HTTP errors - don't retry
             return False
-        
+
         # Network-related errors - retry
         network_errors = (
             aiohttp.ClientConnectorError,
@@ -85,33 +85,33 @@ class WebFetchTool:
             ConnectionResetError,
             asyncio.TimeoutError,
             aiohttp.ClientOSError,
-            aiohttp.ClientPayloadError
+            aiohttp.ClientPayloadError,
         )
-        
+
         return isinstance(error, network_errors)
 
     def _get_retry_delay_for_error(self, error: Exception, attempt: int) -> float:
         """Calculate retry delay based on error type."""
-        
+
         if isinstance(error, aiohttp.ClientResponseError):
             status_code = error.status
-            
+
             # Faster retry for network errors
             if status_code in self.server_error_codes:
-                return self.retry_delay * (1.5 ** attempt) + random.uniform(0, 0.5)
-            
+                return self.retry_delay * (1.5**attempt) + random.uniform(0, 0.5)
+
             # Rate limiting - use Retry-After if available
             if status_code == 429:
-                retry_after = getattr(error, 'headers', {}).get('Retry-After')
+                retry_after = getattr(error, "headers", {}).get("Retry-After")
                 if retry_after:
                     try:
                         return float(retry_after)
                     except (ValueError, TypeError):
                         pass
-                return min(self.retry_delay * (1.5 ** attempt), 30.0)  # Cap at 30s
-        
+                return min(self.retry_delay * (1.5**attempt), 30.0)  # Cap at 30s
+
         # Default exponential backoff
-        return self.retry_delay * (2 ** attempt) + random.uniform(0, 1)
+        return self.retry_delay * (2**attempt) + random.uniform(0, 1)
 
     async def fetch(
         self,
@@ -160,15 +160,13 @@ class WebFetchTool:
                     else:
                         # Non-retryable error - raise immediately
                         raise
-        
+
         # All retries exhausted, raise final error
         if last_error:
             await self._handle_final_error(url, last_error)
-        
+
         # Should never reach here, but just in case
-        raise RuntimeError(
-            f"Failed to fetch URL after {self.max_retries} attempts"
-        )
+        raise RuntimeError(f"Failed to fetch URL after {self.max_retries} attempts")
 
     async def _fetch_url_with_retry(self, url: str, attempt: int) -> tuple[str, str]:
         """Fetch URL content with proper headers and timeout, with retry logic."""
@@ -185,8 +183,7 @@ class WebFetchTool:
             # Add some additional headers that real browsers send
             if random.random() > 0.5:
                 headers["Sec-Ch-Ua"] = (
-                    '"Not_A Brand";v="8", "Chromium";v="120", '
-                    '"Google Chrome";v="120"'
+                    '"Not_A Brand";v="8", "Chromium";v="120", "Google Chrome";v="120"'
                 )
                 headers["Sec-Ch-Ua-Mobile"] = "?0"
                 headers["Sec-Ch-Ua-Platform"] = '"Windows"'
@@ -206,8 +203,13 @@ class WebFetchTool:
             ) as response:
                 # Check content type
                 content_type = response.headers.get("Content-Type", "")
-                supported_types = ["text/html", "application/xhtml", "application/rss+xml", 
-                                 "text/xml", "application/xml"]
+                supported_types = [
+                    "text/html",
+                    "application/xhtml",
+                    "application/rss+xml",
+                    "text/xml",
+                    "application/xml",
+                ]
 
                 if not any(ct in content_type for ct in supported_types):
                     if self.strict_content_type:
@@ -312,67 +314,67 @@ class WebFetchTool:
 
     def _filter_unwanted_links(self, markdown_text: str) -> str:
         """Remove unwanted link types from markdown text.
-        
+
         Filters out:
         - Anchor-only links: [text](#section) -> text
         - Pure anchor pages: [text](http://example.com#anchor) -> text (if no path)
         - Non-HTTP/HTTPS protocol links: [text](mailto:), [text](tel:), etc -> text
-        
+
         Keeps:
         - Full HTTP/HTTPS links: [text](https://example.com)
         - URLs with path and fragments: [text](https://example.com/page#section)
         """
         if not markdown_text:
             return markdown_text
-        
+
         result = []
         i = 0
         text_len = len(markdown_text)
-        
+
         while i < text_len:
-            if markdown_text[i] == '[':
-                bracket_end = markdown_text.find(']', i)
+            if markdown_text[i] == "[":
+                bracket_end = markdown_text.find("]", i)
                 if bracket_end == -1:
                     result.append(markdown_text[i:])
                     break
-                
-                if bracket_end + 1 >= text_len or markdown_text[bracket_end + 1] != '(':
-                    result.append(markdown_text[i:bracket_end + 1])
+
+                if bracket_end + 1 >= text_len or markdown_text[bracket_end + 1] != "(":
+                    result.append(markdown_text[i : bracket_end + 1])
                     i = bracket_end + 1
                     continue
-                
+
                 parens_start = bracket_end + 1  # Position of opening '('
                 parens_count = 1  # We already have one opening paren
                 parens_end = -1
-                
+
                 for j in range(parens_start + 1, text_len):
                     char = markdown_text[j]
-                    if char == '(':
+                    if char == "(":
                         parens_count += 1
-                    elif char == ')':
+                    elif char == ")":
                         parens_count -= 1
                         if parens_count == 0:
                             parens_end = j
                             break
-                
+
                 if parens_end == -1:
                     result.append(markdown_text[i:])
                     break
-                
-                link_text = markdown_text[i + 1:bracket_end]
-                url = markdown_text[parens_start + 1:parens_end]
-                
+
+                link_text = markdown_text[i + 1 : bracket_end]
+                url = markdown_text[parens_start + 1 : parens_end]
+
                 if self._should_keep_link(url):
                     result.append(f"[{link_text}]({url})")
                 else:
                     result.append(link_text)
-                
+
                 i = parens_end + 1
             else:
                 result.append(markdown_text[i])
                 i += 1
-        
-        return ''.join(result)
+
+        return "".join(result)
 
     def _should_keep_link(self, url: str) -> bool:
         """Determine if a link URL should be kept in citations."""
@@ -394,8 +396,7 @@ class WebFetchTool:
         # Truncate if needed
         if len(extracted["content"]) > max_length:
             extracted["content"] = (
-                extracted["content"][:max_length] +
-                "\n\n[Content truncated...]"
+                extracted["content"][:max_length] + "\n\n[Content truncated...]"
             )
             extracted["truncated"] = True
         else:
@@ -418,10 +419,9 @@ class WebFetchTool:
         self, url: str, error: Exception, attempt: int
     ) -> None:
         """Handle retry error by logging and waiting with exponential backoff."""
-        delay = self.retry_delay * (2 ** attempt) + random.uniform(0, 1)
+        delay = self.retry_delay * (2**attempt) + random.uniform(0, 1)
         logger.warning(
-            f"Attempt {attempt + 1} failed for {url}, "
-            f"retrying in {delay:.2f}s: {error}"
+            f"Attempt {attempt + 1} failed for {url}, retrying in {delay:.2f}s: {error}"
         )
         await asyncio.sleep(delay)
 
@@ -462,9 +462,7 @@ async def fetch_webpage(
         ]
 
         if result["metadata"].get("description"):
-            output_parts.append(
-                f"Description: {result['metadata']['description']}"
-            )
+            output_parts.append(f"Description: {result['metadata']['description']}")
 
         if result["metadata"].get("author"):
             output_parts.append(f"Author: {result['metadata']['author']}")
@@ -474,8 +472,7 @@ async def fetch_webpage(
 
         if result.get("truncated"):
             output_parts.append(
-                f"\n[Content truncated at {result['content_length']} "
-                f"characters]"
+                f"\n[Content truncated at {result['content_length']} characters]"
             )
 
         return "\n".join(output_parts)
@@ -486,4 +483,3 @@ async def fetch_webpage(
     except Exception as e:
         logger.error(f"Error in fetch_webpage tool: {e}")
         return f"Error fetching webpage: {str(e)}"
-

@@ -4,7 +4,6 @@ import logging
 from typing import Any
 
 from aibotto.ai.subagent.base import SubAgent
-from aibotto.ai.prompt_templates import ToolDescriptions
 
 logger = logging.getLogger(__name__)
 
@@ -17,58 +16,50 @@ class PythonScriptAgent(SubAgent):
 
     def _get_system_prompt(self) -> str:
         """Get Python execution-specialized system prompt."""
-        return """You are a specialized Python code execution assistant focused on creating and running Python scripts to solve problems.
+        return """You are a Python code generator. Your output is executed IMMEDIATELY.
 
-Your capabilities:
-- Create Python scripts to accomplish tasks based on user requests
-- Execute Python code in isolated environment with 45-second timeout
-- Use CLI tool to execute Python code (python3 -c "your_code")
-- Debug and fix code based on error messages
-- Provide natural language explanations of what the code does
+RULES:
+- Output ONLY Python 3 code
+- No explanations, no markdown code blocks, no extra text
+- Your code runs with 45-second timeout
+- Maximum 3 iterations
+- If errors occur, you'll receive simplified error messages for debugging
 
-Execution guidelines:
-1. Understand the user's request and determine what Python code would help
-2. Create a complete Python script that addresses the request
-3. Execute the script using the CLI tool (python3 -c "your_code")
-4. If there are errors, read error messages carefully and fix the code
-5. You have up to 3 iterations total - use them to debug and improve the script
-6. Provide the result in natural language with context about what was done
-7. Maximum of 45 seconds total execution time for all scripts
-8. Script size can be unlimited, but runtime must stay under 45 seconds
+EXECUTION:
+Your output is automatically executed as Python code. You do not need to call any tools.
+Just output the Python code directly.
 
-Debugging strategy:
-- First iteration: Try initial implementation
-- Second iteration: Fix syntax errors, import issues, or runtime errors
-- Third iteration: Optimize or handle edge cases if needed
-- Always read error messages completely before fixing
+EXAMPLES:
+User: "Calculate 2+2"
+You: print(2+2)
 
-Output format:
-Provide a helpful response that includes:
-1. Explanation of what the Python code does
-2. Key result(s) from execution
-3. Any insights or findings from the execution
-4. Mention if code ran successfully or encountered errors
+User: "Sort numbers [3,1,4,2]"
+You: print(sorted([3,1,4,2]))
 
-Example scenarios:
-- User asks: "Calculate pi to 10 decimal places" → Create Python code using math.pi
-- User asks: "Sort a list of numbers" → Create Python code with list.sort()
-- User asks: "Parse this CSV data" → Create Python code with csv module
+User: "Calculate factorial of 5"
+You: def factorial(n): return 1 if n<=1 else n*factorial(n-1)
+print(factorial(5))
 
-IMPORTANT: You can only execute Python 3 code using the CLI tool. No other programming languages or system commands are available directly."""
+User: "Process data"
+You: data = [1,2,3,4,5]
+print(sum(data))
+
+ERROR HANDLING:
+If your code has errors, you'll see: "Error: <type>: <message>"
+Fix the code and try again. Each error counts toward your 3 iterations.
+
+IMPORTANT: Your output must be ONLY valid Python 3 code. No other text."""
 
     def _get_tool_definitions(self) -> list[dict[str, Any]]:
-        """Subagent only has access to Python execution tool."""
-        return [
-            ToolDescriptions.CLI_TOOL_DESCRIPTION,
-        ]
+        """No tool definitions - LLM generates code, auto-execution handles it."""
+        return []
 
     def _register_tools(self) -> None:
-        """Register CLI tool for Python execution."""
-        from aibotto.tools.executors.cli_executor import CLIExecutor
+        """Register Python executor for auto-execution hook."""
+        from aibotto.tools.executors.python_direct_executor import PythonDirectExecutor
 
-        # Register CLI tool for Python execution
-        cli_executor = CLIExecutor()
-        self._toolset.register_tool("execute_cli_command", cli_executor)
+        python_executor = PythonDirectExecutor()
+        self._toolset.register_tool("execute_python", python_executor)
 
         logger.info(
             f"PythonScriptAgent {self._instance_id}: Registered tools: "
@@ -98,12 +89,12 @@ IMPORTANT: You can only execute Python 3 code using the CLI tool. No other progr
         )
 
         task_instructions = (
-            "Create and execute Python code to accomplish this task. "
-            "Use the execute_cli_command tool with python3 -c 'your_code' format. "
-            "Total execution time must stay under 45 seconds. "
-            "Explain what the code does and provide results in natural language. "
-            "If errors occur, read the error messages and fix the code. "
-            "Maximum of 3 iterations to complete the task."
+            "Create Python code to accomplish this task. "
+            "Your output will be executed automatically. "
+            "Output ONLY Python code - no explanations or markdown. "
+            "If errors occur, you'll see simplified error messages. "
+            "Maximum of 3 iterations to get working code. "
+            "Total execution time must stay under 45 seconds."
         )
 
         try:

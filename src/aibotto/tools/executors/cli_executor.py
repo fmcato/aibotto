@@ -63,14 +63,10 @@ class CLIExecutor(ToolExecutor):
                 logger.info(
                     f"Command completed successfully for user {user_id}: {command}"
                 )
-                logger.info(
-                    f"Command output (first 200 chars): {result[:200]}..."
-                )
+                logger.info(f"Command output (first 200 chars): {result[:200]}...")
 
                 if db_ops:
-                    await db_ops.save_message(
-                        user_id, chat_id, 0, "system", result
-                    )
+                    await db_ops.save_message(user_id, chat_id, 0, "system", result)
 
                 return result
             else:

@@ -49,7 +49,7 @@ Found 5 results for "artificial intelligence":
 """)
 
             # Mock the toolset to return our mock executor
-            with patch.object(agent._toolset, 'get_tool', return_value=mock_search_executor):
+            with patch.object(agent._toolset, 'get_executor', return_value=mock_search_executor):
                 # Second call: LLM synthesizes from search results
                 mock_llm.side_effect = [
                     mock_llm.return_value,
@@ -107,14 +107,14 @@ Found 5 results for "artificial intelligence":
             mock_fetch_executor.execute = AsyncMock(return_value="# Test Article\nThis is the full content about AI developments.")
 
             # Mock the toolset to return appropriate executors
-            def mock_get_tool(tool_name):
+            def mock_get_executor(tool_name):
                 if tool_name == "search_web":
                     return mock_search_executor
                 elif tool_name == "fetch_webpage":
                     return mock_fetch_executor
                 return None
 
-            with patch.object(agent._toolset, 'get_tool', side_effect=mock_get_tool):
+            with patch.object(agent._toolset, 'get_executor', side_effect=mock_get_executor):
                 result = await agent.execute_research("test", user_id=100, chat_id=200)
 
                 # Verify both tools were called
@@ -202,7 +202,7 @@ Found 5 results for "artificial intelligence":
             mock_search_executor = MagicMock()
             mock_search_executor.execute = AsyncMock(return_value="No results found.")
 
-            with patch.object(agent._toolset, 'get_tool', return_value=mock_search_executor):
+            with patch.object(agent._toolset, 'get_executor', return_value=mock_search_executor):
                 result = await agent.execute_research("obscure topic", user_id=5, chat_id=10)
 
                 assert "find" in result.lower() and "results" in result.lower()

@@ -45,9 +45,14 @@ class LLMClient:
 
         for attempt in range(max_retries):
             # Check if we're in a rate limit cooldown period
-            if self._rate_limit_reset_time and time.time() < self._rate_limit_reset_time:
+            if (
+                self._rate_limit_reset_time
+                and time.time() < self._rate_limit_reset_time
+            ):
                 remaining_wait = self._rate_limit_reset_time - time.time()
-                logger.info(f"Rate limited, waiting {remaining_wait:.1f}s before retrying")
+                logger.info(
+                    f"Rate limited, waiting {remaining_wait:.1f}s before retrying"
+                )
                 await asyncio.sleep(remaining_wait)
                 self._rate_limit_reset_time = None  # Reset after waiting
 
@@ -63,7 +68,9 @@ class LLMClient:
 
                 # Set tool_choice appropriately for GLM compatibility
                 if tools:
-                    params["tool_choice"] = tool_choice if tool_choice is not None else "auto"
+                    params["tool_choice"] = (
+                        tool_choice if tool_choice is not None else "auto"
+                    )
                 # Note: When tools is None, tool_choice is not set (GLM validation error)
 
                 # Add max_tokens if configured (can speed up reasoning models)
@@ -126,13 +133,13 @@ class LLMClient:
         try:
             # Extract headers from the error response
             headers = (
-                getattr(error.response, 'headers', {})
-                if hasattr(error, 'response')
+                getattr(error.response, "headers", {})
+                if hasattr(error, "response")
                 else {}
             )
 
             # Get reset time from headers if available
-            reset_timestamp = headers.get('x-ratelimit-reset')
+            reset_timestamp = headers.get("x-ratelimit-reset")
             if reset_timestamp:
                 # Convert to seconds and add a small buffer
                 reset_time = float(reset_timestamp) / 1000 + 1.0

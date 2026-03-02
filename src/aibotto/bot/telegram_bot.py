@@ -32,10 +32,10 @@ class TelegramBot:
     def _create_handlers(self) -> dict[str, Any]:
         """Create bot handlers."""
         return {
-            'start': CommandHandler("start", self._handle_start),
-            'help': CommandHandler("help", self._handle_help),
-            'clear': CommandHandler("clear", self._handle_clear),
-            'message': MessageHandler(
+            "start": CommandHandler("start", self._handle_start),
+            "help": CommandHandler("help", self._handle_help),
+            "clear": CommandHandler("clear", self._handle_clear),
+            "message": MessageHandler(
                 filters.TEXT & ~filters.COMMAND, self._handle_message
             ),
         }
@@ -64,10 +64,7 @@ class TelegramBot:
         )
 
         if update.message:
-            await update.message.reply_text(
-                welcome_text,
-                disable_web_page_preview=True
-            )
+            await update.message.reply_text(welcome_text, disable_web_page_preview=True)
 
     async def _handle_help(
         self, update: Update, context: ContextTypes.DEFAULT_TYPE
@@ -137,8 +134,8 @@ I provide factual information using safe system tools. Here's what I can help wi
                 await update.message.reply_text(
                     "✅ Conversation history cleared! I've forgotten our "
                     "previous conversation.\n\n"
-                "You can start fresh with any question you'd like to ask."
-            )
+                    "You can start fresh with any question you'd like to ask."
+                )
 
         except Exception as e:
             error_msg = BotError(f"Failed to clear conversation history: {str(e)}")
@@ -146,9 +143,7 @@ I provide factual information using safe system tools. Here's what I can help wi
                 await update.message.reply_text(error_msg.get_fallback_message())
             logger.error(f"Error clearing conversation history: {e}")
 
-    async def _handle_thinking_indicator(
-        self, update: Update
-    ) -> Any | None:
+    async def _handle_thinking_indicator(self, update: Update) -> Any | None:
         """Send and return thinking indicator message."""
         if not MessageUtils.safe_update_data(update)["has_message"]:
             return None
@@ -222,7 +217,9 @@ I provide factual information using safe system tools. Here's what I can help wi
 
                 # Start polling (this will block and manage its own event loop)
                 if self.setup_service.application:
-                    self.setup_service.application.run_polling(drop_pending_updates=True)
+                    self.setup_service.application.run_polling(
+                        drop_pending_updates=True
+                    )
                 else:
                     logger.error("❌ Failed to initialize bot application")
                     raise RuntimeError("Failed to initialize bot application")

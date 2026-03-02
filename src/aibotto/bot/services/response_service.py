@@ -42,21 +42,20 @@ class ResponseFormatter:
 
                     # Only decode UTF-8 text files, skip binary files
                     try:
-                        file_content = file_data.decode('utf-8')
+                        file_content = file_data.decode("utf-8")
                         # Clean up common encoding artifacts
-                        file_content = file_content.replace(
-                            '\\n', '\n'
-                        ).replace('\\r', '\r')
-                        file_content = file_content.replace(
-                            'nxe2x94x9c', '│'
-                        ).replace('nxe2x94x80', '─')
-                        file_content = file_content.replace(
-                            'nxe2x94x94', '└'
-                        ).replace('nxe2x94x90', '├')
+                        file_content = file_content.replace("\\n", "\n").replace(
+                            "\\r", "\r"
+                        )
+                        file_content = file_content.replace("nxe2x94x9c", "│").replace(
+                            "nxe2x94x80", "─"
+                        )
+                        file_content = file_content.replace("nxe2x94x94", "└").replace(
+                            "nxe2x94x90", "├"
+                        )
                         combined_text += (
-                        f"📄 **File: {file_name}**\n\n```\n"
-                        f"{file_content}\n```\n\n"
-                    )
+                            f"📄 **File: {file_name}**\n\n```\n{file_content}\n```\n\n"
+                        )
                     except UnicodeDecodeError:
                         # Skip binary files that can't be decoded as UTF-8
                         continue
@@ -70,6 +69,7 @@ class ResponseFormatter:
             logger.warning(f"Failed to format text with telegramify: {e}")
             # Fall back to original text with escaping
             from ...utils.helpers import escape_markdown_v2
+
             return escape_markdown_v2(text)
 
 
@@ -81,9 +81,7 @@ class ResponseSender:
         self.content_handler_factory = ContentHandlerFactory()
 
     async def send_response_with_telegramify(
-        self,
-        response: str,
-        thinking_message: Any
+        self, response: str, thinking_message: Any
     ) -> bool:
         """Send response using telegramify-markdown with proper error handling."""
         if not MessageUtils.has_thinking_message(thinking_message):
@@ -101,7 +99,7 @@ class ResponseSender:
 
             for item in results:
                 # ContentType is an enum, not a string
-                content_type = getattr(item, 'content_type', None)
+                content_type = getattr(item, "content_type", None)
                 if content_type:
                     # Convert enum to string for handler lookup
                     content_type_str = content_type.name
@@ -117,15 +115,16 @@ class ResponseSender:
                     else:
                         all_content_sent = False
                         logger.warning(
-                        f"No handler for content type: {content_type_str}"
-                    )
+                            f"No handler for content type: {content_type_str}"
+                        )
                 else:
                     all_content_sent = False
                     logger.warning("Item has no content_type attribute")
 
             # Delete thinking message only if all content was sent successfully
-            if (all_content_sent and
-                    MessageUtils.should_delete_thinking_message(thinking_message)):
+            if all_content_sent and MessageUtils.should_delete_thinking_message(
+                thinking_message
+            ):
                 await thinking_message.delete()
 
             return all_content_sent
@@ -137,10 +136,6 @@ class ResponseSender:
             )
             return False
 
-    async def send_single_response(
-        self,
-        response: str,
-        thinking_message: Any
-    ) -> bool:
+    async def send_single_response(self, response: str, thinking_message: Any) -> bool:
         """Send single response by editing thinking message."""
         return await self.send_response_with_telegramify(response, thinking_message)

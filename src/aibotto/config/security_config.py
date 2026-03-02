@@ -11,7 +11,7 @@ class SecurityConfig:
     # Maximum command length allowed
     MAX_COMMAND_LENGTH: int = int(os.getenv("MAX_COMMAND_LENGTH", "300000"))
 
-# Whitelist of allowed commands (empty = no whitelist)
+    # Whitelist of allowed commands (empty = no whitelist)
     ALLOWED_COMMANDS: list[str] = (
         os.getenv("ALLOWED_COMMANDS", "").split(",")
         if os.getenv("ALLOWED_COMMANDS")
@@ -21,7 +21,7 @@ class SecurityConfig:
     # Blacklist of blocked commands
     BLOCKED_COMMANDS: list[str] = [
         "rm -rf",
-"sudo",
+        "sudo",
         "dd",
         "mkfs",
         "fdisk",
@@ -43,14 +43,15 @@ class SecurityConfig:
 
     # Security audit logging
     ENABLE_AUDIT_LOGGING: bool = (
-            os.getenv("ENABLE_AUDIT_LOGGING", "true").lower() == "true"
-        )
+        os.getenv("ENABLE_AUDIT_LOGGING", "true").lower() == "true"
+    )
 
     @classmethod
     def reload_from_file(cls, config_file: str = "security_config.json") -> None:
         """Reload security configuration from file."""
         try:
             import json
+
             if os.path.exists(config_file):
                 with open(config_file) as f:
                     config = json.load(f)

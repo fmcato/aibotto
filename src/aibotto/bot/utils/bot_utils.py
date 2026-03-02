@@ -29,18 +29,14 @@ class BotAvailabilityChecker:
     def is_bot_available(application: Any) -> bool:
         """Check if bot application is available."""
         return (
-            application is not None and
-            hasattr(application, 'bot') and
-            application.bot is not None
+            application is not None
+            and hasattr(application, "bot")
+            and application.bot is not None
         )
 
     @staticmethod
     async def send_with_fallback(
-        bot: Bot,
-        chat_id: int,
-        content: str,
-        fallback_message: str,
-        **kwargs: Any
+        bot: Bot, chat_id: int, content: str, fallback_message: str, **kwargs: Any
     ) -> bool:
         """Send message with fallback handling."""
         try:
@@ -52,9 +48,7 @@ class BotAvailabilityChecker:
 
     @staticmethod
     async def edit_with_fallback(
-        message: Any,
-        content: str,
-        fallback_message: str
+        message: Any, content: str, fallback_message: str
     ) -> bool:
         """Edit message with fallback handling."""
         try:
@@ -72,12 +66,11 @@ class ResponseErrorHandler:
     def handle_response_error(
         error: Exception,
         thinking_message: Any | None,
-        context: str = "processing response"
+        context: str = "processing response",
     ) -> str:
         """Handle response errors gracefully."""
         error_msg = BotError(
-            f"Error {context}: {str(error)}",
-            error
+            f"Error {context}: {str(error)}", error
         ).get_fallback_message()
 
         if thinking_message:
@@ -88,9 +81,7 @@ class ResponseErrorHandler:
 
     @staticmethod
     async def handle_content_error(
-        error: Exception,
-        thinking_message: Any,
-        content_type: str
+        error: Exception, thinking_message: Any, content_type: str
     ) -> None:
         """Handle content-specific errors."""
         logger.error(f"Failed to send {content_type}: {error}")
@@ -120,16 +111,16 @@ class MessageUtils:
             }
 
         return {
-            "user_id": getattr(update.effective_user, 'id', 0),
-            "chat_id": getattr(update.effective_chat, 'id', 0),
-            "message": getattr(update.message, 'text', '') if update.message else '',
+            "user_id": getattr(update.effective_user, "id", 0),
+            "chat_id": getattr(update.effective_chat, "id", 0),
+            "message": getattr(update.message, "text", "") if update.message else "",
             "has_message": bool(update and update.message),
         }
 
     @staticmethod
     def has_thinking_message(thinking_message: Any | None) -> bool:
         """Check if thinking message exists."""
-        return thinking_message is not None and hasattr(thinking_message, 'chat_id')
+        return thinking_message is not None and hasattr(thinking_message, "chat_id")
 
     @staticmethod
     def should_delete_thinking_message(thinking_message: Any | None) -> bool:

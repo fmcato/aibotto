@@ -20,6 +20,7 @@ class SubAgentConfig:
         user_id: User ID for logging
         chat_id: Chat ID for logging
     """
+
     subagent_name: str
     method: str
     method_kwargs: dict[str, Any] = field(default_factory=dict)
@@ -77,7 +78,7 @@ class SubAgentExecutor:
 
         # Get method from subagent
         if not hasattr(subagent, self.config.method):
-            available = ", ".join([m for m in dir(subagent) if not m.startswith('_')])
+            available = ", ".join([m for m in dir(subagent) if not m.startswith("_")])
             error_msg = (
                 f"Method '{self.config.method}' not found on {self.config.subagent_name}. "
                 f"Available methods: {available}"
