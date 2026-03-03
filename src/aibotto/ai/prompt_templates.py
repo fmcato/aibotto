@@ -11,31 +11,34 @@ logger = logging.getLogger(__name__)
 
 # Reusable tool description components
 _TOOL_CATEGORIES = """
-1. CLI commands for system information:
-   - Use for date/time, system info, file operations, calculations
-   - Examples: date, uname -a, ls -la, python3 -c "print(2**10)"
+1. CLI commands for system information and COMPUTATIONS:
+   - Use for date/time, system info, file operations, AND ALL CALCULATIONS
+   - Python execution: uv run python -c 'print(sum(range(100)))'
+   - PREFER Python computation over web search for math problems
+   - Examples: date, uname -a, uv run python -c 'import math; print(math.factorial(10))'
 
 2. Web research for discovering new information:
    - Use a specialized subagent to comprehensively research topics
    - Finds multiple sources, evaluates credibility, synthesizes findings
    - Returns summary with inline citations [Title](URL)
    - Examples: "AI developments", "climate change impacts"
+   - NOT for: mathematical computations, prime numbers, factorials
 
 3. Web fetch for specific URLs:
    - Use when you have a specific URL and want to read its full content
    - Extracts readable text from web pages (not HTML code)
    - Useful for reading articles, blog posts, documentation pages
 
- 4. Python code execution via CLI commands:
-    - Simple one-liners: python3 -c "print(2+2)"
-    - Multi-line scripts: python3 << 'EOF' code... EOF
-    - File scripts: python3 /tmp/script.py
-    - Examples: "Calculate statistics", "Process data", "Generate reports"
+4. Python code execution via CLI commands:
+   - Simple one-liners: uv run python -c 'import math; print(math.sqrt(16))'
+   - Multi-line scripts: uv run python << 'EOF' code... EOF
+   - ALWAYS use efficient algorithms (Sieve of Eratosthenes for primes)
+   - Examples: "Calculate nth prime", "Compute factorial", "Find GCD"
 
 5. Task delegation to subagents:
-    - Use delegate_task tool for web research tasks
-    - Use subagent_name="web_research" for comprehensive research
-    - Returns summary with inline citations [Title](URL)
+   - Use delegate_task tool for web research tasks
+   - Use subagent_name="web_research" for comprehensive research
+   - Returns summary with inline citations [Title](URL)
 """
 
 _PYTHON3_LIMITATIONS = """
@@ -44,14 +47,64 @@ You ONLY have access to Python 3 interpreter. You cannot execute code in
 other programming languages like JavaScript, Ruby, Java, C++, etc.
 
 **Python Code Execution:**
-You execute Python 3 code through CLI commands:
-- Simple: python3 -c "print(2+2)"
-- Multi-line: python3 << 'EOF'
+You execute Python 3 code through CLI commands using uv:
+- Simple: uv run python -c 'print(2+2)'
+- Multi-line: uv run python << 'EOF'
 def func():
     return 42
 print(func())
 EOF
-- With imports: python3 -c "import math; print(math.pi)"
+- With imports: uv run python -c 'import math; print(math.pi)'
+"""
+
+_ALGORITHM_GUIDANCE = """
+**OPTIMAL ALGORITHM GUIDANCE - CRITICAL:**
+
+**Mathematical Problems - Use Standard Library:**
+- Factorials: `import math; math.factorial(n)` - never write loops
+- GCD/LCM: `import math; math.gcd(a, b)`, `math.lcm(a, b)`
+- Combinatorics: `import math; math.comb(n, k)`, `math.perm(n, k)`
+- Prime checking: Write efficient isprime() using trial division up to sqrt(n)
+- Nth prime: Use Sieve of Eratosthenes algorithm - estimate upper bound with n*log(n*log(n))
+- Fibonacci: Use matrix exponentiation for large n, or simple iteration
+- Statistics: `import statistics; statistics.mean()`, `median()`, `stdev()`
+
+**Efficient Data Structures:**
+- Use `collections.Counter` for counting
+- Use `collections.defaultdict` for grouping
+- Use `itertools` for permutations, combinations, product
+- Use list/dict comprehensions instead of manual loops
+- Use `set()` for O(1) lookups instead of `in` on lists
+
+**Performance Rules:**
+- Avoid O(n²) algorithms when O(n log n) or O(n) exists
+- Use Sieve of Eratosthenes for finding multiple primes
+- Use binary search (`bisect` module) for sorted data
+- Pre-compute and cache when possible
+
+**AVAILABLE PYTHON LIBRARIES:**
+- Standard: math, itertools, collections, functools, bisect, heapq, decimal, fractions, statistics, random, json, re, datetime, pathlib
+- Transitive: pydantic (validation), httpx (HTTP), lxml (XML/HTML), rich (pretty print), regex (enhanced regex), yaml (YAML parsing)
+"""
+
+_COMPUTATIONAL_PREFERENCE = """
+**TOOL SELECTION FOR COMPUTATIONS:**
+
+**Use execute_cli_command (Python) for:**
+- Mathematical calculations (arithmetic, algebra, calculus)
+- Number theory (primes, factors, GCD, etc.)
+- Statistical computations
+- String/text processing
+- Data transformations
+- Any problem with a known algorithmic solution
+
+**Use search_web only for:**
+- Current events, news, recent developments
+- Factual information not computable (population, prices, etc.)
+- Finding documentation or tutorials
+- Topics requiring multiple sources
+
+**Example:** "What is the 500000th prime?" → Use Python with Sieve of Eratosthenes, NOT web search
 """
 
 _BEHAVIORAL_RULES = """
@@ -65,19 +118,30 @@ _BEHAVIORAL_RULES = """
 """
 
 _DETAILED_TOOL_EXAMPLES = """
-- **Python one-liners**: python3 -c "import math; print(math.sqrt(16))"
-   * python3 -c "import datetime; print(datetime.datetime.now())"
-   * python3 -c "2**10"
+- **Python one-liners**: uv run python -c 'import math; print(math.sqrt(16))'
+   * uv run python -c 'import math; print(math.gcd(48, 18))'
+   * uv run python -c 'import math; print(math.factorial(10))'
 
 - **Python multi-line**: Use heredoc syntax:
-   python3 << 'EOF'
-def factorial(n):
-    return 1 if n<=1 else n*factorial(n-1)
-print(factorial(5))
+   uv run python << 'EOF'
+def sieve(n):
+    is_prime = [True] * (n+1)
+    is_prime[0] = is_prime[1] = False
+    for i in range(2, int(n**0.5)+1):
+        if is_prime[i]:
+            for j in range(i*i, n+1, i):
+                is_prime[j] = False
+    return [i for i, prime in enumerate(is_prime) if prime]
+
+primes = sieve(100)
+print(f"Found {len(primes)} primes: {primes}")
 EOF
 
-- **LIMITATION**: You ONLY have access to Python 3. No other languages
-   like JavaScript, Java, C++, Ruby, etc. are available.
+- **CRITICAL RULES**:
+   * Use ONLY single quotes with -c: uv run python -c 'code'
+   * Use ONLY standard library: math, itertools, collections, bisect, heapq
+   * NO external libraries: numpy, pandas, sympy, etc.
+   * Keep one-liners simple and avoid shell syntax conflicts
 """
 
 
@@ -180,7 +244,14 @@ class SystemPrompts:
     {_get_temporal_resolution_guidelines()}
     {_BEHAVIORAL_RULES}
     {_PYTHON3_LIMITATIONS}
+    {_ALGORITHM_GUIDANCE}
+    {_COMPUTATIONAL_PREFERENCE}
     {_SOURCE_CREDIBILITY_GUIDELINES}
+    **EXECUTION SAFETY:**
+    - Use single quotes only: uv run python -c 'code'
+    - Standard library only: math, itertools, collections, bisect, heapq
+    - No external libraries: numpy, pandas, sympy, etc.
+    - Avoid shell syntax conflicts in one-liners
     Provide a helpful response based on the actual information you received.
     Don't mention the tool commands or technical details."""
 
@@ -197,10 +268,14 @@ class SystemPrompts:
         return f"""You have these tools available:
 {_TOOL_CATEGORIES}
 {_DETAILED_TOOL_EXAMPLES}
+{_ALGORITHM_GUIDANCE}
+{_COMPUTATIONAL_PREFERENCE}
 
     IMPORTANT GUIDELINES:
     - **CRITICAL**: Do NOT call the same tool with the same parameters multiple times
     - **CRITICAL**: Do NOT fetch the same URL more than once
+    - **CRITICAL**: Use Python (execute_cli_command) for ALL mathematical computations
+    - **CRITICAL**: Use search_web ONLY for non-computable information (news, facts, events)
     - **Use delegate_task**: For complex research (web_research)
     - **Use search_web**: For quick web searches without needing synthesis
     - **Use fetch_webpage**: For URLs the user provides or you already have
@@ -272,10 +347,11 @@ class ToolDescriptions:
         "function": {
             "name": "execute_cli_command",
             "description": (
-                "Execute safe CLI commands to get factual information. "
-                "Supports system commands and simple Python 3 code execution. "
-                "For simple Python one-liners: use python3 -c 'your_code_here'. "
-                "For complex Python scripts, use delegate_task tool instead."
+                "Execute safe CLI commands for system info and Python computations. "
+                "For mathematical problems, use Python with efficient algorithms. "
+                "Available: math (factorial, gcd, comb), itertools, collections. "
+                "Use Sieve of Eratosthenes for primes. "
+                "Use this tool for ALL calculations - do NOT use web search for computable math."
             ),
             "parameters": {
                 "type": "object",
@@ -283,10 +359,11 @@ class ToolDescriptions:
                     "command": {
                         "type": "string",
                         "description": (
-                            "The CLI command to execute. For simple Python 3 code, use: "
-                            "python3 -c 'your_code_here'. For complex Python scripts, "
-                            "use delegate_task tool instead. Available: system "
-                            "commands (date, ls, etc.) and Python 3 interpreter only."
+                            "The CLI command. For Python: uv run python -c 'code' (single quotes only). "
+                            "Use efficient algorithms: Sieve of Eratosthenes for primes, "
+                            "math.factorial(n) for factorials, math.gcd() for GCD. "
+                            "STANDARD LIBRARY ONLY: math, itertools, collections, bisect, heapq. "
+                            "NO numpy, pandas, or external libraries."
                         ),
                     }
                 },
@@ -392,9 +469,7 @@ class ToolDescriptions:
                 "properties": {
                     "subagent_name": {
                         "type": "string",
-                        "description": (
-                            "Name of the subagent to use: 'web_research'"
-                        ),
+                        "description": ("Name of the subagent to use: 'web_research'"),
                     },
                     "task_description": {
                         "type": "string",
