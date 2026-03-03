@@ -47,7 +47,9 @@ class WebSearchExecutor(ToolExecutor):
             logger.info(f"Web search result for user {user_id}: {result[:200]}...")
 
             if db_ops:
-                await db_ops.save_message(user_id, chat_id, 0, "system", result)
+                await db_ops.save_message_compat(
+                    user_id=user_id, chat_id=chat_id, role="system", content=result
+                )
 
             return result
 
@@ -55,11 +57,15 @@ class WebSearchExecutor(ToolExecutor):
             logger.error(f"Error parsing web search arguments: {e}")
             error_result = f"Error parsing arguments: {str(e)}"
             if db_ops:
-                await db_ops.save_message(user_id, chat_id, 0, "system", error_result)
+                await db_ops.save_message_compat(
+                    user_id=user_id, chat_id=chat_id, role="system", content=error_result
+                )
             return error_result
         except Exception as e:
             logger.error(f"Error performing web search: {e}")
             error_result = f"Error performing web search: {str(e)}"
             if db_ops:
-                await db_ops.save_message(user_id, chat_id, 0, "system", error_result)
+                await db_ops.save_message_compat(
+                    user_id=user_id, chat_id=chat_id, role="system", content=error_result
+                )
             return error_result

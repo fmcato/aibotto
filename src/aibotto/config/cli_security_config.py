@@ -1,18 +1,15 @@
 """
-Security configuration for the application.
+CLI security configuration for the application.
 """
 
 import os
 
 
-class SecurityConfig:
-    """Security configuration for the application."""
+class CLISecurityConfig:
+    """Security configuration for CLI commands."""
 
-    # Maximum command length allowed
+    # Maximum command length allowed for CLI commands
     MAX_COMMAND_LENGTH: int = int(os.getenv("MAX_COMMAND_LENGTH", "300000"))
-
-    # Maximum Python code length allowed (higher than general commands)
-    MAX_PYTHON_CODE_LENGTH: int = int(os.getenv("MAX_PYTHON_CODE_LENGTH", "60000"))
 
     # Whitelist of allowed commands (empty = no whitelist)
     ALLOWED_COMMANDS: list[str] = (
@@ -50,8 +47,8 @@ class SecurityConfig:
     )
 
     @classmethod
-    def reload_from_file(cls, config_file: str = "security_config.json") -> None:
-        """Reload security configuration from file."""
+    def reload_from_file(cls, config_file: str = "cli_security_config.json") -> None:
+        """Reload CLI security configuration from file."""
         try:
             import json
 
@@ -62,9 +59,6 @@ class SecurityConfig:
                 # Update configuration values
                 cls.MAX_COMMAND_LENGTH = config.get(
                     "MAX_COMMAND_LENGTH", cls.MAX_COMMAND_LENGTH
-                )
-                cls.MAX_PYTHON_CODE_LENGTH = config.get(
-                    "MAX_PYTHON_CODE_LENGTH", cls.MAX_PYTHON_CODE_LENGTH
                 )
                 cls.ALLOWED_COMMANDS = config.get(
                     "ALLOWED_COMMANDS", cls.ALLOWED_COMMANDS
@@ -80,14 +74,13 @@ class SecurityConfig:
                 )
 
         except Exception as e:
-            print(f"Warning: Could not reload security config from file: {e}")
+            print(f"Warning: Could not reload CLI security config from file: {e}")
 
     @classmethod
     def get_security_rules_summary(cls) -> dict[str, object]:
-        """Get summary of current security rules."""
+        """Get summary of current CLI security rules."""
         return {
             "max_command_length": cls.MAX_COMMAND_LENGTH,
-            "max_python_code_length": cls.MAX_PYTHON_CODE_LENGTH,
             "allowed_commands_count": len(cls.ALLOWED_COMMANDS),
             "blocked_commands_count": len(cls.BLOCKED_COMMANDS),
             "custom_blocked_patterns_count": len(cls.CUSTOM_BLOCKED_PATTERNS),

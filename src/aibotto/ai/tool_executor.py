@@ -33,6 +33,7 @@ class ToolExecutor:
     def _register_tools(self) -> None:
         """Register tool executors with the registry."""
         from ..tools.executors.cli_executor import CLIExecutor
+        from ..tools.executors.python_executor import PythonExecutor
         from ..tools.executors.web_fetch_executor import WebFetchExecutor
         from ..tools.executors.web_search_executor import WebSearchExecutor
         from ..tools.delegate_tool import DelegateExecutor
@@ -44,6 +45,7 @@ class ToolExecutor:
         # Register executors
         global_toolset = get_toolset()
         global_toolset.register_executor("execute_cli_command", CLIExecutor())
+        global_toolset.register_executor("execute_python_code", PythonExecutor())
         global_toolset.register_executor("search_web", WebSearchExecutor())
         global_toolset.register_executor("fetch_webpage", WebFetchExecutor())
         global_toolset.register_executor("delegate_task", DelegateExecutor())
@@ -80,7 +82,9 @@ class ToolExecutor:
         if function_name is None:
             error_result = "No function name provided"
             if db_ops:
-                await db_ops.save_message(user_id, chat_id, 0, "system", error_result)
+                await db_ops.save_message_compat(
+                    user_id=user_id, chat_id=chat_id, role="system", content=error_result
+                )
             return error_result
 
         if arguments is None:
@@ -93,7 +97,7 @@ class ToolExecutor:
             # Return early for duplicates to prevent infinite loops
             logger.warning(f"Skipping duplicate tool call: {function_name}")
             return (
-                f"⚠️ Tool call '{function_name}' already executed in this "
+                f"⚠️ Tool call \'{function_name}\' already executed in this "
                 f"conversation. Skipping to prevent infinite loops."
             )
 
@@ -117,7 +121,9 @@ class ToolExecutor:
         if not executor:
             error_result = f"Unknown tool function: {function_name}"
             if db_ops:
-                await db_ops.save_message(user_id, chat_id, 0, "system", error_result)
+                await db_ops.save_message_compat(
+                    user_id=user_id, chat_id=chat_id, role="system", content=error_result
+                )
             return error_result
 
         try:
@@ -151,7 +157,9 @@ class ToolExecutor:
             )
             error_result = f"Error executing {function_name}: {str(e)}"
             if db_ops:
-                await db_ops.save_message(user_id, chat_id, 0, "system", error_result)
+                await db_ops.save_message_compat(
+                    user_id=user_id, chat_id=chat_id, role="system", content=error_result
+                )
             return error_result
 
     async def execute_tool_calls(

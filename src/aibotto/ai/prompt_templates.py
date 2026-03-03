@@ -11,29 +11,29 @@ logger = logging.getLogger(__name__)
 
 # Reusable tool description components
 _TOOL_CATEGORIES = """
-1. CLI commands for system information and COMPUTATIONS:
-   - Use for date/time, system info, file operations, AND ALL CALCULATIONS
-   - Python execution: uv run python -c 'print(sum(range(100)))'
+1. Python code execution:
+   - Use execute_python_code for mathematical computations, algorithms, and data processing
+   - Supports 60KB code length for complex scripts
    - PREFER Python computation over web search for math problems
-   - Examples: date, uname -a, uv run python -c 'import math; print(math.factorial(10))'
+   - Examples: "Calculate nth prime", "Compute factorial", "Find GCD"
+   - Just provide Python code - 'uv run python' is added automatically
 
-2. Web research for discovering new information:
+2. CLI commands for system information:
+   - Use execute_cli_command for date/time, system info, file operations
+   - Examples: date, uname -a, ls, pwd, df
+   - DEPRECATED: Do NOT use execute_cli_command for Python execution
+
+3. Web research for discovering new information:
    - Use a specialized subagent to comprehensively research topics
    - Finds multiple sources, evaluates credibility, synthesizes findings
    - Returns summary with inline citations [Title](URL)
    - Examples: "AI developments", "climate change impacts"
    - NOT for: mathematical computations, prime numbers, factorials
 
-3. Web fetch for specific URLs:
+4. Web fetch for specific URLs:
    - Use when you have a specific URL and want to read its full content
    - Extracts readable text from web pages (not HTML code)
    - Useful for reading articles, blog posts, documentation pages
-
-4. Python code execution via CLI commands:
-   - Simple one-liners: uv run python -c 'import math; print(math.sqrt(16))'
-   - Multi-line scripts: uv run python << 'EOF' code... EOF
-   - ALWAYS use efficient algorithms (Sieve of Eratosthenes for primes)
-   - Examples: "Calculate nth prime", "Compute factorial", "Find GCD"
 
 5. Task delegation to subagents:
    - Use delegate_task tool for web research tasks
@@ -47,14 +47,10 @@ You ONLY have access to Python 3 interpreter. You cannot execute code in
 other programming languages like JavaScript, Ruby, Java, C++, etc.
 
 **Python Code Execution:**
-You execute Python 3 code through CLI commands using uv:
-- Simple: uv run python -c 'print(2+2)'
-- Multi-line: uv run python << 'EOF'
-def func():
-    return 42
-print(func())
-EOF
-- With imports: uv run python -c 'import math; print(math.pi)'
+Use the execute_python_code tool:
+- Simple: execute_python_code(code="print(2+2)")
+- Multi-line: execute_python_code(code="def func(): return 42\\nprint(func())")
+- With imports: execute_python_code(code="import math; print(math.pi)")
 """
 
 _ALGORITHM_GUIDANCE = """
@@ -347,11 +343,10 @@ class ToolDescriptions:
         "function": {
             "name": "execute_cli_command",
             "description": (
-                "Execute safe CLI commands for system info and Python computations. "
-                "For mathematical problems, use Python with efficient algorithms. "
-                "Available: math (factorial, gcd, comb), itertools, collections. "
-                "Use Sieve of Eratosthenes for primes. "
-                "Use this tool for ALL calculations - do NOT use web search for computable math."
+                "Execute safe CLI commands for system information only. "
+                "Use for: date, ls, pwd, df, uname, cat, head, tail, grep, find, etc. "
+                "DEPRECATED: Do NOT use for Python execution - use execute_python_code instead. "
+                "For file operations: Use standard Linux commands safely."
             ),
             "parameters": {
                 "type": "object",
@@ -359,15 +354,45 @@ class ToolDescriptions:
                     "command": {
                         "type": "string",
                         "description": (
-                            "The CLI command. For Python: uv run python -c 'code' (single quotes only). "
-                            "Use efficient algorithms: Sieve of Eratosthenes for primes, "
-                            "math.factorial(n) for factorials, math.gcd() for GCD. "
-                            "STANDARD LIBRARY ONLY: math, itertools, collections, bisect, heapq. "
-                            "NO numpy, pandas, or external libraries."
+                            "The CLI command for system tasks only. "
+                            "File operations: ls, cat, head, tail, less, grep, find. "
+                            "System info: date, uname, whoami, hostname, ps, df, free, top. "
+                            "WARNING: Do NOT use for Python code execution."
                         ),
                     }
                 },
                 "required": ["command"],
+            },
+        },
+    }
+
+    PYTHON_TOOL_DESCRIPTION = {
+        "type": "function",
+        "function": {
+            "name": "execute_python_code",
+            "description": (
+                "Execute Python code for mathematical computations, algorithms, and data processing. "
+                "Supports 60KB code length. Available: math (factorial, gcd, comb), itertools, collections, bisect, heapq. "
+                "Use efficient algorithms: Sieve of Eratosthenes for primes, math.factorial(n) for factorials, math.gcd() for GCD. "
+                "Just provide the Python code - 'uv run python' is added automatically. "
+                "For simple system commands (date, ls, pwd), use execute_cli_command instead. "
+                "DEPRECATED: Do NOT use execute_cli_command for Python execution."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "code": {
+                        "type": "string",
+                        "description": (
+                            "Python code to execute. No 'uv run python' prefix needed. "
+                            "Use efficient algorithms: Sieve of Eratosthenes for primes, "
+                            "math.factorial(n) for factorials, math.gcd() for GCD. "
+                            "STANDARD LIBRARY ONLY: math, itertools, collections, bisect, heapq, statistics, random. "
+                            "NO numpy, pandas, or external libraries."
+                        ),
+                    }
+                },
+                "required": ["code"],
             },
         },
     }
@@ -488,6 +513,7 @@ class ToolDescriptions:
     def get_tool_definitions(cls) -> list[dict[str, Any]]:
         """Get all available tool definitions."""
         return [
+            cls.PYTHON_TOOL_DESCRIPTION,
             cls.CLI_TOOL_DESCRIPTION,
             cls.WEB_SEARCH_TOOL_DESCRIPTION,
             cls.WEB_FETCH_TOOL_DESCRIPTION,

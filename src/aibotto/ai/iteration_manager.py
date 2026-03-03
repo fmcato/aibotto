@@ -77,7 +77,9 @@ class IterationManager:
                 error_msg = f"Error communicating with AI service: {str(e)}"
                 logger.error(error_msg)
                 if db_ops:
-                    await db_ops.save_message(user_id, chat_id, 0, "system", error_msg)
+                    await db_ops.save_message_compat(
+                        user_id=user_id, chat_id=chat_id, role="system", content=error_msg
+                    )
                 return error_msg
 
             # Handle the case where result might be None or a tuple
@@ -114,5 +116,7 @@ class IterationManager:
         )
         logger.error(error_msg)
         if db_ops:
-            await db_ops.save_message(user_id, chat_id, 0, "system", error_msg)
+            await db_ops.save_message_compat(
+                user_id=user_id, chat_id=chat_id, role="system", content=error_msg
+            )
         return error_msg

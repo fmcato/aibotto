@@ -47,7 +47,9 @@ class WebFetchExecutor(ToolExecutor):
             logger.info(f"Web fetch result for user {user_id}: {result[:200]}...")
 
             if db_ops:
-                await db_ops.save_message(user_id, chat_id, 0, "system", result)
+                await db_ops.save_message_compat(
+                    user_id=user_id, chat_id=chat_id, role="system", content=result
+                )
 
             return result
 
@@ -55,11 +57,15 @@ class WebFetchExecutor(ToolExecutor):
             logger.error(f"Error parsing web fetch arguments: {e}")
             error_result = f"Error parsing arguments: {str(e)}"
             if db_ops:
-                await db_ops.save_message(user_id, chat_id, 0, "system", error_result)
+                await db_ops.save_message_compat(
+                    user_id=user_id, chat_id=chat_id, role="system", content=error_result
+                )
             return error_result
         except Exception as e:
             logger.error(f"Error fetching webpage: {e}")
             error_result = f"Error fetching webpage: {str(e)}"
             if db_ops:
-                await db_ops.save_message(user_id, chat_id, 0, "system", error_result)
+                await db_ops.save_message_compat(
+                    user_id=user_id, chat_id=chat_id, role="system", content=error_result
+                )
             return error_result

@@ -1,8 +1,15 @@
 """
-DB module - Database operations for conversation history.
+DB module - Database operations for agentic framework.
 """
 
-from .models import Conversation
+from .models import Conversation, Delegation, Message, SubAgent, ToolCall
 from .operations import DatabaseOperations
 
-__all__ = ["Conversation", "DatabaseOperations"]
+__all__ = [
+    "Conversation",
+    "Message",
+    "ToolCall",
+    "SubAgent",
+    "Delegation",
+    "DatabaseOperations",
+]

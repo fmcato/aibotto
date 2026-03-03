@@ -1,5 +1,5 @@
 """
-CLI command executor with safety measures.
+Python code executor with relaxed length limits.
 """
 
 import asyncio
@@ -7,17 +7,31 @@ import json
 import logging
 
 from ...db.operations import DatabaseOperations
-from ...tools.cli_security_manager import CLISecurityManager
+from ...tools.python_security_manager import PythonSecurityManager
 from ..base import ToolExecutor
 
 logger = logging.getLogger(__name__)
 
 
-class CLIExecutor(ToolExecutor):
-    """Executor for CLI commands with safety features."""
+class PythonExecutor(ToolExecutor):
+    """Executor for Python code execution with higher length limits."""
 
     def __init__(self) -> None:
-        self.security_manager = CLISecurityManager()
+        self.security_manager = PythonSecurityManager()
+
+    def _wrap_python_code(self, code: str) -> str:
+        """Wrap Python code for execution.
+
+        Args:
+            code: Python code to wrap
+
+        Returns:
+            Complete command string for execution
+        """
+        if "\n" in code:
+            return f"uv run python << 'EOF'\n{code}\nEOF"
+        else:
+            return f"uv run python -c '{code}'"
 
     async def execute(
         self,
@@ -26,22 +40,30 @@ class CLIExecutor(ToolExecutor):
         db_ops: DatabaseOperations | None = None,
         chat_id: int = 0,
     ) -> str:
-        """Execute CLI command safely and return output."""
+        """Execute Python code safely and return output.
+
+        Args:
+            arguments: JSON string with 'code' field containing Python code
+            user_id: User ID for logging
+            db_ops: Database operations instance
+            chat_id: Chat ID for database operations
+
+        Returns:
+            Execution result as string
+        """
         try:
-            # Parse arguments
             args = json.loads(arguments)
-            command = args.get("command")
+            code = args.get("code")
 
-            if not command:
-                raise ValueError("No command provided")
+            if not code:
+                raise ValueError("No code provided")
 
-            # Log command execution
-            logger.info(f"Executing CLI command for user {user_id}: {command}")
+            logger.info(f"Executing Python code for user {user_id}")
 
-            # Security checks
-            security_check = await self.security_manager.validate_command(command)
+            # Validate Python code (raw code length, not wrapped command)
+            security_check = await self.security_manager.validate_python_code(code)
             if not bool(security_check["allowed"]):
-                logger.warning(f"Command blocked for security: {command}")
+                logger.warning(f"Python code blocked for security: {code[:100]}...")
                 error_result = str(security_check["message"])
 
                 if db_ops:
@@ -51,8 +73,11 @@ class CLIExecutor(ToolExecutor):
 
                 return error_result
 
-            # Execute command in a controlled environment
-            logger.info(f"Starting subprocess for command: {command}")
+            # Wrap the code after validation for execution
+            command = self._wrap_python_code(code)
+
+            logger.info("Starting subprocess for Python execution")
+
             process = await asyncio.create_subprocess_shell(
                 command, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
             )
@@ -61,9 +86,8 @@ class CLIExecutor(ToolExecutor):
             if process.returncode == 0:
                 result = stdout.decode("utf-8", errors="ignore")
                 logger.info(
-                    f"Command completed successfully for user {user_id}: {command}"
+                    f"Python code executed successfully for user {user_id}: {result[:200]}..."
                 )
-                logger.info(f"Command output (first 200 chars): {result[:200]}...")
 
                 if db_ops:
                     await db_ops.save_message_compat(
@@ -74,10 +98,10 @@ class CLIExecutor(ToolExecutor):
             else:
                 error_msg = stderr.decode("utf-8", errors="ignore")
                 logger.error(
-                    "Command failed with return code "
-                    f"{process.returncode} for user {user_id}: {command}"
+                    f"Python execution failed with return code "
+                    f"{process.returncode} for user {user_id}"
                 )
-                logger.error(f"Command error: {error_msg}")
+                logger.error(f"Python error: {error_msg}")
 
                 error_result = f"Error: {error_msg}"
                 if db_ops:
@@ -88,7 +112,7 @@ class CLIExecutor(ToolExecutor):
                 return error_result
 
         except json.JSONDecodeError as e:
-            logger.error(f"Error parsing CLI arguments: {e}")
+            logger.error(f"Error parsing Python arguments: {e}")
             error_result = f"Error parsing arguments: {str(e)}"
             if db_ops:
                 await db_ops.save_message_compat(
@@ -96,8 +120,8 @@ class CLIExecutor(ToolExecutor):
                 )
             return error_result
         except Exception as e:
-            logger.error(f"Command execution error: {e}")
-            error_result = f"Error executing command: {str(e)}"
+            logger.error(f"Python execution error: {e}")
+            error_result = f"Error executing Python code: {str(e)}"
             if db_ops:
                 await db_ops.save_message_compat(
                     user_id=user_id, chat_id=chat_id, role="system", content=error_result

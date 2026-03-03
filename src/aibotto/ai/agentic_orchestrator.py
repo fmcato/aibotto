@@ -88,7 +88,9 @@ class AgenticOrchestrator(BaseAgenticLoopProcessor):
         if db_ops:
             history = await db_ops.get_conversation_history(user_id, chat_id)
             for msg in history:
-                messages.append({"role": msg["role"], "content": msg["content"]})
+                role: str = msg["role"] or "user"
+                content: str = msg["content"] or ""
+                messages.append({"role": role, "content": content})
 
         # Add current message
         messages.append({"role": "user", "content": message})

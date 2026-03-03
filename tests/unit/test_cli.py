@@ -8,7 +8,6 @@ import pytest
 
 from src.aibotto.config.settings import Config
 from src.aibotto.tools.executors.cli_executor import CLIExecutor
-from src.aibotto.tools.security import SecurityManager
 
 
 class TestCLIExecutor:
@@ -17,7 +16,7 @@ class TestCLIExecutor:
     @pytest.fixture
     def executor(self):
         """Create a CLIExecutor instance for testing."""
-        with patch('src.aibotto.tools.executors.cli_executor.SecurityManager') as mock_security:
+        with patch('src.aibotto.tools.executors.cli_executor.CLISecurityManager') as mock_security:
             executor = CLIExecutor()
             executor.security_manager = MagicMock()
             return executor
@@ -54,12 +53,13 @@ class TestCLIExecutor:
 
 
 class TestSecurityManager:
-    """Test cases for SecurityManager class."""
+    """Test cases for CLI SecurityManager class."""
 
     @pytest.fixture
     def security_manager(self):
-        """Create a SecurityManager instance for testing."""
-        return SecurityManager()
+        """Create a CLISecurityManager instance for testing."""
+        from src.aibotto.tools.cli_security_manager import CLISecurityManager
+        return CLISecurityManager()
 
     @pytest.mark.asyncio
     async def test_validate_command_allowed(self, security_manager):
@@ -75,7 +75,7 @@ class TestSecurityManager:
         result = await security_manager.validate_command("rm -rf /")
 
         assert result["allowed"] is False
-        assert "not allowed" in result["message"]
+        assert "blocked" in result["message"].lower()
 
     @pytest.mark.asyncio
     async def test_validate_command_too_long(self, security_manager):

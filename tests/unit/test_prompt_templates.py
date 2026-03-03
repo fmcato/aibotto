@@ -123,9 +123,10 @@ class TestToolDescriptions:
         """Test that get_tool_definitions returns all tools."""
         definitions = ToolDescriptions.get_tool_definitions()
 
-        assert len(definitions) == 4
+        assert len(definitions) == 5
 
         tool_names = [tool["function"]["name"] for tool in definitions]
+        assert "execute_python_code" in tool_names
         assert "execute_cli_command" in tool_names
         assert "search_web" in tool_names
         assert "fetch_webpage" in tool_names

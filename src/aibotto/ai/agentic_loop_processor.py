@@ -139,8 +139,17 @@ class BaseAgenticLoopProcessor(LLMProcessor):
         if "choices" not in response or len(response["choices"]) == 0:
             error_msg = "Invalid response format: no choices found"
             logger.error(error_msg)
-            if db_ops:
-                await db_ops.save_message(user_id, chat_id, 0, "system", error_msg)
+            if db_ops and hasattr(db_ops, "save_message"):
+                try:
+                    conversation_id = await db_ops.get_or_create_conversation(user_id, chat_id)
+                    await db_ops.save_message(
+                        conversation_id=conversation_id,
+                        role="system",
+                        content=error_msg,
+                        message_type="error",
+                    )
+                except Exception:
+                    pass
             return error_msg, None, None
 
         choice = response["choices"][0]
@@ -149,7 +158,9 @@ class BaseAgenticLoopProcessor(LLMProcessor):
             error_msg = "Invalid response format: no message found"
             logger.error(error_msg)
             if db_ops:
-                await db_ops.save_message(user_id, chat_id, 0, "system", error_msg)
+                await db_ops.save_message_compat(
+                    user_id=user_id, chat_id=chat_id, role="system", content=error_msg
+                )
             return error_msg, None, None
 
         message_obj = choice["message"]
@@ -159,13 +170,17 @@ class BaseAgenticLoopProcessor(LLMProcessor):
             error_msg = "Response truncated - max token limit reached"
             logger.error(error_msg)
             if db_ops:
-                await db_ops.save_message(user_id, chat_id, 0, "system", error_msg)
+                await db_ops.save_message_compat(
+                    user_id=user_id, chat_id=chat_id, role="system", content=error_msg
+                )
             return error_msg, None, None
         elif finish_reason == "content_filter":
             error_msg = "Response blocked by content filter"
             logger.error(error_msg)
             if db_ops:
-                await db_ops.save_message(user_id, chat_id, 0, "system", error_msg)
+                await db_ops.save_message_compat(
+                    user_id=user_id, chat_id=chat_id, role="system", content=error_msg
+                )
             return error_msg, None, None
         elif finish_reason in ("tool_calls", "function_call"):
             tool_calls = MessageProcessor.extract_tool_calls_from_response(message_obj)
@@ -193,8 +208,11 @@ class BaseAgenticLoopProcessor(LLMProcessor):
             # Save assistant message with tool calls to history
             assistant_message = MessageProcessor.extract_response_content(message_obj)
             if db_ops:
-                await db_ops.save_message(
-                    user_id, chat_id, 0, "assistant", assistant_message
+                await db_ops.save_message_compat(
+                    user_id=user_id,
+                    chat_id=chat_id,
+                    role="assistant",
+                    content=assistant_message,
                 )
 
             logger.info(
@@ -210,12 +228,14 @@ class BaseAgenticLoopProcessor(LLMProcessor):
                 error_msg = "Empty response from AI service"
                 logger.error(error_msg)
                 if db_ops:
-                    await db_ops.save_message(user_id, chat_id, 0, "system", error_msg)
+                    await db_ops.save_message_compat(
+                        user_id=user_id, chat_id=chat_id, role="system", content=error_msg
+                    )
                 return error_msg, None, None
-            
+
             if db_ops:
-                await db_ops.save_message(
-                    user_id, chat_id, 0, "assistant", final_content
+                await db_ops.save_message_compat(
+                    user_id=user_id, chat_id=chat_id, role="assistant", content=final_content
                 )
             logger.info(
                 f"Final response received in iteration {self.tracker._iteration_count}: "

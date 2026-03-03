@@ -94,6 +94,7 @@ class ToolRegistrySingleton:
             return
 
         from ..tools.executors.cli_executor import CLIExecutor
+        from ..tools.executors.python_executor import PythonExecutor
         from ..tools.executors.web_fetch_executor import WebFetchExecutor
         from ..tools.executors.web_search_executor import WebSearchExecutor
         from ..tools.delegate_tool import DelegateExecutor
@@ -101,6 +102,7 @@ class ToolRegistrySingleton:
 
         # Create executors once (they're stateless)
         self._executors["execute_cli_command"] = CLIExecutor()
+        self._executors["execute_python_code"] = PythonExecutor()
         self._executors["search_web"] = WebSearchExecutor()
         self._executors["fetch_webpage"] = WebFetchExecutor()
         self._executors["delegate_task"] = DelegateExecutor()

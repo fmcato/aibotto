@@ -23,6 +23,7 @@ services:
       
       # Security Configuration
       - MAX_COMMAND_LENGTH=${MAX_COMMAND_LENGTH:-1000}
+      - MAX_PYTHON_CODE_LENGTH=${MAX_PYTHON_CODE_LENGTH:-60000}
       - ALLOWED_COMMANDS=${ALLOWED_COMMANDS}
       - BLOCKED_COMMANDS=${BLOCKED_COMMANDS:-"rm -rf,sudo,dd,mkfs,fdisk,format,shutdown,reboot,poweroff,halt"}
       
