@@ -16,12 +16,32 @@ logger = logging.getLogger(__name__)
 
 
 class ToolExecutor:
-    """Orchestrates tool execution with logging and error handling."""
+    """Orchestrates tool execution with logging, error handling, and optional isolation.
 
-    def __init__(self, tracker: ToolTracker | None = None) -> None:
-        self.tracker = tracker if tracker else ToolTracker()  # Accept external tracker
+    Supports both main agent (global toolset, no concurrency limit) and
+    subagent (custom toolset, concurrency limited) modes.
+    """
 
-        # Register tool executors
+    def __init__(
+        self,
+        tracker: ToolTracker | None = None,
+        toolset: Any = None,
+        max_concurrent: int | None = None,
+        instance_id: int | None = None,
+    ) -> None:
+        """Initialize tool executor with optional subagent configuration.
+
+        Args:
+            tracker: Tool tracker for deduplication (default: new global tracker)
+            toolset: Custom toolset for isolated tool access (default: global toolset)
+            max_concurrent: Maximum concurrent tool executions (default: no limit)
+            instance_id: Instance ID for namespaced logging (default: None)
+        """
+        self.tracker = tracker if tracker else ToolTracker()
+        self._toolset = toolset
+        self.max_concurrent = max_concurrent
+        self.instance_id = instance_id
+
         self._register_tools()
 
     def _get_tool_definitions(self) -> list[dict[str, Any]]:
@@ -30,22 +50,53 @@ class ToolExecutor:
 
         return ToolDescriptions.get_tool_definitions()
 
+    def _get_log_prefix(self) -> str:
+        """Get logging prefix with optional instance context.
+
+        Returns:
+            Log prefix string
+        """
+        if self.instance_id:
+            return f"SubAgent {self.instance_id}"
+        return "ToolExecutor"
+
+    def _log(self, level: str, message: str) -> None:
+        """Log message with instance context.
+
+        Args:
+            level: Log level (info, warning, error, debug)
+            message: Message to log
+        """
+        prefixed_message = f"{self._get_log_prefix()}: {message}"
+        getattr(logger, level)(prefixed_message)
+
     def _register_tools(self) -> None:
-        """Ensure tool executors are available via the global toolset."""
-        global_toolset = get_toolset()
+        """Ensure tool executors are available via toolset."""
+        if self._toolset is None:
+            global_toolset = get_toolset()
 
-        # The global toolset is a singleton that lazy-initializes on first access
-        # ToolRegistrySingleton.initialize_once() creates and registers all executors
-        # and calls init_subagents(), so no additional work is needed here
+            if not global_toolset.is_initialized():
+                global_toolset.initialize_once()
 
-        if not global_toolset.is_initialized():
-            # Force initialization to ensure tools are available
-            global_toolset.initialize_once()
-
-        logger.info("Tool executors available via global toolset")
+            self._log("info", "Tool executors available via global toolset")
+        else:
+            self._log(
+                "info",
+                f"Tool executors available via custom toolset"
+                f"{f' for instance {self.instance_id}' if self.instance_id else ''}",
+            )
 
     def get_executor(self, function_name: str):
-        """Get executor for a specific tool function."""
+        """Get executor for a specific tool function.
+
+        Args:
+            function_name: Name of the tool function
+
+        Returns:
+            Tool executor instance or None
+        """
+        if self._toolset is not None:
+            return self._toolset.get_executor(function_name)
         global_toolset = get_toolset()
         return global_toolset.get_executor(function_name)
 
@@ -85,33 +136,27 @@ class ToolExecutor:
         if arguments is None:
             arguments = "{}"
 
-        # Check for duplicate tool calls
         if self.tracker.is_duplicate_tool_call(
             function_name, arguments, user_id, chat_id
         ):
-            # Return early for duplicates to prevent infinite loops
-            logger.warning(f"Skipping duplicate tool call: {function_name}")
+            self._log("warning", f"Skipping duplicate tool call: {function_name}")
             return (
                 f"⚠️ Tool call '{function_name}' already executed in this "
                 f"conversation. Skipping to prevent infinite loops."
             )
 
-        # Track this call in recent calls (silently, after duplicate check)
         self.tracker.track_tool_call(function_name, arguments, user_id, chat_id)
 
-        # Check for similar tool calls that might indicate retry logic issues
         if self.tracker.is_similar_tool_call(
             function_name, arguments, user_id, chat_id
         ):
-            logger.info(f"Implementing smart retry prevention for {function_name}")
-            # For complex calculations, suggest optimization instead of retry
+            self._log("info", f"Implementing smart retry prevention for {function_name}")
             if "python3" in arguments.lower() and "calc" in arguments.lower():
                 return (
                     "🔄 I already attempted a similar calculation. Let me try a "
                     "different approach or provide you with what I found so far."
                 )
 
-        # Get executor from registry
         executor = self.get_executor(function_name)
         if not executor:
             error_result = f"Unknown tool function: {function_name}"
@@ -125,33 +170,36 @@ class ToolExecutor:
             return error_result
 
         try:
-            logger.info(
+            self._log(
+                "info",
                 f"Starting tool execution: {function_name} for user {user_id}, "
-                f"chat {chat_id}, iteration {self.tracker._iteration_count}"
+                f"chat {chat_id}, iteration {self.tracker._iteration_count}",
             )
 
             result = await executor.execute(arguments, user_id, db_ops, chat_id)
             execution_time = time.time() - start_time
 
-            logger.info(
+            self._log(
+                "info",
                 f"Tool {function_name} completed in {execution_time:.2f}s for "
-                f"user {user_id}: {result[:200]}..."
+                f"user {user_id}: {result[:200]}...",
             )
 
-            # Log slow executions (> 10 seconds)
             if execution_time > 10:
-                logger.warning(
+                self._log(
+                    "warning",
                     f"SLOW TOOL EXECUTION: {function_name} took {execution_time:.2f}s "
-                    f"for user {user_id}, chat {chat_id}"
+                    f"for user {user_id}, chat {chat_id}",
                 )
 
             return result
 
         except Exception as e:
             execution_time = time.time() - start_time
-            logger.error(
+            self._log(
+                "error",
                 f"Tool {function_name} failed after {execution_time:.2f}s for "
-                f"user {user_id}: {e}"
+                f"user {user_id}: {e}",
             )
             error_result = f"Error executing {function_name}: {str(e)}"
             if db_ops:
@@ -170,7 +218,7 @@ class ToolExecutor:
         chat_id: int = 0,
         db_ops: DatabaseOperations | None = None,
     ) -> list[dict[str, Any]]:
-        """Execute all tool calls in parallel and return results.
+        """Execute all tool calls in parallel with optional concurrency limit.
 
         Args:
             tool_calls: List of tool call objects
@@ -182,12 +230,13 @@ class ToolExecutor:
             List of tool results with tool_call_id and content
         """
         if not tool_calls:
-            logger.info("No tool calls to execute")
+            self._log("info", "No tool calls to execute")
             return []
 
-        logger.info(
-            f"Executing {len(tool_calls)} tool calls in parallel for user {user_id}, "
-            f"chat {chat_id}, iteration {self.tracker._iteration_count}"
+        self._log(
+            "info",
+            f"Executing {len(tool_calls)} tool calls for user {user_id}, "
+            f"chat {chat_id}, iteration {self.tracker._iteration_count}",
         )
 
         async def execute_single(tool_call: Any) -> dict[str, Any]:
@@ -196,18 +245,20 @@ class ToolExecutor:
             )
 
             safe_args = arguments[:100] if arguments else "None"
-            logger.info(
+            self._log(
+                "info",
                 f"Processing tool call {tool_call_id}: {function_name} "
-                f"with arguments: {safe_args}..."
+                f"with arguments: {safe_args}...",
             )
 
             content = await self.execute_single_tool(
                 function_name, arguments, user_id, db_ops, chat_id
             )
 
-            logger.info(
+            self._log(
+                "info",
                 f"Tool call {tool_call_id} completed: {function_name} "
-                f"result length: {len(content)} chars"
+                f"result length: {len(content)} chars",
             )
 
             return {
@@ -215,4 +266,16 @@ class ToolExecutor:
                 "content": content,
             }
 
-        return await asyncio.gather(*[execute_single(tc) for tc in tool_calls])
+        if self.max_concurrent:
+            semaphore = asyncio.Semaphore(self.max_concurrent)
+
+            async def execute_with_limit(tool_call: Any) -> dict[str, Any]:
+                async with semaphore:
+                    return await execute_single(tool_call)
+
+            return await asyncio.gather(
+                *[execute_with_limit(tc) for tc in tool_calls],
+                return_exceptions=False,
+            )
+        else:
+            return await asyncio.gather(*[execute_single(tc) for tc in tool_calls])

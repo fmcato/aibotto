@@ -11,7 +11,6 @@ from aibotto.ai.llm_client import LLMClient, LLMConfig
 from aibotto.ai.prompt_templates import DateTimeContext
 from aibotto.ai.tool_tracker import ToolTracker
 from aibotto.config.subagent_config import LLMProviderConfig, SubAgentDefinition
-from .subagent_tool_executor import SubAgentToolExecutor
 from .toolset import SubAgentToolset
 
 logger = logging.getLogger(__name__)
@@ -139,7 +138,15 @@ OPERATIONAL LIMITS:
 
     def get_tool_execution_interface(self) -> ToolExecutionInterface:
         """Get the tool execution interface for this subagent."""
-        return SubAgentToolExecutor(self._instance_id, self.tracker, self._toolset)
+        from aibotto.ai.tool_executor import ToolExecutor
+        from aibotto.config.settings import Config
+
+        return ToolExecutor(
+            tracker=self.tracker,
+            toolset=self._toolset,
+            max_concurrent=Config.SUBAGENT_MAX_CONCURRENT_TOOLS,
+            instance_id=self._instance_id,
+        )
 
     async def execute_task(
         self,
