@@ -35,6 +35,6 @@ class CLIExecutor(ToolExecutor, SubprocessRunner):
         security_check = await self.security_manager.validate_command(command)
         if not bool(security_check["allowed"]):
             self.logger.warning(f"Command blocked for security: {command}")
-            return security_check["message"]
+            return str(security_check["message"])
 
         return await self._run_subprocess(command, user_id, self.logger)

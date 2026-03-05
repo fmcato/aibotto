@@ -89,8 +89,9 @@ class TestSecurityManager:
     @pytest.mark.asyncio
     async def test_validate_command_whitelist(self, security_manager):
         """Test command validation with whitelist enabled."""
-        # Enable whitelist
-        security_manager.allowed_commands = ["echo", "ls"]
+        # Enable whitelist by modifying the config
+        security_manager.config.ALLOWED_COMMANDS = ["echo", "ls"]
+        security_manager.allowed_items = security_manager.config.ALLOWED_COMMANDS
 
         # Test allowed command
         result = await security_manager.validate_command("echo hello")

@@ -15,9 +15,12 @@ class TestSafeCommands:
     def security_manager(self):
         """Create security manager with test configuration."""
         manager = SecurityManager()
-        # Override with test-specific safe commands
-        manager.blocked_commands = ["rm -rf", "sudo", "dd", "mkfs", "fdisk", "shutdown", "reboot", "poweroff", "halt"]
-        manager.allowed_commands = ["date", "ls", "pwd", "uname", "echo", "cat", "head", "tail", "wc", "grep"]
+        # Override with test-specific safe commands using config
+        manager.config.BLOCKED_COMMANDS = ["rm -rf", "sudo", "dd", "mkfs", "fdisk", "shutdown", "reboot", "poweroff", "halt"]
+        manager.config.ALLOWED_COMMANDS = ["date", "ls", "pwd", "uname", "echo", "cat", "head", "tail", "wc", "grep"]
+        # Update cached items
+        manager.blocked_items = manager.config.BLOCKED_COMMANDS
+        manager.allowed_items = manager.config.ALLOWED_COMMANDS
         return manager
 
     @pytest.mark.asyncio
@@ -56,34 +59,6 @@ class TestSafeCommands:
         assert result["message"] == ""
 
     @pytest.mark.asyncio
-    async def test_blocked_rm_command(self, security_manager):
-        """Test that 'rm -rf' command is blocked."""
-        result = await security_manager.validate_command("rm -rf /")
-        assert result["allowed"] is False
-        assert "not allowed" in result["message"]
-
-    @pytest.mark.asyncio
-    async def test_blocked_sudo_command(self, security_manager):
-        """Test that 'sudo' command is blocked."""
-        result = await security_manager.validate_command("sudo rm -rf /")
-        assert result["allowed"] is False
-        assert "not allowed" in result["message"]
-
-    @pytest.mark.asyncio
-    async def test_blocked_dd_command(self, security_manager):
-        """Test that 'dd' command is blocked."""
-        result = await security_manager.validate_command("dd if=/dev/zero of=/dev/sda")
-        assert result["allowed"] is False
-        assert "not allowed" in result["message"]
-
-    @pytest.mark.asyncio
-    async def test_blocked_shutdown_command(self, security_manager):
-        """Test that 'shutdown' command is blocked."""
-        result = await security_manager.validate_command("shutdown -h now")
-        assert result["allowed"] is False
-        assert "not allowed" in result["message"]
-
-    @pytest.mark.asyncio
     async def test_safe_cat_command(self, security_manager):
         """Test that 'cat' command is allowed."""
         result = await security_manager.validate_command("cat /etc/passwd")
@@ -119,36 +94,64 @@ class TestSafeCommands:
         assert result["message"] == ""
 
     @pytest.mark.asyncio
+    async def test_blocked_rm_command(self, security_manager):
+        """Test that 'rm -rf' command is blocked."""
+        result = await security_manager.validate_command("rm -rf /")
+        assert result["allowed"] is False
+        assert "Blocked" in result["message"]
+
+    @pytest.mark.asyncio
+    async def test_blocked_sudo_command(self, security_manager):
+        """Test that 'sudo' command is blocked."""
+        result = await security_manager.validate_command("sudo rm -rf /")
+        assert result["allowed"] is False
+        assert "Blocked" in result["message"]
+
+    @pytest.mark.asyncio
+    async def test_blocked_dd_command(self, security_manager):
+        """Test that 'dd' command is blocked."""
+        result = await security_manager.validate_command("dd if=/dev/zero of=/dev/sda")
+        assert result["allowed"] is False
+        assert "Blocked" in result["message"]
+
+    @pytest.mark.asyncio
+    async def test_blocked_shutdown_command(self, security_manager):
+        """Test that 'shutdown' command is blocked."""
+        result = await security_manager.validate_command("shutdown -h now")
+        assert result["allowed"] is False
+        assert "Blocked" in result["message"]
+
+    @pytest.mark.asyncio
     async def test_blocked_format_command(self, security_manager):
         """Test that format-related commands are blocked."""
         result = await security_manager.validate_command("mkfs /dev/sda")
         assert result["allowed"] is False
-        assert "not allowed" in result["message"]
+        assert "Blocked" in result["message"]
 
     @pytest.mark.asyncio
     async def test_blocked_reboot_command(self, security_manager):
         """Test that reboot command is blocked."""
         result = await security_manager.validate_command("reboot")
         assert result["allowed"] is False
-        assert "not allowed" in result["message"]
+        assert "Blocked" in result["message"]
 
     @pytest.mark.asyncio
     async def test_blocked_poweroff_command(self, security_manager):
         """Test that poweroff command is blocked."""
         result = await security_manager.validate_command("poweroff")
         assert result["allowed"] is False
-        assert "not allowed" in result["message"]
+        assert "Blocked" in result["message"]
 
     @pytest.mark.asyncio
     async def test_blocked_halt_command(self, security_manager):
         """Test that halt command is blocked."""
         result = await security_manager.validate_command("halt")
         assert result["allowed"] is False
-        assert "not allowed" in result["message"]
+        assert "Blocked" in result["message"]
 
     @pytest.mark.asyncio
     async def test_blocked_fdisk_command(self, security_manager):
         """Test that fdisk command is blocked."""
         result = await security_manager.validate_command("fdisk /dev/sda")
         assert result["allowed"] is False
-        assert "not allowed" in result["message"]
+        assert "Blocked" in result["message"]

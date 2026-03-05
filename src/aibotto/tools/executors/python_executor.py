@@ -52,7 +52,7 @@ class PythonExecutor(ToolExecutor, SubprocessRunner):
         security_check = await self.security_manager.validate_python_code(code)
         if not bool(security_check["allowed"]):
             self.logger.warning(f"Python code blocked for security: {code[:100]}...")
-            return security_check["message"]
+            return str(security_check["message"])
 
         command = self._wrap_python_code(code)
         return await self._run_subprocess(command, user_id, self.logger)
