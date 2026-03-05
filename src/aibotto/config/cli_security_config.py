@@ -2,24 +2,20 @@
 CLI security configuration for the application.
 """
 
-import os
 from typing import Any
 
 from .base_security_config import BaseSecurityConfig
+from .env_loader import EnvLoader
 
 
 class CLISecurityConfig(BaseSecurityConfig):
     """Security configuration for CLI commands."""
 
     # Maximum command length allowed for CLI commands
-    MAX_COMMAND_LENGTH: int = int(os.getenv("MAX_COMMAND_LENGTH", "300000"))
+    MAX_COMMAND_LENGTH: int = EnvLoader.get_int("MAX_COMMAND_LENGTH", 300000)
 
     # Whitelist of allowed commands (empty = no whitelist)
-    ALLOWED_COMMANDS: list[str] = (
-        os.getenv("ALLOWED_COMMANDS", "").split(",")
-        if os.getenv("ALLOWED_COMMANDS")
-        else []
-    )
+    ALLOWED_COMMANDS: list[str] = EnvLoader.get_list("ALLOWED_COMMANDS")
 
     # Blacklist of blocked commands
     BLOCKED_COMMANDS: list[str] = [

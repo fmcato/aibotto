@@ -2,24 +2,20 @@
 Python security configuration for the application.
 """
 
-import os
 from typing import Any
 
 from .base_security_config import BaseSecurityConfig
+from .env_loader import EnvLoader
 
 
 class PythonSecurityConfig(BaseSecurityConfig):
     """Security configuration for Python code execution."""
 
     # Maximum Python code length allowed (raw code, not wrapped command)
-    MAX_PYTHON_CODE_LENGTH: int = int(os.getenv("MAX_PYTHON_CODE_LENGTH", "60000"))
+    MAX_PYTHON_CODE_LENGTH: int = EnvLoader.get_int("MAX_PYTHON_CODE_LENGTH", 60000)
 
     # List of allowed imports (empty = no restrictions)
-    ALLOWED_IMPORTS: list[str] = (
-        os.getenv("PYTHON_ALLOWED_IMPORTS", "").split(",")
-        if os.getenv("PYTHON_ALLOWED_IMPORTS")
-        else []
-    )
+    ALLOWED_IMPORTS: list[str] = EnvLoader.get_list("PYTHON_ALLOWED_IMPORTS")
 
     # List of blocked Python patterns
     BLOCKED_PATTERNS: list[str] = [

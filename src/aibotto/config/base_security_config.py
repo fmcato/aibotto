@@ -6,19 +6,17 @@ import os
 from abc import ABC, abstractmethod
 from typing import Any
 
+from .env_loader import EnvLoader
+
 
 class BaseSecurityConfig(ABC):
     """Base security configuration with common functionality."""
-    
+
     # Common properties
-    CUSTOM_BLOCKED_PATTERNS: list[str] = (
-        os.getenv("CUSTOM_BLOCKED_PATTERNS", "").split(",")
-        if os.getenv("CUSTOM_BLOCKED_PATTERNS")
-        else []
+    CUSTOM_BLOCKED_PATTERNS: list[str] = EnvLoader.get_list(
+        "CUSTOM_BLOCKED_PATTERNS"
     )
-    ENABLE_AUDIT_LOGGING: bool = (
-        os.getenv("ENABLE_AUDIT_LOGGING", "true").lower() == "true"
-    )
+    ENABLE_AUDIT_LOGGING: bool = EnvLoader.get_bool("ENABLE_AUDIT_LOGGING", True)
 
     @classmethod
     def reload_from_file(cls, config_file: str) -> None:
