@@ -1,11 +1,9 @@
 """Generic tool for delegating tasks to specialized subagents."""
 
-import json
 import logging
-from typing import Any
 
 from aibotto.ai.subagent.subagent_executor import SubAgentExecutor, SubAgentConfig
-from aibotto.tools.base import ToolExecutor
+from aibotto.tools.base import ToolExecutor, ToolExecutionError
 
 logger = logging.getLogger(__name__)
 
@@ -13,50 +11,46 @@ logger = logging.getLogger(__name__)
 class DelegateExecutor(ToolExecutor):
     """Generic executor for delegating tasks to any registered subagent."""
 
-    async def execute(
-        self,
-        arguments: str,
-        user_id: int = 0,
-        db_ops: Any = None,
-        chat_id: int = 0,
-    ) -> str:
-        """Delegate task to specified subagent."""
-        try:
-            args = json.loads(arguments)
-            subagent_name = args.get("subagent_name", "")
-            method = args.get("method", "execute_task")
-            task_description = args.get("task_description", "")
+    async def _do_execute(self, args: dict, user_id: int, chat_id: int = 0) -> str:
+        """Delegate task to specified subagent.
 
-            if not subagent_name or not subagent_name.strip():
-                return "Error: subagent_name cannot be empty"
+        Args:
+            args: Parsed arguments with 'subagent_name', 'method', and 'task_description'
+            user_id: User ID for logging
+            chat_id: Chat ID for database operations
 
-            if not task_description or not task_description.strip():
-                return "Error: task_description cannot be empty"
+        Returns:
+            Result from the subagent
 
-            # Configure subagent execution
-            config = SubAgentConfig(
-                subagent_name=subagent_name,
-                method=method,
-                method_kwargs={"initial_message": task_description},
-                user_id=user_id,
-                chat_id=chat_id,
-            )
+        Raises:
+            ToolExecutionError: If validation fails
+        """
+        subagent_name = args.get("subagent_name", "")
+        method = args.get("method", "execute_task")
+        task_description = args.get("task_description", "")
 
-            executor = SubAgentExecutor(config)
-            result = await executor.run()
+        if not subagent_name or not subagent_name.strip():
+            raise ToolExecutionError("Error: subagent_name cannot be empty")
 
-            logger.info(
-                f"Delegated task to subagent '{subagent_name}' "
-                f"(task: {task_description[:50]}...)"
-            )
-            return result
+        if not task_description or not task_description.strip():
+            raise ToolExecutionError("Error: task_description cannot be empty")
 
-        except json.JSONDecodeError as e:
-            logger.error(f"Invalid JSON in delegate_tool arguments: {e}")
-            return "Error: Invalid arguments format. Expected JSON."
-        except Exception as e:
-            logger.error(f"Delegate tool error: {e}")
-            return f"Error delegating task: {str(e)}"
+        config = SubAgentConfig(
+            subagent_name=subagent_name,
+            method=method,
+            method_kwargs={"initial_message": task_description},
+            user_id=user_id,
+            chat_id=chat_id,
+        )
+
+        executor = SubAgentExecutor(config)
+        result = await executor.run()
+
+        logger.info(
+            f"Delegated task to subagent '{subagent_name}' "
+            f"(task: {task_description[:50]}...)"
+        )
+        return result
 
 
 async def delegate_task(

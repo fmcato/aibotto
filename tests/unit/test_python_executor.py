@@ -188,9 +188,9 @@ class TestPythonExecutor:
         with patch("asyncio.create_subprocess_shell") as mock_subprocess:
             mock_subprocess.side_effect = OSError("Subprocess failed")
 
-            result = await python_executor.execute('{"code": "print(1)"}')
+            result = await python_executor.execute('{\"code\": \"print(1)\"}')
 
-            assert "Error executing Python code" in result
+            assert "Subprocess failed" in result
 
     async def test_complex_multiline_script(self, python_executor):
         """Test execution of complex multi-line algorithm."""

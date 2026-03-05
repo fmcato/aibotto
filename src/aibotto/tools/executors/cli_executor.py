@@ -2,116 +2,39 @@
 CLI command executor with safety measures.
 """
 
-import asyncio
-import json
-import logging
-
-from ...db.operations import DatabaseOperations
 from ...tools.cli_security_manager import CLISecurityManager
-from ..base import ToolExecutor
+from ...tools.base import ToolExecutor, ToolExecutionError
+from ...tools.subprocess_runner import SubprocessRunner
 
-logger = logging.getLogger(__name__)
 
-
-class CLIExecutor(ToolExecutor):
+class CLIExecutor(ToolExecutor, SubprocessRunner):
     """Executor for CLI commands with safety features."""
 
     def __init__(self) -> None:
+        super().__init__()
         self.security_manager = CLISecurityManager()
 
-    async def execute(
-        self,
-        arguments: str,
-        user_id: int = 0,
-        db_ops: DatabaseOperations | None = None,
-        chat_id: int = 0,
-    ) -> str:
-        """Execute CLI command safely and return output."""
-        try:
-            # Parse arguments
-            args = json.loads(arguments)
-            command = args.get("command")
+    async def _do_execute(self, args: dict, user_id: int, chat_id: int = 0) -> str:
+        """Execute CLI command safely and return output.
 
-            if not command:
-                raise ValueError("No command provided")
+        Args:
+            args: Parsed arguments with 'command' field
+            user_id: User ID for logging
+            chat_id: Chat ID for database operations
 
-            # Log command execution
-            logger.info(f"Executing CLI command for user {user_id}: {command}")
+        Returns:
+            Command output or error message
+        """
+        command = args.get("command")
 
-            # Security checks
-            security_check = await self.security_manager.validate_command(command)
-            if not bool(security_check["allowed"]):
-                logger.warning(f"Command blocked for security: {command}")
-                error_result = str(security_check["message"])
+        if not command:
+            raise ToolExecutionError("No command provided")
 
-                if db_ops:
-                    await db_ops.save_message_compat(
-                        user_id=user_id,
-                        chat_id=chat_id,
-                        role="system",
-                        content=error_result,
-                    )
+        self.logger.info(f"Executing CLI command for user {user_id}: {command}")
 
-                return error_result
+        security_check = await self.security_manager.validate_command(command)
+        if not bool(security_check["allowed"]):
+            self.logger.warning(f"Command blocked for security: {command}")
+            return security_check["message"]
 
-            # Execute command in a controlled environment
-            logger.info(f"Starting subprocess for command: {command}")
-            process = await asyncio.create_subprocess_shell(
-                command, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
-            )
-            stdout, stderr = await process.communicate()
-
-            if process.returncode == 0:
-                result = stdout.decode("utf-8", errors="ignore")
-                logger.info(
-                    f"Command completed successfully for user {user_id}: {command}"
-                )
-                logger.info(f"Command output (first 200 chars): {result[:200]}...")
-
-                if db_ops:
-                    await db_ops.save_message_compat(
-                        user_id=user_id, chat_id=chat_id, role="system", content=result
-                    )
-
-                return result
-            else:
-                error_msg = stderr.decode("utf-8", errors="ignore")
-                logger.error(
-                    "Command failed with return code "
-                    f"{process.returncode} for user {user_id}: {command}"
-                )
-                logger.error(f"Command error: {error_msg}")
-
-                error_result = f"Error: {error_msg}"
-                if db_ops:
-                    await db_ops.save_message_compat(
-                        user_id=user_id,
-                        chat_id=chat_id,
-                        role="system",
-                        content=error_result,
-                    )
-
-                return error_result
-
-        except json.JSONDecodeError as e:
-            logger.error(f"Error parsing CLI arguments: {e}")
-            error_result = f"Error parsing arguments: {str(e)}"
-            if db_ops:
-                await db_ops.save_message_compat(
-                    user_id=user_id,
-                    chat_id=chat_id,
-                    role="system",
-                    content=error_result,
-                )
-            return error_result
-        except Exception as e:
-            logger.error(f"Command execution error: {e}")
-            error_result = f"Error executing command: {str(e)}"
-            if db_ops:
-                await db_ops.save_message_compat(
-                    user_id=user_id,
-                    chat_id=chat_id,
-                    role="system",
-                    content=error_result,
-                )
-            return error_result
+        return await self._run_subprocess(command, user_id, self.logger)

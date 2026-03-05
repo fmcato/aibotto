@@ -2,76 +2,43 @@
 Web fetch executor for fetching webpage content.
 """
 
-import json
-import logging
-
-from ...db.operations import DatabaseOperations
-from ..base import ToolExecutor
-
-logger = logging.getLogger(__name__)
+from ...tools.base import ToolExecutor, ToolExecutionError
 
 
 class WebFetchExecutor(ToolExecutor):
     """Executor for web page fetching functionality."""
 
-    async def execute(
-        self,
-        arguments: str,
-        user_id: int = 0,
-        db_ops: DatabaseOperations | None = None,
-        chat_id: int = 0,
-    ) -> str:
-        """Execute web fetch with given arguments."""
-        try:
-            # Parse arguments
-            args = json.loads(arguments)
+    async def _do_execute(self, args: dict, user_id: int, chat_id: int = 0) -> str:
+        """Execute web fetch with given arguments.
 
-            url = args.get("url", "")
-            max_length = args.get("max_length")
-            no_citations = args.get("no_citations", False)
+        Args:
+            args: Parsed arguments with 'url', 'max_length', and 'no_citations' fields
+            user_id: User ID for logging
+            chat_id: Chat ID for database operations
 
-            if not url:
-                raise ValueError("URL is required")
+        Returns:
+            Webpage content or error message
 
-            logger.info(f"Fetching webpage for user {user_id}: {url}")
+        Raises:
+            ToolExecutionError: If URL is not provided
+        """
+        url = args.get("url", "")
+        max_length = args.get("max_length")
+        no_citations = args.get("no_citations", False)
 
-            # Import fetch function
-            from ..web_fetch import fetch_webpage
+        if not url:
+            raise ToolExecutionError("URL is required")
 
-            result = await fetch_webpage(
-                url=url,
-                max_length=max_length,
-                no_citations=no_citations,
-            )
+        self.logger.info(f"Fetching webpage for user {user_id}: {url}")
 
-            logger.info(f"Web fetch result for user {user_id}: {result[:200]}...")
+        from ...tools.web_fetch import fetch_webpage
 
-            if db_ops:
-                await db_ops.save_message_compat(
-                    user_id=user_id, chat_id=chat_id, role="system", content=result
-                )
+        result = await fetch_webpage(
+            url=url,
+            max_length=max_length,
+            no_citations=no_citations,
+        )
 
-            return result
+        self.logger.info(f"Web fetch result for user {user_id}: {result[:200]}...")
 
-        except json.JSONDecodeError as e:
-            logger.error(f"Error parsing web fetch arguments: {e}")
-            error_result = f"Error parsing arguments: {str(e)}"
-            if db_ops:
-                await db_ops.save_message_compat(
-                    user_id=user_id,
-                    chat_id=chat_id,
-                    role="system",
-                    content=error_result,
-                )
-            return error_result
-        except Exception as e:
-            logger.error(f"Error fetching webpage: {e}")
-            error_result = f"Error fetching webpage: {str(e)}"
-            if db_ops:
-                await db_ops.save_message_compat(
-                    user_id=user_id,
-                    chat_id=chat_id,
-                    role="system",
-                    content=error_result,
-                )
-            return error_result
+        return result

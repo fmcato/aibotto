@@ -107,8 +107,8 @@ class TestDelegateTool:
         result = await delegate_executor.execute(
             "invalid json", user_id=123, chat_id=456, db_ops=temp_database
         )
-        
-        assert "json" in result.lower() or "invalid" in result.lower()
+
+        assert "parsing" in result.lower()
 
     @pytest.mark.asyncio
     async def test_delegate_preserves_user_chat_context(self, delegate_executor, temp_database):
