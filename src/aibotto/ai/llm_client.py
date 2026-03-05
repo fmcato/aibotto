@@ -5,6 +5,7 @@ LLM client for OpenAI-compatible API integration.
 import asyncio
 import logging
 import time
+from dataclasses import dataclass, field
 from typing import Any, cast
 
 import openai
@@ -16,21 +17,74 @@ from .backoff_handler import ExponentialBackoffHandler
 logger = logging.getLogger(__name__)
 
 
+@dataclass
+class LLMConfig:
+    """Configuration for LLM client.
+
+    All fields have safe defaults that fall back to global Config.
+    Use this class to create subagent-specific LLM configurations.
+
+    Attributes:
+        api_key: API key for authentication
+        base_url: Base URL for the API endpoint
+        model: Model identifier to use
+        max_tokens: Maximum tokens for responses
+        temperature: Temperature for response generation
+    """
+
+    api_key: str = field(default_factory=lambda: Config.OPENAI_API_KEY)
+    base_url: str = field(default_factory=lambda: Config.OPENAI_BASE_URL)
+    model: str = field(default_factory=lambda: Config.OPENAI_MODEL)
+    max_tokens: int | None = field(default_factory=lambda: Config.LLM_MAX_TOKENS)
+    temperature: float | None = None
+
+    @classmethod
+    def from_provider(
+        cls,
+        provider_config: Any,
+        model: str,
+        max_tokens: int | None = None,
+        temperature: float | None = None,
+    ) -> "LLMConfig":
+        """Create LLMConfig from a provider configuration.
+
+        Args:
+            provider_config: LLMProviderConfig instance with api_key_env and base_url
+            model: Model identifier to use
+            max_tokens: Optional max tokens override
+            temperature: Optional temperature override
+
+        Returns:
+            LLMConfig instance
+        """
+        return cls(
+            api_key=provider_config.get_api_key(),
+            base_url=provider_config.base_url,
+            model=model,
+            max_tokens=max_tokens,
+            temperature=temperature,
+        )
+
+
 class LLMClient:
     """Client for OpenAI-compatible API."""
 
-    # Timeout for LLM API calls (seconds) - removed cap for complex questions
-    LLM_TIMEOUT = 300.0  # 5 minutes instead of 2 minutes
+    LLM_TIMEOUT = 300.0
 
-    def __init__(self) -> None:
+    def __init__(self, config: LLMConfig | None = None) -> None:
+        """Initialize LLM client with optional configuration.
+
+        Args:
+            config: LLMConfig instance. If None, uses global Config defaults.
+        """
+        self._config = config or LLMConfig()
+
         self.client = openai.AsyncOpenAI(
-            api_key=Config.OPENAI_API_KEY,
-            base_url=Config.OPENAI_BASE_URL,
+            api_key=self._config.api_key,
+            base_url=self._config.base_url,
             timeout=self.LLM_TIMEOUT,
         )
-        # Track rate limit reset time to avoid unnecessary retries
         self._rate_limit_reset_time: float | None = None
-        # Initialize proper exponential backoff handler with jitter
         self._backoff_handler = ExponentialBackoffHandler()
 
     async def chat_completion(
@@ -59,7 +113,7 @@ class LLMClient:
             try:
                 # Build request params
                 params: dict[str, Any] = {
-                    "model": Config.OPENAI_MODEL,
+                    "model": self._config.model,
                     "messages": messages,
                     "tools": tools,
                     "stream": False,
@@ -73,9 +127,13 @@ class LLMClient:
                     )
                 # Note: When tools is None, tool_choice is not set (GLM validation error)
 
-                # Add max_tokens if configured (can speed up reasoning models)
-                if Config.LLM_MAX_TOKENS is not None:
-                    params["max_tokens"] = Config.LLM_MAX_TOKENS
+                # Add max_tokens if configured
+                if self._config.max_tokens is not None:
+                    params["max_tokens"] = self._config.max_tokens
+
+                # Add temperature if configured
+                if self._config.temperature is not None:
+                    params["temperature"] = self._config.temperature
 
                 response = await self.client.chat.completions.create(**params)
 

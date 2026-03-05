@@ -68,7 +68,10 @@ class PythonExecutor(ToolExecutor):
 
                 if db_ops:
                     await db_ops.save_message_compat(
-                        user_id=user_id, chat_id=chat_id, role="system", content=error_result
+                        user_id=user_id,
+                        chat_id=chat_id,
+                        role="system",
+                        content=error_result,
                     )
 
                 return error_result
@@ -106,7 +109,10 @@ class PythonExecutor(ToolExecutor):
                 error_result = f"Error: {error_msg}"
                 if db_ops:
                     await db_ops.save_message_compat(
-                        user_id=user_id, chat_id=chat_id, role="system", content=error_result
+                        user_id=user_id,
+                        chat_id=chat_id,
+                        role="system",
+                        content=error_result,
                     )
 
                 return error_result
@@ -116,7 +122,10 @@ class PythonExecutor(ToolExecutor):
             error_result = f"Error parsing arguments: {str(e)}"
             if db_ops:
                 await db_ops.save_message_compat(
-                    user_id=user_id, chat_id=chat_id, role="system", content=error_result
+                    user_id=user_id,
+                    chat_id=chat_id,
+                    role="system",
+                    content=error_result,
                 )
             return error_result
         except Exception as e:
@@ -124,6 +133,9 @@ class PythonExecutor(ToolExecutor):
             error_result = f"Error executing Python code: {str(e)}"
             if db_ops:
                 await db_ops.save_message_compat(
-                    user_id=user_id, chat_id=chat_id, role="system", content=error_result
+                    user_id=user_id,
+                    chat_id=chat_id,
+                    role="system",
+                    content=error_result,
                 )
             return error_result

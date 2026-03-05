@@ -53,28 +53,19 @@ class SubAgentExecutor:
             f"with namespace (user_id: {self.config.user_id}, chat_id: {self.config.chat_id})"
         )
 
-        # Get subagent class from registry
-        subagent_class = SubAgentRegistry.get(self.config.subagent_name)
-        if subagent_class is None:
+        # Create subagent instance via registry (handles config-driven properly)
+        # Note: method_kwargs are NOT passed to constructor - they're used for the method call later
+        subagent = SubAgentRegistry.create(self.config.subagent_name)
+        if subagent is None:
             available = ", ".join(SubAgentRegistry.list_subagents())
-            error_msg = (
-                f"Subagent '{self.config.subagent_name}' not found. "
-                f"Available subagents: {available}"
-            )
+            error_msg = f"Failed to create subagent '{self.config.subagent_name}'. Available: {available}"
             logger.error(error_msg)
             raise RuntimeError(error_msg)
 
-        # Create subagent instance
-        try:
-            subagent = subagent_class()
-            logger.info(
-                f"SubAgentExecutor: Created {self.config.subagent_name} instance "
-                f"(instance_id: {subagent._instance_id})"
-            )
-        except Exception as e:
-            error_msg = f"Failed to instantiate {self.config.subagent_name}: {e}"
-            logger.error(error_msg)
-            raise RuntimeError(error_msg) from e
+        logger.info(
+            f"SubAgentExecutor: Created {self.config.subagent_name} instance "
+            f"(instance_id: {subagent._instance_id})"
+        )
 
         # Get method from subagent
         if not hasattr(subagent, self.config.method):

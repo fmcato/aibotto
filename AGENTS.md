@@ -15,22 +15,29 @@ The system uses subagents for specialized tasks with isolated LLM contexts to pr
 
 ### Available Subagents
 
-#### WebResearchAgent
-Specialized subagent for comprehensive web research with isolated LLM context.
+#### Config-Driven Subagent System
+Subagents are now defined using YAML configuration files with full flexibility for LLM providers, models, system prompts, and tools.
+
+**Configuration Location:** `src/aibotto/config/subagents.yaml`
+
+**Available Subagents:**
+- `web_research` - Comprehensive web research with search, fetch, and synthesis capabilities
 
 **Access:**
 - `delegate_task` with `subagent_name="web_research"`
 
 **Capabilities:**
-- Search strategy refinement
+- Config-driven behavior via YAML
+- Per-agent LLM provider and model selection
+- Dynamic tool lists
+- Configurable iteration limits
 - Source credibility evaluation (.gov, .edu, established news)
 - Multi-source synthesis
 - Inline citations [Title](URL)
-- 5-iteration limit (hardcoded)
 
 **Flow:**
 1. Main agent calls `delegate_task(subagent_name="web_research", task_description="query")`
-2. WebResearchAgent spawned in isolated context
+2. Config-driven subagent created from YAML definition
 3. Agent searches, fetches, synthesizes internally
 4. Returns summary with citations to main agent
 5. Main agent receives only final result (context stays clean)
@@ -139,8 +146,29 @@ except asyncio.TimeoutError:
 - Use environment variables for sensitive configuration
 - Validate all external inputs
 
-### Test-Driven Development
-ALWAYS write tests before implementation
+### Test-Driven Development (Mandatory)
+TDD IS REQUIRED - This is not optional. All code changes must follow the test-driven development workflow:
+
+**TDD Workflow (Always Follow This Order):**
+1. **RED**: Write a failing test that defines the desired behavior
+2. **GREEN**: Write the minimal implementation to make the test pass
+3. **REFACTOR**: Improve the code while keeping tests passing
+4. **REPEAT**: Continue until feature is complete
+
+**TDD Requirements:**
+- NEVER write production code without a failing test first
+- Write tests that describe expected behavior, not implementation details
+- Keep tests small, focused, and independent
+- Mock external dependencies (APIs, databases, file I/O)
+- Run tests frequently during development (after each small change)
+- If you cannot write a test, reconsider if the code should be written
+
+**Why TDD Is Mandated:**
+- Prevents bugs from being introduced
+- Serves as living documentation
+- Enables confident refactoring
+- Catches integration issues early
+- Reduces debugging time
 
 ## Tool Calling Architecture
 
@@ -157,16 +185,31 @@ Iteration 2: LLM sees complete interchange, no duplicates
 ## Import Paths
 
 ```python
+# Core tools
 from aibotto.tools.web_fetch import fetch_webpage
 from aibotto.tools.web_search import search_web
-from aibotto.tools.research_tool import ResearchExecutor
 from aibotto.tools.security import SecurityManager
-from aibotto.tools.tool_registry import tool_registry
+from aibotto.tools.toolset import get_toolset
+
+# Tool executors
+from aibotto.tools.executors.python_executor import PythonExecutor
+
+# Security managers (separate validators for CLI and Python)
+from aibotto.tools.cli_security_manager import CLISecurityManager
+from aibotto.tools.python_security_manager import PythonSecurityManager
+
+# Security configuration
+from aibotto.config.cli_security_config import CLISecurityConfig
+from aibotto.config.python_security_config import PythonSecurityConfig
+
+# AI components
 from aibotto.ai.agentic_orchestrator import AgenticOrchestrator
 from aibotto.ai.llm_client import LLMClient
 from aibotto.ai.prompt_templates import SystemPrompts
-from aibotto.ai.subagent import SubAgent, WebResearchAgent, init_subagents
-from aibotto.config.settings import Config
+from aibotto.ai.subagent import SubAgent, init_subagents
+
+# Database models and operations
+from aibotto.db import Conversation, Message, ToolCall, SubAgent, Delegation
 from aibotto.db.operations import DatabaseOperations
 ```
 

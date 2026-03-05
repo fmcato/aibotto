@@ -90,9 +90,7 @@ class PythonSecurityConfig:
                 cls.MAX_PYTHON_CODE_LENGTH = config.get(
                     "MAX_PYTHON_CODE_LENGTH", cls.MAX_PYTHON_CODE_LENGTH
                 )
-                cls.ALLOWED_IMPORTS = config.get(
-                    "ALLOWED_IMPORTS", cls.ALLOWED_IMPORTS
-                )
+                cls.ALLOWED_IMPORTS = config.get("ALLOWED_IMPORTS", cls.ALLOWED_IMPORTS)
                 cls.BLOCKED_PATTERNS = config.get(
                     "BLOCKED_PATTERNS", cls.BLOCKED_PATTERNS
                 )

@@ -3,7 +3,7 @@
 import pytest
 from unittest.mock import AsyncMock, patch, MagicMock
 
-from aibotto.ai.subagent.web_research_agent import WebResearchAgent
+from aibotto.ai.subagent.base import SubAgent
 
 
 class TestSubAgentWebSearchInvocation:
@@ -16,9 +16,26 @@ class TestSubAgentWebSearchInvocation:
         init_subagents()
 
     @pytest.mark.asyncio
-    async def test_subagent_invokes_search_web_correctly(self):
-        """Test that subagent calls search_web with correct parameters."""
-        agent = WebResearchAgent()
+    async def test_config_driven_subagent_invokes_search_web_correctly(self):
+        """Test that config-driven subagent calls search_web with correct parameters."""
+        from aibotto.config.subagent_config import LLMProviderConfig, SubAgentDefinition
+        from aibotto.ai.subagent.base import SubAgent as ConfigDrivenSubAgent
+        from pathlib import Path
+
+        provider = LLMProviderConfig(api_key_env="OPENAI_API_KEY", base_url="https://api.openai.com/v1")
+        definition = SubAgentDefinition(
+            name="web_research",
+            description="Web research agent",
+            provider="test",
+            model="gpt-3.5-turbo",
+            prompt_file="prompt.md",
+            system_prompt="You are a web research assistant",
+            base_dir=None,
+            tools=["search_web"],
+            max_iterations=5
+        )
+
+        agent = ConfigDrivenSubAgent(definition=definition, provider=provider)
 
         # Mock LLM response that requests web search
         with patch.object(agent.llm_client, 'chat_completion', new_callable=AsyncMock) as mock_llm:
@@ -63,7 +80,7 @@ Found 5 results for "artificial intelligence":
                     }
                 ]
 
-                result = await agent.execute_research("artificial intelligence", user_id=123, chat_id=456)
+                result = await agent.execute_task("artificial intelligence", user_id=123, chat_id=456)
 
                 # Verify search_web was called
                 mock_search_executor.execute.assert_called_once()
@@ -71,9 +88,25 @@ Found 5 results for "artificial intelligence":
                 assert call_args[0][0] == '{"query": "artificial intelligence", "num_results": 5}'
 
     @pytest.mark.asyncio
-    async def test_web_search_result_format_validation(self):
-        """Test that subagent properly validates and uses web search results."""
-        agent = WebResearchAgent()
+    async def test_config_driven_web_search_result_format_validation(self):
+        """Test that config-driven subagent properly validates and uses web search results."""
+        from aibotto.config.subagent_config import LLMProviderConfig, SubAgentDefinition
+        from aibotto.ai.subagent.base import SubAgent as ConfigDrivenSubAgent
+
+        provider = LLMProviderConfig(api_key_env="OPENAI_API_KEY", base_url="https://api.openai.com/v1")
+        definition = SubAgentDefinition(
+            name="web_research",
+            description="Web research agent",
+            provider="test",
+            model="gpt-3.5-turbo",
+            prompt_file="prompt.md",
+            system_prompt="You are a web research assistant",
+            base_dir=None,
+            tools=["search_web", "fetch_webpage"],
+            max_iterations=5
+        )
+
+        agent = ConfigDrivenSubAgent(definition=definition, provider=provider)
 
         with patch.object(agent.llm_client, 'chat_completion', new_callable=AsyncMock) as mock_llm:
             # Call sequence: search_web, then fetch_webpage
@@ -115,7 +148,7 @@ Found 5 results for "artificial intelligence":
                 return None
 
             with patch.object(agent._toolset, 'get_executor', side_effect=mock_get_executor):
-                result = await agent.execute_research("test", user_id=100, chat_id=200)
+                result = await agent.execute_task("test", user_id=100, chat_id=200)
 
                 # Verify both tools were called
                 mock_search_executor.execute.assert_called_once()
@@ -135,7 +168,23 @@ Found 5 results for "artificial intelligence":
     @pytest.mark.asyncio
     async def test_subagent_duplicate_search_prevention(self):
         """Test that subagent prevents duplicate search_web calls."""
-        agent = WebResearchAgent()
+        from aibotto.config.subagent_config import LLMProviderConfig, SubAgentDefinition
+        from aibotto.ai.subagent.base import SubAgent as ConfigDrivenSubAgent
+
+        provider = LLMProviderConfig(api_key_env="OPENAI_API_KEY", base_url="https://api.openai.com/v1")
+        definition = SubAgentDefinition(
+            name="web_research",
+            description="Web research agent",
+            provider="test",
+            model="gpt-3.5-turbo",
+            prompt_file="prompt.md",
+            system_prompt="You are a web research assistant",
+            base_dir=None,
+            tools=["search_web"],
+            max_iterations=5
+        )
+        
+        agent = ConfigDrivenSubAgent(definition=definition, provider=provider)
 
         # Check first call is not a duplicate
         is_duplicate_first = agent._tracker.is_duplicate_tool_call(
@@ -162,7 +211,23 @@ Found 5 results for "artificial intelligence":
     @pytest.mark.asyncio
     async def test_subagent_citation_format(self):
         """Test that subagent generates proper citation format."""
-        agent = WebResearchAgent()
+        from aibotto.config.subagent_config import LLMProviderConfig, SubAgentDefinition
+        from aibotto.ai.subagent.base import SubAgent as ConfigDrivenSubAgent
+
+        provider = LLMProviderConfig(api_key_env="OPENAI_API_KEY", base_url="https://api.openai.com/v1")
+        definition = SubAgentDefinition(
+            name="web_research",
+            description="Web research agent",
+            provider="test",
+            model="gpt-3.5-turbo",
+            prompt_file="prompt.md",
+            system_prompt="You are a web research assistant",
+            base_dir=None,
+            tools=["search_web"],
+            max_iterations=5
+        )
+        
+        agent = ConfigDrivenSubAgent(definition=definition, provider=provider)
 
         with patch.object(agent.llm_client, 'chat_completion', new_callable=AsyncMock) as mock_llm:
             mock_llm.return_value = {
@@ -174,7 +239,7 @@ Found 5 results for "artificial intelligence":
                 }]
             }
 
-            result = await agent.execute_research("test topic", user_id=1, chat_id=1)
+            result = await agent.execute_task("test topic", user_id=1, chat_id=1)
 
             # Verify citation format
             assert "[Important Paper](https://example.com/paper)" in result
@@ -183,7 +248,23 @@ Found 5 results for "artificial intelligence":
     @pytest.mark.asyncio
     async def test_subagent_empty_search_results(self):
         """Test subagent handling of empty search results."""
-        agent = WebResearchAgent()
+        from aibotto.config.subagent_config import LLMProviderConfig, SubAgentDefinition
+        from aibotto.ai.subagent.base import SubAgent as ConfigDrivenSubAgent
+
+        provider = LLMProviderConfig(api_key_env="OPENAI_API_KEY", base_url="https://api.openai.com/v1")
+        definition = SubAgentDefinition(
+            name="web_research",
+            description="Web research agent",
+            provider="test",
+            model="gpt-3.5-turbo",
+            prompt_file="prompt.md",
+            system_prompt="You are a web research assistant",
+            base_dir=None,
+            tools=["search_web"],
+            max_iterations=5
+        )
+        
+        agent = ConfigDrivenSubAgent(definition=definition, provider=provider)
 
         with patch.object(agent.llm_client, 'chat_completion', new_callable=AsyncMock) as mock_llm:
             search_call = {
@@ -203,6 +284,6 @@ Found 5 results for "artificial intelligence":
             mock_search_executor.execute = AsyncMock(return_value="No results found.")
 
             with patch.object(agent._toolset, 'get_executor', return_value=mock_search_executor):
-                result = await agent.execute_research("obscure topic", user_id=5, chat_id=10)
+                result = await agent.execute_task("obscure topic", user_id=5, chat_id=10)
 
                 assert "find" in result.lower() and "results" in result.lower()

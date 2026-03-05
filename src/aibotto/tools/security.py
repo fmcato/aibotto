@@ -25,31 +25,41 @@ class SecurityManager:
         """Validate command for security."""
         result = {"allowed": False, "message": ""}
 
-        logger.debug(f"SECURITY CHECK: Starting validation for command (length: {len(command)}, limit: {self.max_command_length})")
+        logger.debug(
+            f"SECURITY CHECK: Starting validation for command (length: {len(command)}, limit: {self.max_command_length})"
+        )
         logger.debug(f"SECURITY CHECK: Command preview: {command[:100]}...")
 
         # Check command length
         length_check = await self._check_command_length(command)
         if length_check:
-            logger.warning(f"SECURITY CHECK: Blocked by length check - {length_check['message']}")
+            logger.warning(
+                f"SECURITY CHECK: Blocked by length check - {length_check['message']}"
+            )
             return length_check
 
         # Check blocked commands
         blocked_check = await self._check_blocked_commands(command)
         if blocked_check:
-            logger.warning(f"SECURITY CHECK: Blocked by command check - {blocked_check['message']}")
+            logger.warning(
+                f"SECURITY CHECK: Blocked by command check - {blocked_check['message']}"
+            )
             return blocked_check
 
         # Check custom blocked patterns
         pattern_check = await self._check_custom_patterns(command)
         if pattern_check:
-            logger.warning(f"SECURITY CHECK: Blocked by pattern check - {pattern_check['message']}")
+            logger.warning(
+                f"SECURITY CHECK: Blocked by pattern check - {pattern_check['message']}"
+            )
             return pattern_check
 
         # Check allowed commands whitelist
         whitelist_check = await self._check_allowed_commands(command)
         if whitelist_check:
-            logger.warning(f"SECURITY CHECK: Blocked by whitelist check - {whitelist_check['message']}")
+            logger.warning(
+                f"SECURITY CHECK: Blocked by whitelist check - {whitelist_check['message']}"
+            )
             return whitelist_check
 
         # Command is allowed
@@ -62,7 +72,9 @@ class SecurityManager:
 
     async def _check_command_length(self, command: str) -> dict[str, object] | None:
         """Check if command length exceeds maximum."""
-        logger.debug(f"LENGTH CHECK: Command length={len(command)}, max={self.max_command_length}")
+        logger.debug(
+            f"LENGTH CHECK: Command length={len(command)}, max={self.max_command_length}"
+        )
         if len(command) > self.max_command_length:
             message = (
                 f"Error: Command too long (max {self.max_command_length} characters)"
@@ -78,10 +90,14 @@ class SecurityManager:
         command_lower = command.lower()
         command_parts = command.strip().split()
 
-        logger.debug(f"BLOCKED COMMANDS CHECK: Checking {len(self.blocked_commands)} blocked patterns")
+        logger.debug(
+            f"BLOCKED COMMANDS CHECK: Checking {len(self.blocked_commands)} blocked patterns"
+        )
 
         for danger in self.blocked_commands:
-            logger.debug(f"BLOCKED COMMANDS CHECK: Checking against blocked pattern: '{danger}'")
+            logger.debug(
+                f"BLOCKED COMMANDS CHECK: Checking against blocked pattern: '{danger}'"
+            )
             # Most dangerous commands should be blocked exactly
             if danger in [
                 "rm -rf",
@@ -95,7 +111,9 @@ class SecurityManager:
                 "halt",
             ]:
                 if danger in command_lower:
-                    logger.warning(f"BLOCKED COMMANDS CHECK: MATCHED - found '{danger}' in command")
+                    logger.warning(
+                        f"BLOCKED COMMANDS CHECK: MATCHED - found '{danger}' in command"
+                    )
                     return self._create_blocked_result(
                         f"Blocked dangerous command: {command}", danger
                     )
@@ -104,13 +122,17 @@ class SecurityManager:
                 if any(
                     part.startswith(("format", "/format")) for part in command_parts
                 ):
-                    logger.warning("BLOCKED COMMANDS CHECK: MATCHED - found format-related command")
+                    logger.warning(
+                        "BLOCKED COMMANDS CHECK: MATCHED - found format-related command"
+                    )
                     return self._create_blocked_result(
                         f"Blocked format command: {command}", "format"
                     )
             # All other blocked commands - check if contained in command
             elif danger in command_lower:
-                logger.warning(f"BLOCKED COMMANDS CHECK: MATCHED - found '{danger}' in command (substring match)")
+                logger.warning(
+                    f"BLOCKED COMMANDS CHECK: MATCHED - found '{danger}' in command (substring match)"
+                )
                 return self._create_blocked_result(
                     f"Blocked command: {command}", danger
                 )

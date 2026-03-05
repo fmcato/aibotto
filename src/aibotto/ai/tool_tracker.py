@@ -128,7 +128,8 @@ class ToolTracker:
                             f"(may indicate retry logic issue)"
                         )
                         return True
-            except Exception:
+            except Exception as e:
+                logger.debug(f"Error checking tool calls: {e}")
                 continue
 
         return False
@@ -207,17 +208,17 @@ class ToolTracker:
         self, function_name: str, arguments: str, user_id: int = 0, chat_id: int = 0
     ) -> None:
         """Track a tool call for deduplication.
-        
+
         This silently tracks the tool call without logging warnings.
         """
         call_hash = self._generate_tool_call_hash(function_name, arguments)
         tracking_key = self._get_tracking_key(function_name, user_id, chat_id)
-        
+
         # Add to global tracker silently
         if tracking_key not in _tool_call_tracker:
             _tool_call_tracker[tracking_key] = set()
         _tool_call_tracker[tracking_key].add(call_hash)
-        
+
         # Also add to recent calls for this iteration
         self._recent_tool_calls.add(call_hash)
 
@@ -228,10 +229,10 @@ class ToolTracker:
         # Check if this is a duplicate without logging warnings
         call_hash = self._generate_tool_call_hash(function_name, arguments)
         tracking_key = self._get_tracking_key(function_name, user_id, chat_id)
-        
+
         if tracking_key not in _tool_call_tracker:
             return False
-            
+
         return call_hash in _tool_call_tracker[tracking_key]
 
     def reset_tracking(self) -> None:

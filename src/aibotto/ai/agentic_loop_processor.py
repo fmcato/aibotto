@@ -141,15 +141,17 @@ class BaseAgenticLoopProcessor(LLMProcessor):
             logger.error(error_msg)
             if db_ops and hasattr(db_ops, "save_message"):
                 try:
-                    conversation_id = await db_ops.get_or_create_conversation(user_id, chat_id)
+                    conversation_id = await db_ops.get_or_create_conversation(
+                        user_id, chat_id
+                    )
                     await db_ops.save_message(
                         conversation_id=conversation_id,
                         role="system",
                         content=error_msg,
                         message_type="error",
                     )
-                except Exception:
-                    pass
+                except Exception as e:
+                    logger.warning(f"Failed to save error message: {e}")
             return error_msg, None, None
 
         choice = response["choices"][0]
@@ -229,13 +231,19 @@ class BaseAgenticLoopProcessor(LLMProcessor):
                 logger.error(error_msg)
                 if db_ops:
                     await db_ops.save_message_compat(
-                        user_id=user_id, chat_id=chat_id, role="system", content=error_msg
+                        user_id=user_id,
+                        chat_id=chat_id,
+                        role="system",
+                        content=error_msg,
                     )
                 return error_msg, None, None
 
             if db_ops:
                 await db_ops.save_message_compat(
-                    user_id=user_id, chat_id=chat_id, role="assistant", content=final_content
+                    user_id=user_id,
+                    chat_id=chat_id,
+                    role="assistant",
+                    content=final_content,
                 )
             logger.info(
                 f"Final response received in iteration {self.tracker._iteration_count}: "

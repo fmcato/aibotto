@@ -16,7 +16,10 @@ logger = logging.getLogger(__name__)
 # Sensitive data patterns for masking
 SENSITIVE_PATTERNS = [
     (r"--?[A-Za-z]+['\"]?\s*=\s*['\"]?[A-Za-z0-9_\-]{20,}['\"]?", "[REDACTED]"),
-    (r"(api[_-]?key|token|secret|password)\s*[:=]\s*['\"]?[A-Za-z0-9_\-/+=]{15,}['\"]?", "[REDACTED]"),
+    (
+        r"(api[_-]?key|token|secret|password)\s*[:=]\s*['\"]?[A-Za-z0-9_\-/+=]{15,}['\"]?",
+        "[REDACTED]",
+    ),
     (r"(TELEGRAM_TOKEN|OPENAI_API_KEY)\s*=\s*['\"]?[^'\"]{10,}['\"]?", "[REDACTED]"),
 ]
 
@@ -206,7 +209,9 @@ class DatabaseOperations:
 
             for index_name, index_sql in indexes:
                 try:
-                    cursor.execute(f"CREATE INDEX IF NOT EXISTS {index_name} ON {index_sql}")
+                    cursor.execute(
+                        f"CREATE INDEX IF NOT EXISTS {index_name} ON {index_sql}"
+                    )
                 except Exception as e:
                     logger.warning(f"Failed to create index {index_name}: {e}")
 
@@ -217,9 +222,7 @@ class DatabaseOperations:
             logger.error(f"Database initialization failed: {e}")
             raise
 
-    async def get_or_create_conversation(
-        self, user_id: int, chat_id: int
-    ) -> int:
+    async def get_or_create_conversation(self, user_id: int, chat_id: int) -> int:
         """Get existing conversation or create new one.
 
         Args:
@@ -313,7 +316,9 @@ class DatabaseOperations:
                     ),
                 )
                 msg_id = cursor.lastrowid
-                logger.debug(f"Saved message {msg_id}: {role} in conversation {conversation_id}")
+                logger.debug(
+                    f"Saved message {msg_id}: {role} in conversation {conversation_id}"
+                )
                 return msg_id
         except Exception as e:
             logger.error(f"Failed to save message: {e}")
@@ -539,7 +544,13 @@ class DatabaseOperations:
                         status = CASE WHEN ? IS NOT NULL THEN 'error' ELSE 'completed' END
                     WHERE id = ?
                 """,
-                    (result_summary, error_message, actual_iterations, error_message, db_subagent_id),
+                    (
+                        result_summary,
+                        error_message,
+                        actual_iterations,
+                        error_message,
+                        db_subagent_id,
+                    ),
                 )
                 logger.debug(f"Updated subagent {db_subagent_id} completion details")
         except Exception as e:
@@ -754,7 +765,9 @@ class DatabaseOperations:
                     (conversation_id, summary),
                 )
 
-            logger.info(f"Replaced conversation with summary for user {user_id}, chat {chat_id}")
+            logger.info(
+                f"Replaced conversation with summary for user {user_id}, chat {chat_id}"
+            )
         except Exception as e:
             logger.error(f"Failed to replace conversation with summary: {e}")
             raise

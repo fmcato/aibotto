@@ -80,7 +80,7 @@ class Config:
     @classmethod
     def validate_config(cls) -> bool:
         """Validate configuration"""
-        if cls.TELEGRAM_TOKEN == "YOUR_TELEGRAM_TOKEN_HERE":
+        if cls.TELEGRAM_TOKEN == "YOUR_TELEGRAM_TOKEN_HERE":  # nosec: B105
             print("❌ TELEGRAM_TOKEN not set")
             return False
 

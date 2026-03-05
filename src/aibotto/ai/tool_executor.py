@@ -31,26 +31,18 @@ class ToolExecutor:
         return ToolDescriptions.get_tool_definitions()
 
     def _register_tools(self) -> None:
-        """Register tool executors with the registry."""
-        from ..tools.executors.cli_executor import CLIExecutor
-        from ..tools.executors.python_executor import PythonExecutor
-        from ..tools.executors.web_fetch_executor import WebFetchExecutor
-        from ..tools.executors.web_search_executor import WebSearchExecutor
-        from ..tools.delegate_tool import DelegateExecutor
-        from .subagent import init_subagents
-
-        # Initialize subagents
-        init_subagents()
-
-        # Register executors
+        """Ensure tool executors are available via the global toolset."""
         global_toolset = get_toolset()
-        global_toolset.register_executor("execute_cli_command", CLIExecutor())
-        global_toolset.register_executor("execute_python_code", PythonExecutor())
-        global_toolset.register_executor("search_web", WebSearchExecutor())
-        global_toolset.register_executor("fetch_webpage", WebFetchExecutor())
-        global_toolset.register_executor("delegate_task", DelegateExecutor())
 
-        logger.info("Registered all tool executors")
+        # The global toolset is a singleton that lazy-initializes on first access
+        # ToolRegistrySingleton.initialize_once() creates and registers all executors
+        # and calls init_subagents(), so no additional work is needed here
+
+        if not global_toolset.is_initialized():
+            # Force initialization to ensure tools are available
+            global_toolset.initialize_once()
+
+        logger.info("Tool executors available via global toolset")
 
     def get_executor(self, function_name: str):
         """Get executor for a specific tool function."""
@@ -83,7 +75,10 @@ class ToolExecutor:
             error_result = "No function name provided"
             if db_ops:
                 await db_ops.save_message_compat(
-                    user_id=user_id, chat_id=chat_id, role="system", content=error_result
+                    user_id=user_id,
+                    chat_id=chat_id,
+                    role="system",
+                    content=error_result,
                 )
             return error_result
 
@@ -97,7 +92,7 @@ class ToolExecutor:
             # Return early for duplicates to prevent infinite loops
             logger.warning(f"Skipping duplicate tool call: {function_name}")
             return (
-                f"⚠️ Tool call \'{function_name}\' already executed in this "
+                f"⚠️ Tool call '{function_name}' already executed in this "
                 f"conversation. Skipping to prevent infinite loops."
             )
 
@@ -122,7 +117,10 @@ class ToolExecutor:
             error_result = f"Unknown tool function: {function_name}"
             if db_ops:
                 await db_ops.save_message_compat(
-                    user_id=user_id, chat_id=chat_id, role="system", content=error_result
+                    user_id=user_id,
+                    chat_id=chat_id,
+                    role="system",
+                    content=error_result,
                 )
             return error_result
 
@@ -158,7 +156,10 @@ class ToolExecutor:
             error_result = f"Error executing {function_name}: {str(e)}"
             if db_ops:
                 await db_ops.save_message_compat(
-                    user_id=user_id, chat_id=chat_id, role="system", content=error_result
+                    user_id=user_id,
+                    chat_id=chat_id,
+                    role="system",
+                    content=error_result,
                 )
             return error_result
 
