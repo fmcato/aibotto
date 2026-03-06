@@ -58,6 +58,10 @@ class ToolTracker:
         self, function_name: str, arguments: str, user_id: int, chat_id: int = 0
     ) -> bool:
         """Check if this tool call has been executed before in this conversation."""
+        # Skip duplicate checking for stateless sessions (user_id=0, chat_id=0)
+        if user_id == 0 and chat_id == 0:
+            return False
+
         call_hash = self._generate_tool_call_hash(function_name, arguments)
         tracking_key = self._get_tracking_key(function_name, user_id, chat_id)
 
