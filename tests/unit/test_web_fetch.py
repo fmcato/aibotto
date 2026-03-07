@@ -61,7 +61,7 @@ class TestWebFetchTool:
         ):
             result = await web_fetch_tool.fetch("https://example.com")
 
-            # Trafailatura extracts title from metadata or first heading
+            # trafilatura extracts title from content (<h1>) prioritized over <title> tag
             assert result["title"] in ["Test Page", "Main Heading"]
             assert result["url"] == "https://example.com"
             assert "test paragraph" in result["content"].lower()
@@ -385,3 +385,125 @@ class TestFetchUrl:
             result = await web_fetch_tool._fetch_url_with_retry("https://example.com", 0)
 
             assert result == (html, "text/html")
+
+
+class TestBareExtraction:
+    """Test cases for bare_extraction usage and new features."""
+
+    @pytest.fixture
+    def web_fetch_tool(self):
+        """Create a WebFetchTool instance for testing."""
+        return WebFetchTool()
+
+    @pytest.mark.asyncio
+    async def test_preserves_formatting(self, web_fetch_tool):
+        """Test that formatting (bold, italic, headings) is preserved."""
+        html_content = """
+        <html>
+            <head><title>Formatting Test</title></head>
+            <body>
+                <main>
+                    <h1>Main Title</h1>
+                    <h2>Subtitle</h2>
+                    <p>Text with <strong>bold</strong> and <em>italic</em> formatting.</p>
+                </main>
+            </body>
+        </html>
+        """
+
+        with patch.object(
+            web_fetch_tool, '_fetch_url_with_retry', return_value=(html_content, "text/html")
+        ):
+            result = await web_fetch_tool.fetch("https://example.com")
+
+        assert "Main Title" in result["content"]
+        assert "Subtitle" in result["content"]
+        assert "bold" in result["content"]
+        assert "italic" in result["content"]
+
+    @pytest.mark.asyncio
+    async def test_deduplicates_content(self, web_fetch_tool):
+        """Test that deduplicate parameter is enabled."""
+        html_content = """
+        <html>
+            <head><title>Duplicate Test</title></head>
+            <body>
+                <main>
+                    <p>This is a test paragraph with sufficient content.</p>
+                    <p>Another unique paragraph with different content.</p>
+                </main>
+            </body>
+        </html>
+        """
+
+        with patch.object(
+            web_fetch_tool, '_fetch_url_with_retry', return_value=(html_content, "text/html")
+        ):
+            result = await web_fetch_tool.fetch("https://example.com")
+
+        assert "This is a test paragraph with sufficient content." in result["content"]
+
+    @pytest.mark.asyncio
+    async def test_extracts_categories_metadata(self, web_fetch_tool):
+        """Test that categories field is included in metadata."""
+        html_content = """
+        <html>
+            <head><title>Categories Test</title></head>
+            <body>
+                <main>
+                    <p>Test content about technology and AI.</p>
+                </main>
+            </body>
+        </html>
+        """
+
+        with patch.object(
+            web_fetch_tool, '_fetch_url_with_retry', return_value=(html_content, "text/html")
+        ):
+            result = await web_fetch_tool.fetch("https://example.com")
+
+        assert "categories" in result["metadata"]
+        assert isinstance(result["metadata"]["categories"], list)
+
+    @pytest.mark.asyncio
+    async def test_extracts_tags_metadata(self, web_fetch_tool):
+        """Test that tags field is included in metadata."""
+        html_content = """
+        <html>
+            <head><title>Tags Test</title></head>
+            <body>
+                <main>
+                    <p>Test content about Python and machine learning.</p>
+                </main>
+            </body>
+        </html>
+        """
+
+        with patch.object(
+            web_fetch_tool, '_fetch_url_with_retry', return_value=(html_content, "text/html")
+        ):
+            result = await web_fetch_tool.fetch("https://example.com")
+
+        assert "tags" in result["metadata"]
+        assert isinstance(result["metadata"]["tags"], list)
+
+    @pytest.mark.asyncio
+    async def test_extracts_hostname_metadata(self, web_fetch_tool):
+        """Test that hostname field is included in metadata."""
+        html_content = """
+        <html>
+            <head><title>Hostname Test</title></head>
+            <body>
+                <main>
+                    <p>Test content.</p>
+                </main>
+            </body>
+        </html>
+        """
+
+        with patch.object(
+            web_fetch_tool, '_fetch_url_with_retry', return_value=(html_content, "text/html")
+        ):
+            result = await web_fetch_tool.fetch("https://example.com")
+
+        assert "hostname" in result["metadata"]

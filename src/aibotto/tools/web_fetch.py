@@ -5,12 +5,13 @@ Web fetch tool for extracting readable content from URLs.
 import asyncio
 import logging
 import random
-from typing import Any
+from typing import Any, cast
 from urllib.parse import urlparse
 
 import aiohttp
 import trafilatura
-from trafilatura import extract
+from trafilatura import bare_extraction
+from trafilatura.settings import Document
 
 from ..config.settings import Config
 from ..config.headers_config import (
@@ -235,7 +236,7 @@ class WebFetchTool:
         html: str,
         url: str,
         include_links: bool,
-    ) -> str:
+    ) -> tuple[str, Document | None]:
         """Extract content with precision → recall fallback.
 
         Args:
@@ -244,30 +245,38 @@ class WebFetchTool:
             include_links: Whether to include links in extraction
 
         Returns:
-            Extracted text content or empty string
+            Tuple of (text_content, Document object)
         """
-        extracted = extract(
+        result = cast(Document | None, bare_extraction(
             html,
             url=url,
             include_links=include_links,
             include_comments=False,
             include_images=False,
-            output_format="txt",
+            include_formatting=True,
+            deduplicate=True,
+            output_format="python",
             favor_precision=True,
-        )
+        ))
 
-        if not extracted or extracted.strip() == "":
-            extracted = extract(
+        if result is None or not result.text or result.text.strip() == "":
+            result = cast(Document | None, bare_extraction(
                 html,
                 url=url,
                 include_links=include_links,
                 include_comments=False,
                 include_images=False,
-                output_format="txt",
+                include_formatting=True,
+                deduplicate=True,
+                output_format="python",
                 favor_recall=True,
-            )
+            ))
 
-        return extracted or ""
+        if result and result.text:
+            return (result.text, result)
+        if result:
+            return ("", result)
+        return ("", None)
 
     def _extract_content(
         self,
@@ -284,19 +293,17 @@ class WebFetchTool:
         # Regular HTML content extraction
         if no_citations:
             # Plain text extraction without citations
-            content = self._extract_with_fallback(html, url, include_links=False)
+            content, doc = self._extract_with_fallback(html, url, include_links=False)
         else:
             # Use trafilatura\'s built-in markdown link generation
-            content = self._extract_with_fallback(html, url, include_links=True)
+            content, doc = self._extract_with_fallback(html, url, include_links=True)
             # Filter unwanted links (anchors, javascript:, mailto:, etc.)
             content = self._filter_unwanted_links(content)
 
-        # Extract metadata using trafilatura
+        # Extract metadata using extract_metadata for better <title> extraction
         metadata = trafilatura.extract_metadata(html, default_url=url)
 
-        title = ""
-        if metadata:
-            title = metadata.title or ""
+        title = metadata.title if metadata and metadata.title else ""
         if not title:
             # Fallback to URL-derived title
             title = url.split("/")[-1] or url
@@ -306,9 +313,12 @@ class WebFetchTool:
             "content": content.strip(),
             "url": url,
             "metadata": {
-                "description": metadata.description if metadata else None,
-                "author": metadata.author if metadata else None,
-                "published_date": metadata.date if metadata else None,
+                "description": doc.description if doc else (metadata.description if metadata else None),
+                "author": doc.author if doc else (metadata.author if metadata else None),
+                "published_date": doc.date if doc else (metadata.date if metadata else None),
+                "categories": list(doc.categories) if doc and doc.categories else [],
+                "tags": list(doc.tags) if doc and doc.tags else [],
+                "hostname": doc.hostname if doc else (metadata.hostname if metadata else None),
             },
         }
 

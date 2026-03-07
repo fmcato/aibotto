@@ -96,7 +96,8 @@ class TestLinkCitations:
 
         assert "[Return to top]" not in result["content"]
         assert "Return to top" in result["content"]
-        assert "#" not in result["content"]
+        assert "#top" not in result["content"]
+        assert "#section" not in result["content"]
 
     @pytest.mark.asyncio
     async def test_filters_javascript_links(self, web_fetch_tool):
