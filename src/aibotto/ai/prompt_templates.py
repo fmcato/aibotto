@@ -106,6 +106,7 @@ _COMPUTATIONAL_PREFERENCE = """
 
 _BEHAVIORAL_RULES = """
 **CRITICAL BEHAVIOR RULES:**
+- You can call multiple tools in parallel in a single turn
 - Execute each tool ONCE and provide the best answer you can
 - NEVER retry the same tool with the same parameters to "verify" or "get more details"
 - If results are incomplete, try a DIFFERENT tool or approach
