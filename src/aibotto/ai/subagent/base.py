@@ -69,7 +69,7 @@ class SubAgent(BaseAgenticLoopProcessor):
 
 OPERATIONAL LIMITS:
 - Maximum iterations allowed: {self._definition.max_iterations}
-- Use your iterations wisely - each tool call counts as one iteration
+- Each LLM turn counts as one iteration (you can call multiple tools in parallel per iteration)
 - Plan your approach before executing to stay within the limit"""
 
         return base_prompt + dynamic_context

@@ -21,20 +21,20 @@ class ToolExecutor(ABC):
     async def execute(
         self, arguments: str, user_id: int = 0, db_ops: Any = None, chat_id: int = 0
     ) -> str:
-        """Execute the tool with given arguments using template method pattern.
+        """Execute the tool with arguments.
 
         Args:
             arguments: JSON string of arguments
             user_id: User ID for logging
-            db_ops: Database operations instance
-            chat_id: Chat ID for database operations
+            db_ops: Database operations for saving results (optional, positional)
+            chat_id: Chat ID for database operations (optional)
 
         Returns:
             Tool execution result as string
         """
         try:
             args = self._parse_arguments(arguments)
-            result = await self._do_execute(args, user_id, chat_id)
+            result = await self._do_execute(args, user_id, chat_id, db_ops)
             await self._save_if_needed(db_ops, user_id, chat_id, result)
             return result
         except Exception as e:
@@ -76,13 +76,16 @@ class ToolExecutor(ABC):
             )
 
     @abstractmethod
-    async def _do_execute(self, args: dict, user_id: int, chat_id: int = 0) -> str:
+    async def _do_execute(
+        self, args: dict, user_id: int, chat_id: int = 0, db_ops: Any = None
+    ) -> str:
         """Implement in subclass: actual execution logic.
 
         Args:
             args: Parsed arguments dictionary
             user_id: User ID for logging
             chat_id: Chat ID for database operations
+            db_ops: Database operations (optional)
 
         Returns:
             Tool execution result as string

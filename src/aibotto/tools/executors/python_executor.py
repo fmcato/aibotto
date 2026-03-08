@@ -2,6 +2,8 @@
 Python code executor with relaxed length limits.
 """
 
+from typing import Any
+
 from ...tools.python_security_manager import PythonSecurityManager
 from ...tools.base import ToolExecutor, ToolExecutionError
 from ...tools.subprocess_runner import SubprocessRunner
@@ -28,7 +30,9 @@ class PythonExecutor(ToolExecutor, SubprocessRunner):
         else:
             return f"uv run python -c '{code}'"
 
-    async def _do_execute(self, args: dict, user_id: int, chat_id: int = 0) -> str:
+    async def _do_execute(
+        self, args: dict, user_id: int, chat_id: int = 0, db_ops: Any = None
+    ) -> str:
         """Execute Python code safely and return output.
 
         Args:

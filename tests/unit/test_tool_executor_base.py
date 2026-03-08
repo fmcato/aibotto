@@ -22,7 +22,7 @@ class DummyExecutor(ToolExecutor):
         self.do_execute_user_id = None
         self.do_execute_chat_id = None
 
-    async def _do_execute(self, args: dict, user_id: int, chat_id: int = 0) -> str:
+    async def _do_execute(self, args: dict, user_id: int, chat_id: int = 0, db_ops=None) -> str:
         self.do_execute_called = True
         self.do_execute_args = args
         self.do_execute_user_id = user_id
@@ -133,7 +133,7 @@ class TestToolExecutorBase:
     async def test_execute_exception_in_do_execute(self, executor):
         """Test execute handles exception in _do_execute."""
         class FailingExecutor(ToolExecutor):
-            async def _do_execute(self, args: dict, user_id: int, chat_id: int = 0) -> str:
+            async def _do_execute(self, args: dict, user_id: int, chat_id: int = 0, db_ops=None) -> str:
                 raise ValueError("Something went wrong")
 
         failing_executor = FailingExecutor()
@@ -144,7 +144,7 @@ class TestToolExecutorBase:
     async def test_execute_exception_saves_to_db(self, mock_db_ops):
         """Test execute saves exception message to database."""
         class FailingExecutor(ToolExecutor):
-            async def _do_execute(self, args: dict, user_id: int, chat_id: int = 0) -> str:
+            async def _do_execute(self, args: dict, user_id: int, chat_id: int = 0, db_ops=None) -> str:
                 raise ValueError("Something went wrong")
 
         failing_executor = FailingExecutor()

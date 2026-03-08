@@ -57,7 +57,7 @@ class IterationManager:
             remaining = self.max_iterations - iteration
 
             # Add warning when running low on turns
-            if remaining <= 3:
+            if remaining <= 2:
                 messages.append(
                     {
                         "role": "user",

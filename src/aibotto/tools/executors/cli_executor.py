@@ -2,6 +2,8 @@
 CLI command executor with safety measures.
 """
 
+from typing import Any
+
 from ...tools.cli_security_manager import CLISecurityManager
 from ...tools.base import ToolExecutor, ToolExecutionError
 from ...tools.subprocess_runner import SubprocessRunner
@@ -14,7 +16,9 @@ class CLIExecutor(ToolExecutor, SubprocessRunner):
         super().__init__()
         self.security_manager = CLISecurityManager()
 
-    async def _do_execute(self, args: dict, user_id: int, chat_id: int = 0) -> str:
+    async def _do_execute(
+        self, args: dict, user_id: int, chat_id: int = 0, db_ops: Any = None
+    ) -> str:
         """Execute CLI command safely and return output.
 
         Args:

@@ -32,6 +32,7 @@ class ToolExecutionInterface(Protocol):
         user_id: int = 0,
         chat_id: int = 0,
         db_ops: DatabaseOperations | None = None,
+        message_id: int = 0,
     ) -> list[dict[str, Any]]:
         """Execute tool calls and return results.
 
@@ -40,6 +41,7 @@ class ToolExecutionInterface(Protocol):
             user_id: User ID for logging
             chat_id: Chat ID for database operations
             db_ops: Database operations for saving results
+            message_id: Message ID for database tracking (optional)
 
         Returns:
             List of tool results with tool_call_id and content
@@ -201,21 +203,28 @@ class BaseAgenticLoopProcessor(LLMProcessor):
         )
 
         if tool_calls:
+            # Save assistant message with tool calls to history BEFORE executing tools
+            assistant_message = MessageProcessor.extract_response_content(message_obj)
+            message_id = 0
+            if db_ops:
+                try:
+                    conversation_id = await db_ops.get_or_create_conversation(
+                        user_id, chat_id
+                    )
+                    message_id = await db_ops.save_message(
+                        conversation_id=conversation_id,
+                        role="assistant",
+                        content=assistant_message,
+                        message_type="chat",
+                    )
+                except Exception as e:
+                    logger.warning(f"Failed to save assistant message: {e}")
+
             # Execute tool calls using subclass-specific implementation
             tool_executor = self.get_tool_execution_interface()
             tool_results = await tool_executor.execute_tool_calls(
-                tool_calls, user_id, chat_id, db_ops
+                tool_calls, user_id, chat_id, db_ops, message_id=message_id
             )
-
-            # Save assistant message with tool calls to history
-            assistant_message = MessageProcessor.extract_response_content(message_obj)
-            if db_ops:
-                await db_ops.save_message_compat(
-                    user_id=user_id,
-                    chat_id=chat_id,
-                    role="assistant",
-                    content=assistant_message,
-                )
 
             logger.info(
                 f"Tool execution completed for iteration {self.tracker._iteration_count}, "

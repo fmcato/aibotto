@@ -2,13 +2,17 @@
 Web fetch executor for fetching webpage content.
 """
 
+from typing import Any
+
 from ...tools.base import ToolExecutor, ToolExecutionError
 
 
 class WebFetchExecutor(ToolExecutor):
     """Executor for web page fetching functionality."""
 
-    async def _do_execute(self, args: dict, user_id: int, chat_id: int = 0) -> str:
+    async def _do_execute(
+        self, args: dict, user_id: int, chat_id: int = 0, db_ops: Any = None
+    ) -> str:
         """Execute web fetch with given arguments.
 
         Args:

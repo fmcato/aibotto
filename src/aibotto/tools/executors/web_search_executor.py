@@ -2,13 +2,17 @@
 Web search executor for web search functionality.
 """
 
+from typing import Any
+
 from ...tools.base import ToolExecutor, ToolExecutionError
 
 
 class WebSearchExecutor(ToolExecutor):
     """Executor for web search functionality."""
 
-    async def _do_execute(self, args: dict, user_id: int, chat_id: int = 0) -> str:
+    async def _do_execute(
+        self, args: dict, user_id: int, chat_id: int = 0, db_ops: Any = None
+    ) -> str:
         """Execute web search with given arguments.
 
         Args:

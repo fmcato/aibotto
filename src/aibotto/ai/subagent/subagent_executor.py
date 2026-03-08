@@ -5,6 +5,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from aibotto.ai.subagent.registry import SubAgentRegistry
+from aibotto.db.operations import DatabaseOperations
 
 logger = logging.getLogger(__name__)
 
@@ -19,6 +20,7 @@ class SubAgentConfig:
         method_kwargs: Keyword arguments to pass to the method
         user_id: User ID for logging
         chat_id: Chat ID for logging
+        db_ops: Database operations for tracking (optional)
     """
 
     subagent_name: str
@@ -26,6 +28,7 @@ class SubAgentConfig:
     method_kwargs: dict[str, Any] = field(default_factory=dict)
     user_id: int = 0
     chat_id: int = 0
+    db_ops: DatabaseOperations | None = None
 
 
 class SubAgentExecutor:
@@ -67,6 +70,22 @@ class SubAgentExecutor:
             f"(instance_id: {subagent._instance_id})"
         )
 
+        # Save subagent to database if db_ops available
+        db_subagent_id = None
+        if self.config.db_ops:
+            try:
+                db_subagent_id = await self.config.db_ops.save_subagent(
+                    subagent_name=self.config.subagent_name,
+                    instance_id=subagent._instance_id,
+                    user_id=self.config.user_id,
+                    chat_id=self.config.chat_id,
+                    max_iterations=subagent.max_iterations,
+                    parent_agent="main",
+                    task_description=str(self.config.method_kwargs),
+                )
+            except Exception as e:
+                logger.warning(f"Failed to save subagent to database: {e}")
+
         # Get method from subagent
         if not hasattr(subagent, self.config.method):
             available = ", ".join([m for m in dir(subagent) if not m.startswith("_")])
@@ -96,10 +115,34 @@ class SubAgentExecutor:
                 f"SubAgentExecutor: {self.config.subagent_name}.{self.config.method} "
                 f"completed (instance_id: {subagent._instance_id})"
             )
+
+            # Update subagent completion in database
+            if self.config.db_ops and db_subagent_id:
+                try:
+                    await self.config.db_ops.update_subagent_completion(
+                        db_subagent_id=db_subagent_id,
+                        result_summary=result[:500] if result else None,
+                        actual_iterations=subagent.tracker._iteration_count,
+                    )
+                except Exception as e:
+                    logger.warning(f"Failed to update subagent completion: {e}")
+
             return result
         except Exception as e:
             error_msg = (
                 f"Error executing {self.config.subagent_name}.{self.config.method}: {e}"
             )
             logger.error(error_msg)
+
+            # Update subagent failure in database
+            if self.config.db_ops and db_subagent_id:
+                try:
+                    await self.config.db_ops.update_subagent_completion(
+                        db_subagent_id=db_subagent_id,
+                        error_message=str(e),
+                        actual_iterations=subagent.tracker._iteration_count,
+                    )
+                except Exception as db_e:
+                    logger.warning(f"Failed to update subagent failure: {db_e}")
+
             raise RuntimeError(error_msg) from e

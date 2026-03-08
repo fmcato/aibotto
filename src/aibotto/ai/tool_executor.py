@@ -107,6 +107,8 @@ class ToolExecutor:
         user_id: int = 0,
         db_ops: DatabaseOperations | None = None,
         chat_id: int = 0,
+        message_id: int = 0,
+        tool_call_id: str | None = None,
     ) -> str:
         """Execute a single tool and return the result.
 
@@ -116,6 +118,8 @@ class ToolExecutor:
             user_id: User ID for logging (optional)
             db_ops: Database operations for saving results (optional)
             chat_id: Chat ID for database operations (optional)
+            message_id: Message ID for database tracking (optional)
+            tool_call_id: Tool call ID for database tracking (optional)
 
         Returns:
             Tool execution result as string
@@ -171,12 +175,30 @@ class ToolExecutor:
                 )
             return error_result
 
+        source_agent = (
+            "main" if not self.instance_id else f"subagent_{self.instance_id}"
+        )
+
         try:
             self._log(
                 "info",
                 f"Starting tool execution: {function_name} for user {user_id}, "
                 f"chat {chat_id}, iteration {self.tracker._iteration_count}",
             )
+
+            if db_ops and tool_call_id is not None:
+                try:
+                    await db_ops.save_tool_call(
+                        message_id=message_id,
+                        tool_name=function_name,
+                        tool_call_id=tool_call_id,
+                        arguments_json=arguments,
+                        source_agent=source_agent,
+                        subagent_instance_id=self.instance_id,
+                        iteration_number=self.tracker._iteration_count,
+                    )
+                except Exception as e:
+                    self._log("warning", f"Failed to save tool call: {e}")
 
             result = await executor.execute(arguments, user_id, db_ops, chat_id)
             execution_time = time.time() - start_time
@@ -193,6 +215,16 @@ class ToolExecutor:
                     f"SLOW TOOL EXECUTION: {function_name} took {execution_time:.2f}s "
                     f"for user {user_id}, chat {chat_id}",
                 )
+
+            if db_ops and tool_call_id is not None:
+                try:
+                    await db_ops.update_tool_call_result(
+                        tool_call_id=tool_call_id,
+                        result_content=result,
+                        status="completed",
+                    )
+                except Exception as e:
+                    self._log("warning", f"Failed to update tool call result: {e}")
 
             return result
 
@@ -211,6 +243,18 @@ class ToolExecutor:
                     role="system",
                     content=error_result,
                 )
+
+            if db_ops and tool_call_id is not None:
+                try:
+                    await db_ops.update_tool_call_result(
+                        tool_call_id=tool_call_id,
+                        result_content=error_result,
+                        status="failed",
+                        error_message=str(e),
+                    )
+                except Exception as db_e:
+                    self._log("warning", f"Failed to update tool call failure: {db_e}")
+
             return error_result
 
     async def execute_tool_calls(
@@ -219,6 +263,7 @@ class ToolExecutor:
         user_id: int = 0,
         chat_id: int = 0,
         db_ops: DatabaseOperations | None = None,
+        message_id: int = 0,
     ) -> list[dict[str, Any]]:
         """Execute all tool calls in parallel with optional concurrency limit.
 
@@ -227,6 +272,7 @@ class ToolExecutor:
             user_id: User ID for logging and database
             chat_id: Chat ID for database operations
             db_ops: Database operations for saving results (optional)
+            message_id: Message ID for database tracking (optional)
 
         Returns:
             List of tool results with tool_call_id and content
@@ -254,7 +300,13 @@ class ToolExecutor:
             )
 
             content = await self.execute_single_tool(
-                function_name, arguments, user_id, db_ops, chat_id
+                function_name,
+                arguments,
+                user_id,
+                db_ops,
+                chat_id,
+                message_id,
+                tool_call_id,
             )
 
             self._log(

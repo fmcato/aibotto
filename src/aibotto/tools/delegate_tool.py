@@ -1,6 +1,12 @@
-"""Generic tool for delegating tasks to specialized subagents."""
+"""Generic tool for delegating tasks to specialized subagents.
+
+Delegation tracking is integrated through the SubAgent system:
+- SubAgent lifecycle is tracked via save_subagent/update_subagent_completion
+- Parent-child relationship is maintained via conversation_id and user_id
+"""
 
 import logging
+from typing import Any
 
 from aibotto.ai.subagent.subagent_executor import SubAgentExecutor, SubAgentConfig
 from aibotto.tools.base import ToolExecutor, ToolExecutionError
@@ -9,15 +15,25 @@ logger = logging.getLogger(__name__)
 
 
 class DelegateExecutor(ToolExecutor):
-    """Generic executor for delegating tasks to any registered subagent."""
+    """Generic executor for delegating tasks to any registered subagent.
 
-    async def _do_execute(self, args: dict, user_id: int, chat_id: int = 0) -> str:
+    Delegation events are tracked through the SubAgent database operations:
+    - When a subagent is created, it gets saved via save_subagent()
+    - When execution completes, it's updated via update_subagent_completion()
+    - This provides full visibility into delegation lifecycle without manual
+      delegation table entries
+    """
+
+    async def _do_execute(
+        self, args: dict, user_id: int, chat_id: int = 0, db_ops: Any = None
+    ) -> str:
         """Delegate task to specified subagent.
 
         Args:
             args: Parsed arguments with 'subagent_name', 'method', and 'task_description'
             user_id: User ID for logging
             chat_id: Chat ID for database operations
+            db_ops: Database operations (optional)
 
         Returns:
             Result from the subagent
@@ -41,6 +57,7 @@ class DelegateExecutor(ToolExecutor):
             method_kwargs={"initial_message": task_description},
             user_id=user_id,
             chat_id=chat_id,
+            db_ops=db_ops,
         )
 
         executor = SubAgentExecutor(config)

@@ -31,7 +31,9 @@ class UserAspectExecutor(ToolExecutor):
         self._db_ops = db_ops
         return await super().execute(arguments, user_id, db_ops, chat_id)
 
-    async def _do_execute(self, args: dict, user_id: int, chat_id: int = 0) -> str:
+    async def _do_execute(
+        self, args: dict, user_id: int, chat_id: int = 0, db_ops: Any = None
+    ) -> str:
         """Store a user aspect with validation.
 
         Args:
