@@ -2,7 +2,7 @@
 DB module - Database operations for agentic framework.
 """
 
-from .models import Conversation, Delegation, Message, SubAgent, ToolCall
+from .models import Conversation, Delegation, Message, SubAgent, ToolCall, UserAspect
 from .operations import DatabaseOperations
 
 __all__ = [
@@ -11,5 +11,6 @@ __all__ = [
     "ToolCall",
     "SubAgent",
     "Delegation",
+    "UserAspect",
     "DatabaseOperations",
 ]

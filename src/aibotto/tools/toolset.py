@@ -98,6 +98,7 @@ class ToolRegistrySingleton:
         from ..tools.executors.web_fetch_executor import WebFetchExecutor
         from ..tools.executors.web_search_executor import WebSearchExecutor
         from ..tools.delegate_tool import DelegateExecutor
+        from ..tools.executors.user_aspect_executor import UserAspectExecutor
         from ..ai.subagent import init_subagents
 
         # Create executors once (they're stateless)
@@ -106,6 +107,8 @@ class ToolRegistrySingleton:
         self._executors["search_web"] = WebSearchExecutor()
         self._executors["fetch_webpage"] = WebFetchExecutor()
         self._executors["delegate_task"] = DelegateExecutor()
+        user_aspect_executor = UserAspectExecutor()
+        self._executors["store_user_aspect"] = user_aspect_executor
 
         # Initialize subagents once
         init_subagents()

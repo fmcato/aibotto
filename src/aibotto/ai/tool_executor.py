@@ -150,7 +150,9 @@ class ToolExecutor:
         if self.tracker.is_similar_tool_call(
             function_name, arguments, user_id, chat_id
         ):
-            self._log("info", f"Implementing smart retry prevention for {function_name}")
+            self._log(
+                "info", f"Implementing smart retry prevention for {function_name}"
+            )
             if "python3" in arguments.lower() and "calc" in arguments.lower():
                 return (
                     "🔄 I already attempted a similar calculation. Let me try a "

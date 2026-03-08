@@ -94,11 +94,12 @@ _COMPUTATIONAL_PREFERENCE = """
 - Data transformations
 - Any problem with a known algorithmic solution
 
-**Use search_web only for:**
+**Use delegate_task for web research:**
 - Current events, news, recent developments
 - Factual information not computable (population, prices, etc.)
 - Finding documentation or tutorials
 - Topics requiring multiple sources
+- Use subagent_name="web_research" to delegate web searches with source evaluation
 
 **Example:** "What is the 500000th prime?" → Use Python with Sieve of Eratosthenes, NOT web search
 """
@@ -271,9 +272,8 @@ class SystemPrompts:
     - **CRITICAL**: Do NOT call the same tool with the same parameters multiple times
     - **CRITICAL**: Do NOT fetch the same URL more than once
     - **CRITICAL**: Use Python (execute_cli_command) for ALL mathematical computations
-    - **CRITICAL**: Use search_web ONLY for non-computable information (news, facts, events)
-    - **Use delegate_task**: For complex research (web_research)
-    - **Use search_web**: For quick web searches without needing synthesis
+    - **CRITICAL**: Use delegate_task for ALL web search and research tasks
+    - **Use delegate_task**: For web research (subagent_name="web_research")
     - **Use fetch_webpage**: For URLs the user provides or you already have
     - If a tool result is not useful, try a DIFFERENT approach instead of repeating
     - **For calculations**: Once you get a result, provide your answer. Don't retry to "verify" or get "more details"
@@ -509,13 +509,56 @@ class ToolDescriptions:
         },
     }
 
+    USER_ASPECT_TOOL_DESCRIPTION = {
+        "type": "function",
+        "function": {
+            "name": "store_user_aspect",
+            "description": (
+                "Store a discovered aspect about the user. Use when you learn something meaningful "
+                "about their personality, interests, status, preferences, or other characteristics. "
+                "This helps build a user profile that improves future conversations. "
+                "Examples: 'enjoys Python programming', 'works as a software engineer', 'likes hiking', 'friendly personality'"
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "category": {
+                        "type": "string",
+                        "description": (
+                            "Category of the aspect (e.g., 'interests', 'personality', 'status', "
+                            "'preferences', 'profession', 'lifestyle')"
+                        ),
+                    },
+                    "aspect": {
+                        "type": "string",
+                        "description": (
+                            "The discovered aspect description (e.g., 'enjoys Python programming', "
+                            "'works as software engineer', 'friendly personality')"
+                        ),
+                    },
+                    "confidence": {
+                        "type": "number",
+                        "description": (
+                            "Confidence level 0.0-1.0 (default 0.5). Use higher confidence "
+                            "when you're very certain about the aspect, lower when less certain."
+                        ),
+                        "minimum": 0,
+                        "maximum": 1,
+                        "default": 0.5,
+                    },
+                },
+                "required": ["category", "aspect"],
+            },
+        },
+    }
+
     @classmethod
     def get_tool_definitions(cls) -> list[dict[str, Any]]:
         """Get all available tool definitions."""
         return [
             cls.PYTHON_TOOL_DESCRIPTION,
             cls.CLI_TOOL_DESCRIPTION,
-            cls.WEB_SEARCH_TOOL_DESCRIPTION,
             cls.WEB_FETCH_TOOL_DESCRIPTION,
             cls.DELEGATE_TASK_TOOL_DESCRIPTION,
+            cls.USER_ASPECT_TOOL_DESCRIPTION,
         ]

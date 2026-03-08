@@ -25,16 +25,15 @@ class SecurityManager(BaseSecurityManager):
     def _get_blocked_items(self) -> list[str]:
         """Get blocked commands list."""
         return self.config.BLOCKED_COMMANDS
-    
+
     def _get_allowed_items(self) -> list[str]:
         """Get allowed commands list."""
         return self.config.ALLOWED_COMMANDS
-    
+
     def _get_max_length(self) -> int:
         """Get maximum command length."""
         return self.config.MAX_COMMAND_LENGTH
-    
-    
+
     async def _check_blocked_items(self, command: str) -> dict[str, Any] | None:
         """Check for blocked commands using precise matching."""
         command_lower = command.lower()
@@ -76,13 +75,11 @@ class SecurityManager(BaseSecurityManager):
                 logger.warning(
                     f"BLOCKED COMMANDS CHECK: MATCHED - found '{danger}' in command (substring match)"
                 )
-                return self._create_blocked_result_dict(
-                    f"Blocked command: {command}"
-                )
+                return self._create_blocked_result_dict(f"Blocked command: {command}")
 
         logger.debug("BLOCKED COMMANDS CHECK: PASSED - no blocked commands found")
         return None
-    
+
     async def _check_allowed_items(self, command: str) -> dict[str, Any] | None:
         """Check if command is in allowed whitelist (if enabled)."""
         if not self.allowed_items:

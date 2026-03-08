@@ -182,6 +182,20 @@ class DatabaseOperations:
                 )
             """)
 
+            # Create user_aspects table
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS user_aspects (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    user_id INTEGER NOT NULL,
+                    category TEXT NOT NULL,
+                    aspect TEXT NOT NULL,
+                    confidence REAL DEFAULT 0.5,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    UNIQUE(user_id, category)
+                )
+            """)
+
             # Create indexes for performance
             indexes = [
                 ("idx_conversations_user_chat", "conversations(user_id, chat_id)"),
@@ -205,6 +219,8 @@ class DatabaseOperations:
                 ("idx_delegations_message", "delegations(message_id)"),
                 ("idx_delegations_status", "delegations(status)"),
                 ("idx_delegations_conversation", "delegations(conversation_id)"),
+                ("idx_user_aspects_user_id", "user_aspects(user_id)"),
+                ("idx_user_aspects_category", "user_aspects(category)"),
             ]
 
             for index_name, index_sql in indexes:
@@ -880,4 +896,93 @@ class DatabaseOperations:
                 return history
         except Exception as e:
             logger.error(f"Failed to get subagent history: {e}")
+            raise
+
+    async def store_user_aspect(
+        self,
+        user_id: int,
+        category: str,
+        aspect: str,
+        confidence: float = 0.5,
+    ) -> int:
+        """Store or update a user aspect.
+
+        Args:
+            user_id: User ID
+            category: Aspect category (e.g., 'interests', 'personality')
+            aspect: The aspect description
+            confidence: Confidence level (0.0-1.0)
+
+        Returns:
+            User aspect ID (new or existing)
+        """
+        try:
+            with _get_db_connection() as cursor:
+                cursor.execute(
+                    """
+                    INSERT INTO user_aspects (user_id, category, aspect, confidence, updated_at)
+                    VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
+                    ON CONFLICT(user_id, category) DO UPDATE SET
+                        aspect = excluded.aspect,
+                        confidence = excluded.confidence,
+                        updated_at = CURRENT_TIMESTAMP
+                    """,
+                    (user_id, category, aspect, confidence),
+                )
+
+                if cursor.lastrowid > 0:
+                    aspect_id = cursor.lastrowid
+                else:
+                    cursor.execute(
+                        "SELECT id FROM user_aspects WHERE user_id = ? AND category = ?",
+                        (user_id, category),
+                    )
+                    row = cursor.fetchone()
+                    aspect_id = row[0] if row else 0
+
+                logger.debug(
+                    f"Stored user aspect {aspect_id}: {category} for user {user_id}"
+                )
+                return aspect_id
+        except Exception as e:
+            logger.error(f"Failed to store user aspect: {e}")
+            raise
+
+    async def get_user_aspects(
+        self, user_id: int, limit: int = 30
+    ) -> list[dict[str, str | float]]:
+        """Get user aspects for prompt injection.
+
+        Args:
+            user_id: User ID
+            limit: Maximum number of aspects to return
+
+        Returns:
+            List of aspect dictionaries with keys: id, category, aspect, confidence
+        """
+        try:
+            with _get_db_connection() as cursor:
+                cursor.execute(
+                    """
+                    SELECT id, category, aspect, confidence
+                    FROM user_aspects
+                    WHERE user_id = ?
+                    ORDER BY updated_at DESC
+                    LIMIT ?
+                    """,
+                    (user_id, limit),
+                )
+                aspects = []
+                for row in cursor.fetchall():
+                    aspects.append(
+                        {
+                            "id": row["id"],
+                            "category": row["category"],
+                            "aspect": row["aspect"],
+                            "confidence": row["confidence"],
+                        }
+                    )
+                return aspects
+        except Exception as e:
+            logger.error(f"Failed to get user aspects: {e}")
             raise

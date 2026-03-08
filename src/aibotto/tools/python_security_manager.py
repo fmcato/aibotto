@@ -21,11 +21,11 @@ class PythonSecurityManager(BaseSecurityManager):
     def _get_blocked_items(self) -> list[str]:
         """Get blocked patterns list."""
         return self.config.BLOCKED_PATTERNS
-    
+
     def _get_allowed_items(self) -> list[str]:
         """Get allowed imports list."""
         return self.config.ALLOWED_IMPORTS
-    
+
     def _get_max_length(self) -> int:
         """Get maximum Python code length."""
         return self.config.MAX_PYTHON_CODE_LENGTH
@@ -50,9 +50,11 @@ class PythonSecurityManager(BaseSecurityManager):
                     f"Blocked Python pattern: {pattern}"
                 )
 
-        logger.debug("PYTHON BLOCKED PATTERNS CHECK: PASSED - no blocked patterns found")
+        logger.debug(
+            "PYTHON BLOCKED PATTERNS CHECK: PASSED - no blocked patterns found"
+        )
         return None
-    
+
     async def _check_allowed_items(self, input_data: str) -> dict[str, Any] | None:
         """Check for import restrictions."""
         if not self.allowed_items:

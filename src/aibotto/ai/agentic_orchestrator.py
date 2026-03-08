@@ -84,6 +84,15 @@ class AgenticOrchestrator(BaseAgenticLoopProcessor):
         # Get base system prompt
         messages = SystemPrompts.get_base_prompt(max_turns=self.max_iterations)
 
+        # Add user aspects if available
+        if db_ops:
+            aspects = await db_ops.get_user_aspects(user_id, limit=30)
+            if aspects:
+                aspects_text = self._format_aspects_for_prompt(aspects)
+                messages.append(
+                    {"role": "system", "content": f"[User Profile]\n{aspects_text}"}
+                )
+
         # Add conversation history if available
         if db_ops:
             history = await db_ops.get_conversation_history(user_id, chat_id)
@@ -96,6 +105,28 @@ class AgenticOrchestrator(BaseAgenticLoopProcessor):
         messages.append({"role": "user", "content": message})
 
         return messages
+
+    def _format_aspects_for_prompt(self, aspects: list[dict[str, str | float]]) -> str:
+        """Format user aspects for prompt injection.
+
+        Args:
+            aspects: List of user aspects with category, aspect, and confidence
+
+        Returns:
+            Formatted string for system prompt
+        """
+        if not aspects:
+            return ""
+
+        lines = ["Known aspects about this user:"]
+        for aspect in aspects:
+            category = aspect.get("category", "unknown")
+            aspect_text = aspect.get("aspect", "")
+
+            if aspect_text:
+                lines.append(f"- {category}: {aspect_text}")
+
+        return "\n".join(lines)
 
     async def process_prompt_stateless(self, message: str) -> str:
         """Process a single prompt without database persistence (stateless).

@@ -60,7 +60,14 @@ class TestDatabaseOperations:
         tables = [row[0] for row in cursor.fetchall()]
 
         # Check each required table
-        required_tables = ["conversations", "messages", "tool_calls", "subagents", "delegations"]
+        required_tables = [
+            "conversations",
+            "messages",
+            "tool_calls",
+            "subagents",
+            "delegations",
+            "user_aspects",
+        ]
         for table in required_tables:
             assert table in tables, f"{table} table not created"
 
@@ -357,3 +364,99 @@ class TestDatabaseOperations:
         content = "This is normal text without secrets"
         masked = mask_sensitive_data(content)
         assert "[REDACTED]" not in masked
+
+    @pytest.mark.asyncio
+    async def test_store_user_aspect_new(self, db_ops):
+        """Test storing a new user aspect."""
+        aspect_id = await db_ops.store_user_aspect(
+            user_id=123,
+            category="interests",
+            aspect="enjoys Python programming",
+            confidence=0.8,
+        )
+
+        assert aspect_id is not None
+        assert isinstance(aspect_id, int)
+
+    @pytest.mark.asyncio
+    async def test_store_user_aspect_update_existing(self, db_ops):
+        """Test that storing with same user_id and category updates existing aspect."""
+        aspect_id_1 = await db_ops.store_user_aspect(
+            user_id=123,
+            category="interests",
+            aspect="enjoys Python programming",
+            confidence=0.8,
+        )
+
+        aspect_id_2 = await db_ops.store_user_aspect(
+            user_id=123,
+            category="interests",
+            aspect="loves Python and Rust",
+            confidence=0.9,
+        )
+
+        # Should return same ID (update, not insert)
+        assert aspect_id_1 == aspect_id_2
+
+        # Verify updated values
+        aspects = await db_ops.get_user_aspects(user_id=123)
+        assert len(aspects) == 1
+        assert aspects[0]["aspect"] == "loves Python and Rust"
+        assert aspects[0]["confidence"] == 0.9
+
+    @pytest.mark.asyncio
+    async def test_store_user_aspect_different_users(self, db_ops):
+        """Test that different users can have aspects with same category."""
+        aspect_id_1 = await db_ops.store_user_aspect(
+            user_id=123, category="interests", aspect="likes Python"
+        )
+
+        aspect_id_2 = await db_ops.store_user_aspect(
+            user_id=456, category="interests", aspect="likes JavaScript"
+        )
+
+        # Should create separate entries (different user_id)
+        assert aspect_id_1 is not None
+        assert aspect_id_2 is not None
+
+    @pytest.mark.asyncio
+    async def test_get_user_aspects_empty(self, db_ops):
+        """Test getting aspects for user with no stored aspects."""
+        aspects = await db_ops.get_user_aspects(user_id=123)
+        assert aspects == []
+
+    @pytest.mark.asyncio
+    async def test_get_user_aspects_multiple(self, db_ops):
+        """Test getting multiple aspects for a user."""
+        await db_ops.store_user_aspect(user_id=123, category="interests", aspect="likes Python")
+        await db_ops.store_user_aspect(user_id=123, category="profession", aspect="software engineer")
+        await db_ops.store_user_aspect(user_id=123, category="personality", aspect="friendly")
+
+        aspects = await db_ops.get_user_aspects(user_id=123)
+
+        assert len(aspects) == 3
+        categories = [a["category"] for a in aspects]
+        assert "interests" in categories
+        assert "profession" in categories
+        assert "personality" in categories
+
+    @pytest.mark.asyncio
+    async def test_get_user_aspects_limit(self, db_ops):
+        """Test that limit parameter works correctly."""
+        for i in range(5):
+            await db_ops.store_user_aspect(
+                user_id=123, category=f"category_{i}", aspect=f"aspect_{i}"
+            )
+
+        aspects = await db_ops.get_user_aspects(user_id=123, limit=3)
+        assert len(aspects) == 3
+
+    @pytest.mark.asyncio
+    async def test_store_user_aspect_default_confidence(self, db_ops):
+        """Test that default confidence is set when not provided."""
+        aspect_id = await db_ops.store_user_aspect(
+            user_id=123, category="interests", aspect="likes Python"
+        )
+
+        aspects = await db_ops.get_user_aspects(user_id=123)
+        assert aspects[0]["confidence"] == 0.5

@@ -128,9 +128,9 @@ class TestToolDescriptions:
         tool_names = [tool["function"]["name"] for tool in definitions]
         assert "execute_python_code" in tool_names
         assert "execute_cli_command" in tool_names
-        assert "search_web" in tool_names
         assert "fetch_webpage" in tool_names
         assert "delegate_task" in tool_names
+        assert "store_user_aspect" in tool_names
 
     def test_cli_tool_structure(self):
         """Test CLI tool definition structure."""

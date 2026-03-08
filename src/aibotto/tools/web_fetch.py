@@ -247,20 +247,9 @@ class WebFetchTool:
         Returns:
             Tuple of (text_content, Document object)
         """
-        result = cast(Document | None, bare_extraction(
-            html,
-            url=url,
-            include_links=include_links,
-            include_comments=False,
-            include_images=False,
-            include_formatting=True,
-            deduplicate=True,
-            output_format="python",
-            favor_precision=True,
-        ))
-
-        if result is None or not result.text or result.text.strip() == "":
-            result = cast(Document | None, bare_extraction(
+        result = cast(
+            Document | None,
+            bare_extraction(
                 html,
                 url=url,
                 include_links=include_links,
@@ -269,8 +258,25 @@ class WebFetchTool:
                 include_formatting=True,
                 deduplicate=True,
                 output_format="python",
-                favor_recall=True,
-            ))
+                favor_precision=True,
+            ),
+        )
+
+        if result is None or not result.text or result.text.strip() == "":
+            result = cast(
+                Document | None,
+                bare_extraction(
+                    html,
+                    url=url,
+                    include_links=include_links,
+                    include_comments=False,
+                    include_images=False,
+                    include_formatting=True,
+                    deduplicate=True,
+                    output_format="python",
+                    favor_recall=True,
+                ),
+            )
 
         if result and result.text:
             return (result.text, result)
@@ -313,12 +319,20 @@ class WebFetchTool:
             "content": content.strip(),
             "url": url,
             "metadata": {
-                "description": doc.description if doc else (metadata.description if metadata else None),
-                "author": doc.author if doc else (metadata.author if metadata else None),
-                "published_date": doc.date if doc else (metadata.date if metadata else None),
+                "description": doc.description
+                if doc
+                else (metadata.description if metadata else None),
+                "author": doc.author
+                if doc
+                else (metadata.author if metadata else None),
+                "published_date": doc.date
+                if doc
+                else (metadata.date if metadata else None),
                 "categories": list(doc.categories) if doc and doc.categories else [],
                 "tags": list(doc.tags) if doc and doc.tags else [],
-                "hostname": doc.hostname if doc else (metadata.hostname if metadata else None),
+                "hostname": doc.hostname
+                if doc
+                else (metadata.hostname if metadata else None),
             },
         }
 

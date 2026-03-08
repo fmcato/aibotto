@@ -22,6 +22,7 @@ class TestParallelToolCalling:
         db_ops.save_message = AsyncMock()
         db_ops.save_message_compat = AsyncMock()
         db_ops.get_or_create_conversation = AsyncMock(return_value=1)
+        db_ops.get_user_aspects = AsyncMock(return_value=[])
         return db_ops
 
     @pytest.fixture

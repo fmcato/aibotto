@@ -117,3 +117,22 @@ class Delegation:
     def __post_init__(self) -> None:
         if self.delegated_at is None:
             self.delegated_at = datetime.now()
+
+
+@dataclass
+class UserAspect:
+    """Model for storing discovered user aspects."""
+
+    id: int | None = None
+    user_id: int = 0
+    category: str = ""
+    aspect: str = ""
+    confidence: float = 0.5
+    created_at: datetime | None = None
+    updated_at: datetime | None = None
+
+    def __post_init__(self) -> None:
+        if self.created_at is None:
+            self.created_at = datetime.now()
+        if self.updated_at is None:
+            self.updated_at = datetime.now()

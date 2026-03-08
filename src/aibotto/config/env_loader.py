@@ -77,9 +77,7 @@ class EnvLoader:
             return default
 
     @staticmethod
-    def get_bool(
-        key: str, default: bool = False, required: bool = False
-    ) -> bool:
+    def get_bool(key: str, default: bool = False, required: bool = False) -> bool:
         """Load boolean environment variable.
 
         Args:
