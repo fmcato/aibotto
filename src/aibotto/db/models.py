@@ -15,7 +15,6 @@ class Conversation:
     chat_id: int = 0
     started_at: datetime | None = None
     ended_at: datetime | None = None
-    summary: str | None = None
     metadata: str | None = None
 
     def __post_init__(self) -> None:

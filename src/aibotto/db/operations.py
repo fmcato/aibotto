@@ -50,6 +50,7 @@ def _get_db_connection() -> Iterator:
         import sqlite3
 
         conn = sqlite3.connect(Config.DATABASE_PATH)
+        conn.execute("PRAGMA foreign_keys = ON")
         conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
         yield cursor
@@ -87,7 +88,6 @@ class DatabaseOperations:
                     chat_id INTEGER NOT NULL,
                     started_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                     ended_at DATETIME,
-                    summary TEXT,
                     metadata JSON
                 )
             """)
@@ -96,10 +96,10 @@ class DatabaseOperations:
             cursor.execute("""
                 CREATE TABLE IF NOT EXISTS messages (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    conversation_id INTEGER NOT NULL REFERENCES conversations(id),
+                    conversation_id INTEGER NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
                     role TEXT NOT NULL,
                     content TEXT,
-                    message_type TEXT DEFAULT 'chat',
+                    message_type TEXT DEFAULT \'chat\',
                     source_agent TEXT,
                     subagent_instance_id INTEGER,
                     iteration_number INTEGER,
@@ -115,7 +115,7 @@ class DatabaseOperations:
             cursor.execute("""
                 CREATE TABLE IF NOT EXISTS tool_calls (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    message_id INTEGER NOT NULL REFERENCES messages(id),
+                    message_id INTEGER NOT NULL REFERENCES messages(id) ON DELETE CASCADE,
                     tool_name TEXT NOT NULL,
                     tool_call_id TEXT NOT NULL,
                     arguments_json TEXT NOT NULL,
@@ -141,7 +141,7 @@ class DatabaseOperations:
                     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                     started_at DATETIME,
                     completed_at DATETIME,
-                    status TEXT DEFAULT 'idle',
+                    status TEXT DEFAULT \'idle\',
                     max_iterations INTEGER,
                     actual_iterations INTEGER DEFAULT 0,
                     parent_agent TEXT,
@@ -152,7 +152,7 @@ class DatabaseOperations:
                     result_summary TEXT,
                     error_message TEXT,
                     metadata JSON,
-                    FOREIGN KEY (conversation_id) REFERENCES conversations(id),
+                    FOREIGN KEY (conversation_id) REFERENCES conversations(id) ON DELETE CASCADE,
                     UNIQUE(subagent_name, instance_id)
                 )
             """)
@@ -161,7 +161,7 @@ class DatabaseOperations:
             cursor.execute("""
                 CREATE TABLE IF NOT EXISTS delegations (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    message_id INTEGER NOT NULL REFERENCES messages(id),
+                    message_id INTEGER NOT NULL REFERENCES messages(id) ON DELETE CASCADE,
                     parent_agent TEXT NOT NULL,
                     parent_subagent_id INTEGER,
                     child_agent_name TEXT NOT NULL,
@@ -170,7 +170,7 @@ class DatabaseOperations:
                     task_description TEXT NOT NULL,
                     delegated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                     completed_at DATETIME,
-                    status TEXT DEFAULT 'pending',
+                    status TEXT DEFAULT \'pending\',
                     result_content TEXT,
                     error_message TEXT,
                     conversation_id INTEGER NOT NULL,
@@ -178,7 +178,7 @@ class DatabaseOperations:
                     chat_id INTEGER,
                     iteration_number INTEGER,
                     FOREIGN KEY (parent_subagent_id) REFERENCES subagents(id),
-                    FOREIGN KEY (conversation_id) REFERENCES conversations(id)
+                    FOREIGN KEY (conversation_id) REFERENCES conversations(id) ON DELETE CASCADE
                 )
             """)
 
@@ -753,39 +753,28 @@ class DatabaseOperations:
             logger.error(f"Failed to clear conversation history: {e}")
             raise
 
-    async def replace_conversation_with_summary(
-        self, user_id: int, chat_id: int, summary: str
-    ) -> None:
-        """Replace conversation history with a summary message.
+    async def delete_conversation(self, user_id: int, chat_id: int) -> bool:
+        """Hard delete conversation and all related records via cascade.
 
         Args:
             user_id: User ID
             chat_id: Chat ID
-            summary: Summary text
+
+        Returns:
+            True if conversation was deleted, False if not found
         """
         try:
-            conversation_id = await self.get_or_create_conversation(user_id, chat_id)
-
             with _get_db_connection() as cursor:
-                # Delete all existing messages for this conversation
                 cursor.execute(
-                    "DELETE FROM messages WHERE conversation_id = ?", (conversation_id,)
+                    "DELETE FROM conversations WHERE user_id = ? AND chat_id = ?",
+                    (user_id, chat_id),
                 )
-
-                # Add summary as a system message
-                cursor.execute(
-                    """
-                    INSERT INTO messages (conversation_id, role, content, message_type)
-                    VALUES (?, 'system', ?, 'chat')
-                """,
-                    (conversation_id, summary),
-                )
-
-            logger.info(
-                f"Replaced conversation with summary for user {user_id}, chat {chat_id}"
-            )
+                deleted = cursor.rowcount > 0
+                if deleted:
+                    logger.info(f"Deleted conversation for user {user_id}, chat {chat_id}")
+                return deleted
         except Exception as e:
-            logger.error(f"Failed to replace conversation with summary: {e}")
+            logger.error(f"Failed to delete conversation: {e}")
             raise
 
     async def get_tool_call_stats(

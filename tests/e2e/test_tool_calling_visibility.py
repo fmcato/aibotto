@@ -180,10 +180,11 @@ class TestToolCallingVisibility:
 
     @pytest.mark.asyncio
     async def test_conversation_history_isolation(self, tool_manager, real_db_ops):
-        """Test that tool calling doesn't expose previous tool calls in conversation history."""
+        """Test that tool calling doesn\'t expose previous tool calls in conversation history."""
         # Add some initial conversation history
-        await real_db_ops.save_message(12345, 67890, 0, "user", "Hello")
-        await real_db_ops.save_message(12345, 67890, 0, "assistant", "Hello! How can I help you today?")
+        conversation_id = await real_db_ops.get_or_create_conversation(12345, 67890)
+        await real_db_ops.save_message(conversation_id, "user", "Hello")
+        await real_db_ops.save_message(conversation_id, "assistant", "Hello! How can I help you today?")
 
         # Mock the first LLM response (contains tool call)
         mock_first_response = {

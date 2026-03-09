@@ -278,24 +278,47 @@ class TestDatabaseOperations:
         assert new_conversation_id != conversation_id
 
     @pytest.mark.asyncio
-    async def test_replace_conversation_with_summary(self, db_ops):
-        """Test replacing conversation with summary."""
+    async def test_delete_conversation_cascade(self, db_ops):
+        """Test that deleting conversation cascades to related records."""
+        from src.aibotto.db.operations import _get_db_connection
+
         conversation_id = await db_ops.get_or_create_conversation(123, 456)
 
-        await db_ops.save_message(
-            conversation_id=conversation_id,
-            role="user",
-            content="Hello",
-            message_type="chat",
-            source_agent="main_agent",
+        message_id = await db_ops.save_message(
+            conversation_id=conversation_id, role="user", content="test"
         )
 
-        await db_ops.replace_conversation_with_summary(123, 456, "Summary of conversation")
+        tool_call_id = await db_ops.save_tool_call(
+            message_id=message_id, tool_name="test_tool",
+            tool_call_id="tc_123", arguments_json="{}", source_agent="main"
+        )
 
-        history = await db_ops.get_conversation_history(123, 456)
-        assert len(history) == 1
-        assert history[0]["role"] == "system"
-        assert history[0]["content"] == "Summary of conversation"
+        subagent_id = await db_ops.save_subagent(
+            subagent_name="web_research", instance_id=1,
+            conversation_id=conversation_id
+        )
+
+        delegation_id = await db_ops.save_delegation(
+            message_id=message_id, conversation_id=conversation_id,
+            parent_agent="main", child_agent_name="web_research",
+            child_subagent_id=subagent_id, task_description="test task"
+        )
+
+        deleted = await db_ops.delete_conversation(123, 456)
+        assert deleted is True
+
+        with _get_db_connection() as cursor:
+            cursor.execute("SELECT COUNT(*) FROM messages WHERE conversation_id = ?", (conversation_id,))
+            assert cursor.fetchone()[0] == 0
+
+            cursor.execute("SELECT COUNT(*) FROM tool_calls WHERE id = ?", (tool_call_id,))
+            assert cursor.fetchone()[0] == 0
+
+            cursor.execute("SELECT COUNT(*) FROM subagents WHERE id = ?", (subagent_id,))
+            assert cursor.fetchone()[0] == 0
+
+            cursor.execute("SELECT COUNT(*) FROM delegations WHERE id = ?", (delegation_id,))
+            assert cursor.fetchone()[0] == 0
 
     @pytest.mark.asyncio
     async def test_get_tool_call_stats(self, db_ops):
