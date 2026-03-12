@@ -360,7 +360,15 @@ class ToolDescriptions:
                             "System info: date, uname, whoami, hostname, ps, df, free, top. "
                             "WARNING: Do NOT use for Python code execution."
                         ),
-                    }
+                    },
+                    "stdin": {
+                        "type": "string",
+                        "description": (
+                            "Optional input data to pass to the command via stdin. "
+                            "Useful for commands that read from standard input like grep, awk, sed, sort, etc. "
+                            "Example: command='grep pattern', stdin='line1\\nline2\\npattern_line\\n'"
+                        ),
+                    },
                 },
                 "required": ["command"],
             },

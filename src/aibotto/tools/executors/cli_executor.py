@@ -22,7 +22,7 @@ class CLIExecutor(ToolExecutor, SubprocessRunner):
         """Execute CLI command safely and return output.
 
         Args:
-            args: Parsed arguments with 'command' field
+            args: Parsed arguments with 'command' field and optional 'stdin' field
             user_id: User ID for logging
             chat_id: Chat ID for database operations
 
@@ -30,6 +30,7 @@ class CLIExecutor(ToolExecutor, SubprocessRunner):
             Command output or error message
         """
         command = args.get("command")
+        stdin = args.get("stdin")
 
         if not command:
             raise ToolExecutionError("No command provided")
@@ -41,4 +42,4 @@ class CLIExecutor(ToolExecutor, SubprocessRunner):
             self.logger.warning(f"Command blocked for security: {command}")
             return str(security_check["message"])
 
-        return await self._run_subprocess(command, user_id, self.logger)
+        return await self._run_subprocess(command, user_id, self.logger, stdin=stdin)

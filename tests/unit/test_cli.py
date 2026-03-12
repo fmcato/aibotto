@@ -51,6 +51,60 @@ class TestCLIExecutor:
         assert result == "Command blocked"
         executor.security_manager.validate_command.assert_called_once_with("rm -rf /")
 
+    @pytest.mark.asyncio
+    async def test_execute_command_error(self, executor):
+        """Test command execution when command fails."""
+        executor.security_manager.validate_command = AsyncMock(return_value={"allowed": True})
+
+        with patch("asyncio.create_subprocess_shell") as mock_subprocess:
+            mock_process = MagicMock()
+            mock_process.returncode = 1
+            mock_process.communicate = AsyncMock(return_value=(b"", b"Command not found\n"))
+            mock_subprocess.return_value = mock_process
+
+            arguments = '{"command": "invalid_command"}'
+            result = await executor.execute(arguments, 0, None, 0)
+
+            assert result == "Error: Command not found\n"
+            executor.security_manager.validate_command.assert_called_once_with("invalid_command")
+
+    @pytest.mark.asyncio
+    async def test_execute_command_with_stdin(self, executor):
+        """Test command execution with stdin input."""
+        executor.security_manager.validate_command = AsyncMock(return_value={"allowed": True})
+
+        with patch("asyncio.create_subprocess_shell") as mock_subprocess:
+            mock_process = MagicMock()
+            mock_process.returncode = 0
+            mock_process.communicate = AsyncMock(return_value=(b"hello world\n", b""))
+            mock_subprocess.return_value = mock_process
+
+            arguments = '{"command": "grep hello", "stdin": "hello world"}'
+            result = await executor.execute(arguments, 0, None, 0)
+
+            assert result == "hello world\n"
+            executor.security_manager.validate_command.assert_called_once_with("grep hello")
+            mock_subprocess.assert_called_once()
+            mock_process.communicate.assert_called_once_with(input=b"hello world")
+
+    @pytest.mark.asyncio
+    async def test_execute_command_with_stdin_error(self, executor):
+        """Test command execution with stdin when command fails."""
+        executor.security_manager.validate_command = AsyncMock(return_value={"allowed": True})
+
+        with patch("asyncio.create_subprocess_shell") as mock_subprocess:
+            mock_process = MagicMock()
+            mock_process.returncode = 1
+            mock_process.communicate = AsyncMock(return_value=(b"", b"Error processing input\n"))
+            mock_subprocess.return_value = mock_process
+
+            arguments = '{"command": "grep hello", "stdin": "hello"}'
+            result = await executor.execute(arguments, 0, None, 0)
+
+            assert result == "Error: Error processing input\n"
+            executor.security_manager.validate_command.assert_called_once_with("grep hello")
+            mock_process.communicate.assert_called_once_with(input=b"hello")
+
 
 class TestSecurityManager:
     """Test cases for CLI SecurityManager class."""

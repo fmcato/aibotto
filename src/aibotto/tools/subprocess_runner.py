@@ -26,7 +26,7 @@ class SubprocessRunner:
     """Mixin class providing subprocess execution functionality."""
 
     async def _run_subprocess(
-        self, command: str, user_id: int, logger: SubprocessLogger
+        self, command: str, user_id: int, logger: SubprocessLogger, stdin: str | None = None
     ) -> str:
         """Run a command in a subprocess and return output.
 
@@ -34,16 +34,25 @@ class SubprocessRunner:
             command: Command to execute
             user_id: User ID for logging
             logger: Logger instance for subprocess operations
+            stdin: Optional input data to pass to the command via stdin
 
         Returns:
             Command output or error message
         """
         logger.info(f"Starting subprocess for command: {command}")
 
+        if stdin:
+            logger.info(f"stdin input (first 200 chars): {stdin[:200]}...")
+
         process = await asyncio.create_subprocess_shell(
-            command, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
+            command,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+            stdin=asyncio.subprocess.PIPE if stdin else None,
         )
-        stdout, stderr = await process.communicate()
+
+        stdin_bytes = stdin.encode("utf-8") if stdin else None
+        stdout, stderr = await process.communicate(input=stdin_bytes)
 
         if process.returncode == 0:
             result = stdout.decode("utf-8", errors="ignore")
