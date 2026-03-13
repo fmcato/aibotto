@@ -975,3 +975,84 @@ class DatabaseOperations:
         except Exception as e:
             logger.error(f"Failed to get user aspects: {e}")
             raise
+
+    def _format_conversation_for_summary(self, history: list[dict[str, str | None]]) -> str:
+        """Format conversation history for LLM summarization.
+
+        Args:
+            history: List of message dictionaries from conversation history
+
+        Returns:
+            Formatted conversation text for summarization
+        """
+        if not history:
+            return "No conversation history available."
+
+        formatted_messages = []
+        for msg in history:
+            role = str(msg.get("role", "unknown") or "unknown")
+            content = str(msg.get("content", "") or "")
+            if content:
+                # Truncate very long messages to avoid context overflow
+                if len(content) > 1000:
+                    content = content[:1000] + "... [truncated]"
+                formatted_messages.append(f"{role.upper()}: {content}")
+
+        return "\n\n".join(formatted_messages)
+
+    async def summarize_conversation(
+        self, user_id: int, chat_id: int, llm_client
+    ) -> str:
+        """Generate LLM summary and replace conversation history.
+
+        Args:
+            user_id: User ID
+            chat_id: Chat ID
+            llm_client: LLM client instance for generating summary
+
+        Returns:
+            Generated summary text
+        """
+        try:
+            # Get current conversation history
+            history = await self.get_conversation_history(user_id, chat_id)
+            
+            if not history:
+                return "No conversation history to summarize."
+
+            # Format conversation for LLM
+            conversation_text = self._format_conversation_for_summary(history)
+            
+            # Create summary prompt
+            summary_prompt = f"""Please provide a concise summary of the following conversation:
+
+{conversation_text}
+
+Key points to include in your summary:
+- Main topics discussed
+- Key questions asked and answers provided
+- Important information shared
+- Any decisions or conclusions reached
+
+Keep the summary focused and informative, approximately 2-4 paragraphs."""
+
+            # Generate summary using LLM
+            messages = [{"role": "user", "content": summary_prompt}]
+            response = await llm_client.chat_completion(messages)
+            
+            # Extract summary text from response
+            summary_text = response["choices"][0]["message"]["content"]
+            
+            # Clear old conversation and save summary
+            await self.clear_conversation_history(user_id, chat_id)
+            await self.save_message_compat(
+                user_id, chat_id, "assistant", summary_text,
+                message_type="summary"
+            )
+            
+            logger.info(f"Generated summary for user {user_id}, chat {chat_id}")
+            return summary_text
+            
+        except Exception as e:
+            logger.error(f"Failed to summarize conversation for user {user_id}, chat {chat_id}: {e}")
+            raise

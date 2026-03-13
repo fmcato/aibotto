@@ -35,6 +35,7 @@ class TelegramBot:
             "start": CommandHandler("start", self._handle_start),
             "help": CommandHandler("help", self._handle_help),
             "clear": CommandHandler("clear", self._handle_clear),
+            "summarize": CommandHandler("summarize", self._handle_summarize),
             "message": MessageHandler(
                 filters.TEXT & ~filters.COMMAND, self._handle_message
             ),
@@ -105,6 +106,7 @@ I provide factual information using safe system tools. Here's what I can help wi
 - `/start` - Start the bot and see welcome message
 - `/help` - Show this help message
 - `/clear` - Clear conversation history and start fresh
+- `/summarize` - Replace conversation with AI-generated summary
 
 💡 **Tip:** Just ask me any factual question and I'll get you the accurate information!
 
@@ -142,6 +144,49 @@ I provide factual information using safe system tools. Here's what I can help wi
             if update.message:
                 await update.message.reply_text(error_msg.get_fallback_message())
             logger.error(f"Error clearing conversation history: {e}")
+
+    async def _handle_summarize(
+        self, update: Update, context: ContextTypes.DEFAULT_TYPE
+    ) -> None:
+        """Handle /summarize command."""
+        update_data = MessageUtils.safe_update_data(update)
+        if not update_data["has_message"]:
+            return
+
+        user_id = update_data["user_id"]
+        chat_id = update_data["chat_id"]
+
+        # Send thinking indicator
+        thinking_message = await self._handle_thinking_indicator(update)
+        if not thinking_message:
+            return
+
+        try:
+            logger.info(f"📝 Starting conversation summarization for user {user_id}, chat {chat_id}")
+            
+            # Generate summary using the orchestrator's LLM client
+            summary = await self.db_ops.summarize_conversation(
+                user_id, chat_id, self.tool_manager.llm_client
+            )
+
+            # Send summary response
+            if update.message:
+                await update.message.reply_text(
+                    f"✅ **Conversation Summary**\n\n{summary}",
+                    parse_mode="Markdown"
+                )
+
+            # Delete thinking message
+            if thinking_message:
+                await thinking_message.delete()
+
+            logger.info(f"✅ Conversation summarization completed for user {user_id}, chat {chat_id}")
+            
+        except Exception as e:
+            logger.error(f"Error summarizing conversation: {e}")
+            error_msg = f"❌ Failed to summarize conversation: {str(e)}"
+            if thinking_message:
+                await thinking_message.edit_text(error_msg)
 
     async def _handle_thinking_indicator(self, update: Update) -> Any | None:
         """Send and return thinking indicator message."""

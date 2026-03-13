@@ -47,6 +47,8 @@ class BotSetupService:
             self.application.add_handler(handlers["help"])
         if "clear" in handlers:
             self.application.add_handler(handlers["clear"])
+        if "summarize" in handlers:
+            self.application.add_handler(handlers["summarize"])
 
         # Add message handler
         if "message" in handlers:
