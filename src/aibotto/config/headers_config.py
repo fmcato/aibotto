@@ -31,7 +31,11 @@ COMMON_HEADERS = {
         "q=0.8,application/signed-exchange;v=b3;q=0.7"
     ),
     "Accept-Language": "en-US,en;q=0.9",
-    "Accept-Encoding": "gzip, deflate",
+    # Accept-Encoding is handled automatically by aiohttp 3.13+ with brotli dependency
+    # When brotli>=1.0.9 is available, aiohttp automatically:
+    # 1. Adds 'br' to Accept-Encoding when making requests
+    # 2. Handles automatic decompression of Content-Encoding: br responses
+    # 3. Supports gzip and deflate fallbacks automatically
     "DNT": "1",
     "Connection": "keep-alive",
     "Upgrade-Insecure-Requests": "1",

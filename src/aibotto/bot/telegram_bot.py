@@ -163,7 +163,7 @@ I provide factual information using safe system tools. Here's what I can help wi
 
         try:
             logger.info(f"📝 Starting conversation summarization for user {user_id}, chat {chat_id}")
-            
+
             # Generate summary using the orchestrator's LLM client
             summary = await self.db_ops.summarize_conversation(
                 user_id, chat_id, self.tool_manager.llm_client
@@ -181,7 +181,7 @@ I provide factual information using safe system tools. Here's what I can help wi
                 await thinking_message.delete()
 
             logger.info(f"✅ Conversation summarization completed for user {user_id}, chat {chat_id}")
-            
+
         except Exception as e:
             logger.error(f"Error summarizing conversation: {e}")
             error_msg = f"❌ Failed to summarize conversation: {str(e)}"

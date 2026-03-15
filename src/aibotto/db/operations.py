@@ -1016,13 +1016,13 @@ class DatabaseOperations:
         try:
             # Get current conversation history
             history = await self.get_conversation_history(user_id, chat_id)
-            
+
             if not history:
                 return "No conversation history to summarize."
 
             # Format conversation for LLM
             conversation_text = self._format_conversation_for_summary(history)
-            
+
             # Create summary prompt
             summary_prompt = f"""Please provide a concise summary of the following conversation:
 
@@ -1039,20 +1039,20 @@ Keep the summary focused and informative, approximately 2-4 paragraphs."""
             # Generate summary using LLM
             messages = [{"role": "user", "content": summary_prompt}]
             response = await llm_client.chat_completion(messages)
-            
+
             # Extract summary text from response
             summary_text = response["choices"][0]["message"]["content"]
-            
+
             # Clear old conversation and save summary
             await self.clear_conversation_history(user_id, chat_id)
             await self.save_message_compat(
                 user_id, chat_id, "assistant", summary_text,
                 message_type="summary"
             )
-            
+
             logger.info(f"Generated summary for user {user_id}, chat {chat_id}")
             return summary_text
-            
+
         except Exception as e:
             logger.error(f"Failed to summarize conversation for user {user_id}, chat {chat_id}: {e}")
             raise
