@@ -2,53 +2,6 @@
 
 AI agent communicating via Telegram and using CLI tools.
 
-## Subagent System
-
-### Architecture
-The system uses subagents for specialized tasks with isolated LLM contexts to prevent main context bloat.
-
-### Main Agent Tools
-- `execute_cli_command` - CLI operations (date, system info, Python code execution)
-- `search_web` - Quick web search using DuckDuckGo
-- `fetch_webpage` - Fetch known URLs (user-provided URLs)
-- `delegate_task` - Generic tool for delegating to any registered subagent
-
-### Available Subagents
-
-#### Config-Driven Subagent System
-Subagents are now defined using YAML configuration files with full flexibility for LLM providers, models, system prompts, and tools.
-
-**Configuration Location:** `src/aibotto/config/subagents.yaml`
-
-**Available Subagents:**
-- `web_research` - Comprehensive web research with search, fetch, and synthesis capabilities
-
-**Access:**
-- `delegate_task` with `subagent_name="web_research"`
-
-**Capabilities:**
-- Config-driven behavior via YAML
-- Per-agent LLM provider and model selection
-- Dynamic tool lists
-- Configurable iteration limits
-- Source credibility evaluation (.gov, .edu, established news)
-- Multi-source synthesis
-- Inline citations [Title](URL)
-
-**Flow:**
-1. Main agent calls `delegate_task(subagent_name="web_research", task_description="query")`
-2. Config-driven subagent created from YAML definition
-3. Agent searches, fetches, synthesizes internally
-4. Returns summary with citations to main agent
-5. Main agent receives only final result (context stays clean)
-
-### Benefits
-- **Context Efficiency**: Main context contains only synthesized results, not every intermediate operation
-- **Specialization**: Each subagent has specialized prompts for its domain
-- **Isolation**: Subagent failures don't pollute main context
-- **Extensibility**: Easy to add more subagent types via `delegate_task` tool
-- **Flexibility**: Generic `delegate_task` means no need to update main agent tools for new subagents
-
 ## Build & Quality Commands
 
 ### Development Setup
@@ -95,8 +48,52 @@ git commit -m 'your commit message'
 4. pytest (all tests must pass)
 5. TODO comment check in production code
 
+## Subagent System
 
-## Code Style Guidelines
+### Architecture
+The system uses subagents for specialized tasks with isolated LLM contexts to prevent main context bloat.
+
+### Main Agent Tools
+- `execute_command` - CLI operations (date, system info, Python code execution)
+- `search_web` - Quick web search using DuckDuckGo
+- `fetch_webpage` - Fetch known URLs (user-provided URLs)
+- `delegate_task` - Generic tool for delegating to any registered subagent
+
+### Available Subagents
+
+#### Config-Driven Subagent System
+Subagents are defined using YAML configuration files with full flexibility for LLM providers, models, system prompts, and tools.
+
+**Configuration Location:** `src/aibotto/config/subagents.yaml`
+
+**Available Subagents:**
+- `web_research` - Comprehensive web research with search, fetch, and synthesis capabilities
+
+**Access:**
+- `delegate_task` with `subagent_name="web_research"`
+
+**Capabilities:**
+- Config-driven behavior via YAML
+- Per-agent LLM provider and model selection
+- Dynamic tool lists
+- Configurable iteration limits
+- Source credibility evaluation (.gov, .edu, established news)
+- Multi-source synthesis
+- Inline citations [Title](URL)
+
+**Flow:**
+1. Main agent calls `delegate_task(subagent_name="web_research", task_description="query")`
+2. Config-driven subagent created from YAML definition
+3. Agent searches, fetches, synthesizes internally
+4. Returns summary with citations to main agent
+5. Main agent receives only final result (context stays clean)
+
+### Benefits
+- **Context Efficiency**: Main context contains only synthesized results, not every intermediate operation
+- **Specialization**: Each subagent has specialized prompts for its domain
+- **Isolation**: Subagent failures don't pollute main context
+- **Extensibility**: Easy to add more subagent types via `delegate_task` tool
+- **Flexibility**: Generic `delegate_task` means no need to update main agent tools for new subagents
 
 ## Code Style Guidelines
 
@@ -170,6 +167,12 @@ TDD IS REQUIRED - This is not optional. All code changes must follow the test-dr
 - Catches integration issues early
 - Reduces debugging time
 
+### Testing Guidelines
+- Unit tests go in `tests/unit/`, E2E tests in `tests/e2e/`
+- Use `@pytest.mark.asyncio` for async tests
+- Follow patterns in `tests/AGENTS.md` for fixtures and mocking
+- **All tests must pass** before committing
+
 ## Tool Calling Architecture
 
 Tool calling requires assistant `tool_calls` before `tool` results:
@@ -236,11 +239,7 @@ from aibotto.db.operations import DatabaseOperations
 - Failed search_replace twice: Use write tool to overwrite entire file
 - Tool message issues: Ensure assistant messages include `tool_calls` before `tool` results
 
-### Testing Patterns
-- Unit tests go in `tests/unit/`
-- E2E tests go in `tests/e2e/` 
-- Use `@pytest.mark.asyncio` for async tests
-- Mock external dependencies (APIs, databases)
-- Follow patterns in existing tests for consistency
-- **Detailed test guidelines**: See `tests/AGENTS.md` for comprehensive testing patterns, fixtures, and examples
+## Testing Reference
+
+For comprehensive testing patterns, fixtures, and examples, see `tests/AGENTS.md`.
 
