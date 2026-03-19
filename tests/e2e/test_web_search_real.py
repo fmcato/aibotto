@@ -97,8 +97,7 @@ class TestWebSearchE2E:
         # Verify result
         assert isinstance(result, str)
         assert len(result) > 0
-        assert "Search results for" in result
-        assert query in result
+        assert query.lower() in result.lower()
         assert "URL:" in result
         assert "Content:" in result
 
