@@ -5,16 +5,19 @@ Quick reference for writing tests in the AIBOTTO project.
 ## Import Paths
 
 ```python
-# Tools (LLM-callable)
+# Tool executors
 from src.aibotto.tools.executors.cli_executor import CLIExecutor
-from src.aibotto.tools.security import SecurityManager
-from src.aibotto.tools.web_search import WebSearchTool, search_web
+from src.aibotto.tools.executors.python_executor import PythonExecutor
+
+# Security managers
+from src.aibotto.tools.cli_security_manager import CLISecurityManager
+from src.aibotto.tools.python_security_manager import PythonSecurityManager
 
 # AI/LLM
 from src.aibotto.ai.llm_client import LLMClient
 from src.aibotto.ai.agentic_orchestrator import AgenticOrchestrator
 from src.aibotto.ai.prompt_templates import SystemPrompts, ToolDescriptions
-from src.aibotto.ai.subagent import SubAgent, WebResearchAgent, init_subagents
+from src.aibotto.ai.subagent import SubAgent, init_subagents
 
 # Other modules
 from src.aibotto.config.settings import Config
@@ -29,11 +32,6 @@ from src.aibotto.prompt_cli import parse_args, run_prompt, main
 test_<method>_<scenario>
 test_<method>_<error_condition>
 ```
-
-Examples:
-- `test_execute_command_success`
-- `test_execute_command_blocked`
-- `test_validate_command_too_long`
 
 ## Fixture Selection Guide
 
@@ -58,7 +56,6 @@ from unittest.mock import AsyncMock, patch
 
 @pytest.mark.asyncio
 async def test_async_operation(mock_cli_executor):
-    """Test description."""
     result = await mock_cli_executor.execute_command("date")
     assert result == "Mock output"
 ```
@@ -66,12 +63,9 @@ async def test_async_operation(mock_cli_executor):
 ### Testing with Mock CLI Executor
 
 ```python
-from src.aibotto.tools.executors.cli_executor import CLIExecutor
-
 @pytest.fixture
 def executor(self):
-    """Create a CLIExecutor instance for testing."""
-    with patch('src.aibotto.tools.executors.cli_executor.SecurityManager') as mock_security:
+    with patch('src.aibotto.tools.executors.cli_executor.CLISecurityManager') as mock_security:
         executor = CLIExecutor()
         executor.security_manager = MagicMock()
         return executor
@@ -81,40 +75,22 @@ async def test_execute_command_success(self, executor):
     executor.security_manager.validate_command = AsyncMock(
         return_value={"allowed": True}
     )
-    
     with patch('asyncio.create_subprocess_shell') as mock_subprocess:
         mock_process = MagicMock()
         mock_process.returncode = 0
         mock_process.communicate = AsyncMock(return_value=(b"Success", b""))
         mock_subprocess.return_value = mock_process
-        
         result = await executor.execute_command("echo hello")
         assert result == "Success"
-```
-
-### Testing Tool Calling
-
-```python
-from src.aibotto.ai.tool_calling import ToolCallingManager
-
-def test_tool_calling(self, mock_llm_client_with_responses, mock_cli_executor):
-    """Test tool calling with mocked dependencies."""
-    manager = ToolCallingManager()
-    manager.llm_client = mock_llm_client_with_responses
-    manager.cli_executor = mock_cli_executor
-    return manager
 ```
 
 ### Testing Security Validation
 
 ```python
-from src.aibotto.tools.security import SecurityManager
-
 @pytest.mark.asyncio
 async def test_blocked_command():
-    security_manager = SecurityManager()
+    security_manager = CLISecurityManager()
     result = await security_manager.validate_command("rm -rf /")
-    
     assert result["allowed"] is False
     assert "not allowed" in result["message"]
 ```
@@ -124,7 +100,6 @@ async def test_blocked_command():
 ```python
 @pytest.mark.asyncio
 async def test_database_operation(temp_database):
-    """Test using real temporary database."""
     await temp_database.save_message(1, 1, 0, "user", "Hello")
     history = await temp_database.get_conversation_history(1, 1)
     assert len(history) == 1
@@ -136,11 +111,11 @@ Patch at the **usage location**, not the definition:
 
 ```python
 # CORRECT: Patch where it's imported
-with patch('src.aibotto.tools.executors.cli_executor.SecurityManager') as mock:
+with patch('src.aibotto.tools.executors.cli_executor.CLISecurityManager') as mock:
     ...
 
 # WRONG: Patching the original module
-with patch('src.aibotto.tools.security.SecurityManager') as mock:
+with patch('src.aibotto.tools.cli_security_manager.CLISecurityManager') as mock:
     ...
 ```
 
@@ -148,11 +123,12 @@ with patch('src.aibotto.tools.security.SecurityManager') as mock:
 
 | What You're Testing | Where to Put It |
 |---------------------|-----------------|
-| Tool (CLI, web search) | `tests/unit/test_cli.py` or `tests/unit/test_web_search.py` |
+| CLI executor | `tests/unit/test_cli.py` |
+| Python executor | `tests/unit/test_python_executor.py` |
 | Tool calling logic | `tests/unit/test_tool_calling_edge_cases.py` |
 | Subagent system | `tests/unit/test_subagent_*.py` |
-| Research tools | `tests/unit/test_research_tool.py` |
-| Web research subagent | `tests/unit/test_web_research_agent.py` |
+| Web fetch | `tests/unit/test_web_fetch*.py` |
+| Web search | `tests/unit/test_web_search.py` |
 | Telegram bot | `tests/unit/test_bot.py` |
 | CLI prompt interface | `tests/unit/test_prompt_cli.py` |
 | Database operations | `tests/unit/test_db.py` |
@@ -185,11 +161,11 @@ mock_obj.async_method = AsyncMock(return_value="result")
 ### 3. Patching wrong path
 ```python
 # WRONG - patches the class definition
-with patch('src.aibotto.tools.security.SecurityManager'):
+with patch('src.aibotto.tools.cli_security_manager.CLISecurityManager'):
     ...
 
 # CORRECT - patches where it's used
-with patch('src.aibotto.tools.executors.cli_executor.SecurityManager'):
+with patch('src.aibotto.tools.executors.cli_executor.CLISecurityManager'):
     ...
 ```
 
@@ -245,51 +221,56 @@ uv run pytest tests/e2e/
 ```
 tests/
 ├── conftest.py                    # Fixtures (DO NOT MODIFY without review)
-├── unit/                          # Unit tests (mocked dependencies)
-│   ├── test_backoff_handler.py    # Exponential backoff tests
-│   ├── test_bot.py               # Telegram bot tests
-│   ├── test_clear_command.py     # /clear command tests
-│   ├── test_cli.py               # CLI executor tests
-│   ├── test_config.py            # Config module tests
-│   ├── test_db.py                # Database module tests
-│   ├── test_glm_fix.py           # LLM client fixes tests
-│   ├── test_llm_client.py        # LLM client tests
-│   ├── test_llm_retry.py         # LLM retry logic tests
-│   ├── test_main.py              # Main entry point tests
-│   ├── test_message_splitter.py  # Message splitting tests
-│   ├── test_prompt_cli.py        # CLI prompt interface tests
-│   ├── test_research_tool.py     # Research tool tests (subagent system)
-│   ├── test_safe_commands.py     # Security validation tests
-│   ├── test_setup_service.py     # Setup service tests
-│   ├── test_subagent_base.py     # Subagent base class tests
-│   ├── test_subagent_datetime.py # Subagent datetime tests
-│   ├── test_subagent_executor.py # Subagent executor tests
-│   ├── test_subagent_registry.py # Subagent registry tests
-│   ├── test_subagent_web_search.py # Subagent web search tests
-│   ├── test_tool_calling_edge_cases.py  # Tool calling edge cases
-│   ├── test_web_fetch.py         # Web fetch tests
-│   ├── test_web_fetch_citations.py # Citation extraction tests
-│   ├── test_web_fetch_rss.py     # RSS feed tests
-│   ├── test_web_research_agent.py # Web research subagent tests
-│   └── test_web_search.py        # Web search unit tests
-├── e2e/                          # End-to-end tests (real infrastructure)
-│   ├── test_basic_tool_interactions.py
-│   ├── test_complete_flow.py
-│   ├── test_parallel_tool_calls.py
-│   ├── test_tool_calling_visibility.py
-│   └── test_web_search_real.py
-└── config_helpers.py             # Test configuration helpers
+├── config_helpers.py              # Test configuration helpers
+├── unit/                          # Unit tests (32 files)
+│   ├── test_backoff_handler.py
+│   ├── test_base_security_config.py
+│   ├── test_base_security_manager.py
+│   ├── test_bot.py
+│   ├── test_clear_command.py
+│   ├── test_cli.py
+│   ├── test_config.py
+│   ├── test_db.py
+│   ├── test_delegate_tool.py
+│   ├── test_env_loader.py
+│   ├── test_glm_fix.py
+│   ├── test_llm_client.py
+│   ├── test_llm_retry.py
+│   ├── test_main.py
+│   ├── test_prompt_cli.py
+│   ├── test_prompt_templates.py
+│   ├── test_python_executor.py
+│   ├── test_refactored_security_config.py
+│   ├── test_refactored_security_manager.py
+│   ├── test_safe_commands.py
+│   ├── test_setup_service.py
+│   ├── test_subagent_datetime.py
+│   ├── test_subagent_loader.py
+│   ├── test_subagent_web_search.py
+│   ├── test_tool_calling_edge_cases.py
+│   ├── test_tool_executor_base.py
+│   ├── test_user_aspect_executor.py
+│   ├── test_web_fetch.py
+│   ├── test_web_fetch_brotli_integration.py
+│   ├── test_web_fetch_citations.py
+│   ├── test_web_fetch_rss.py
+│   └── test_web_search.py
+└── e2e/                           # End-to-end tests (4 files)
+    ├── test_complete_flow.py
+    ├── test_parallel_tool_calls.py
+    ├── test_tool_calling_visibility.py
+    └── test_web_search_real.py
 ```
 
 ## Key Fixtures in conftest.py
 
 ### `mock_llm_client_with_responses`
-The most important fixture for tool calling tests. Returns different responses based on query content:
-- "date"/"day" queries → triggers `execute_cli_command` with `date`
-- "weather" queries → triggers `execute_cli_command` with curl
-- "system"/"uname" queries → triggers `execute_cli_command` with `uname -a`
+Most important fixture for tool calling tests. Returns different responses based on query content:
+- "date"/"day" → triggers `execute_cli_command` with `date`
+- "weather" → triggers `execute_cli_command` with curl
+- "system"/"uname" → triggers `execute_cli_command` with `uname -a`
 - "capital of France" → direct response without tool calls
-- "research"/"web research" queries → triggers `research_topic` with appropriate arguments
+- "research"/"web research" → triggers `delegate_task` with web_research
 
 ### `temp_database`
 Creates a real SQLite file, yields `DatabaseOperations` instance, cleans up after test.
@@ -299,6 +280,6 @@ Pre-configured mock with `execute_command` returning "Mock output".
 
 ## Quality Metrics
 
-- **Test Count**: 240 tests (211 unit + 29 e2e)
-- **Coverage**: 72% (current with subagent system)
+- **Test Count**: 335 tests (317 unit + 18 e2e)
+- **Coverage**: 77%
 - **All tests must pass** before committing
