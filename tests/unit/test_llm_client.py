@@ -68,32 +68,6 @@ class TestLLMClient:
         llm_client.client.chat.completions.create.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_simple_chat_success(self, llm_client):
-        """Test simple chat completion with direct response."""
-        mock_response = MagicMock()
-        mock_response.model_dump.return_value = {
-            "choices": [{"message": {"content": "Simple response"}}]
-        }
-        llm_client.client.chat.completions.create = AsyncMock(return_value=mock_response)
-
-        result = await llm_client.simple_chat([{"role": "user", "content": "Hi"}])
-
-        assert result == "Simple response"
-
-    @pytest.mark.asyncio
-    async def test_simple_chat_empty_response(self, llm_client):
-        """Test chat completion with empty response."""
-        mock_response = MagicMock()
-        mock_response.model_dump.return_value = {
-            "choices": [{"message": {"content": None}}]
-        }
-        llm_client.client.chat.completions.create = AsyncMock(return_value=mock_response)
-
-        result = await llm_client.simple_chat([{"role": "user", "content": "Hello"}])
-
-        assert result is None
-
-    @pytest.mark.asyncio
     async def test_chat_completion_error(self, llm_client):
         """Test chat completion with error."""
         llm_client.client.chat.completions.create = AsyncMock(side_effect=Exception("API Error"))

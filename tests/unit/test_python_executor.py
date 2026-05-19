@@ -8,7 +8,7 @@ from unittest.mock import AsyncMock, MagicMock, patch, call
 import pytest
 
 from src.aibotto.tools.executors.python_executor import PythonExecutor
-from src.aibotto.config.security_config import SecurityConfig
+from src.aibotto.config.python_security_config import PythonSecurityConfig
 
 
 @pytest.fixture

@@ -4,9 +4,12 @@ Python code executor with relaxed length limits.
 
 from typing import Any
 
+from ...config.env_loader import EnvLoader
 from ...tools.python_security_manager import PythonSecurityManager
 from ...tools.base import ToolExecutor, ToolExecutionError
 from ...tools.subprocess_runner import SubprocessRunner
+
+PYTHON_EXECUTABLE: str = EnvLoader.get_str("PYTHON_EXECUTABLE", "uv run python")
 
 
 class PythonExecutor(ToolExecutor, SubprocessRunner):
@@ -26,9 +29,9 @@ class PythonExecutor(ToolExecutor, SubprocessRunner):
             Complete command string for execution
         """
         if "\n" in code:
-            return f"uv run python << 'EOF'\n{code}\nEOF"
+            return f"{PYTHON_EXECUTABLE} << 'EOF'\n{code}\nEOF"
         else:
-            return f"uv run python -c '{code}'"
+            return f"{PYTHON_EXECUTABLE} -c '{code}'"
 
     async def _do_execute(
         self, args: dict, user_id: int, chat_id: int = 0, db_ops: Any = None

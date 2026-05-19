@@ -96,15 +96,3 @@ class SubAgentRegistry:
             List of subagent names
         """
         return list(cls._subagents.keys())
-
-    @classmethod
-    def has_subagent(cls, name: str) -> bool:
-        """Check if a subagent is registered.
-
-        Args:
-            name: Subagent name
-
-        Returns:
-            True if registered, False otherwise
-        """
-        return name in cls._subagents

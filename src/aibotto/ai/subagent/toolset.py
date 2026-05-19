@@ -26,17 +26,6 @@ class SubAgentToolset:
         self._executors[tool_name] = executor
         logger.info(f"SubAgent {self._instance_id}: Registered tool: {tool_name}")
 
-    def get_tool(self, tool_name: str) -> Optional[Any]:
-        """Get a tool executor for this subagent.
-
-        Args:
-            tool_name: Name of the tool
-
-        Returns:
-            Tool executor instance or None
-        """
-        return self._executors.get(tool_name)
-
     def get_executor(self, tool_name: str) -> Optional[Any]:
         """Get a tool executor for this subagent.
 
@@ -55,14 +44,3 @@ class SubAgentToolset:
             List of tool names
         """
         return list(self._executors.keys())
-
-    def has_tool(self, tool_name: str) -> bool:
-        """Check if a tool is available.
-
-        Args:
-            tool_name: Name of the tool
-
-        Returns:
-            True if tool is available, False otherwise
-        """
-        return tool_name in self._executors

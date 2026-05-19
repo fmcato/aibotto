@@ -66,19 +66,3 @@ class ExponentialBackoffHandler:
         prepare for the next retry attempt.
         """
         self.retry_count += 1
-
-    def get_retry_count(self) -> int:
-        """Get current retry count for logging or testing purposes.
-
-        Returns:
-            Current number of consecutive retry attempts
-        """
-        return self.retry_count
-
-    def set_reset_on_success(self, reset: bool) -> None:
-        """Configure whether to reset counter on successful requests.
-
-        Args:
-            reset: True to reset on success, False to maintain counter
-        """
-        self.reset_on_success = reset

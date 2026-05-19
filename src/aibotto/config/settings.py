@@ -72,7 +72,6 @@ class Config:
 
     # LLM Retry Configuration
     LLM_MAX_RETRIES: int = EnvLoader.get_int("LLM_MAX_RETRIES", 3)
-    LLM_RETRY_DELAY: float = EnvLoader.get_float("LLM_RETRY_DELAY", 1.0)
 
     # Subagent Configuration
     SUBAGENT_MAX_CONCURRENT_TOOLS: int = EnvLoader.get_int(

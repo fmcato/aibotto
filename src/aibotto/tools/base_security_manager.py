@@ -135,19 +135,3 @@ class BaseSecurityManager(ABC):
     def _create_blocked_result_dict(self, message: str) -> dict[str, Any]:
         """Create standard blocked result."""
         return {"allowed": False, "message": message}
-
-    def reload_security_rules(self, config_file: str = "security_config.json") -> None:
-        """Reload security rules from configuration."""
-        self.config.reload_from_file(config_file)
-        self._initialize_properties()
-
-    def get_security_status(self) -> dict[str, Any]:
-        """Get security status."""
-        return {
-            "blocked_items_count": len(self.blocked_items),
-            "allowed_items_count": len(self.allowed_items),
-            "custom_patterns_count": len(self.custom_blocked_patterns),
-            "max_length": self.max_length,
-            "audit_logging_enabled": self.enable_audit_logging,
-            "security_rules_summary": self.config.get_security_rules_summary(),
-        }

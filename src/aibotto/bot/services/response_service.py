@@ -6,71 +6,11 @@ import logging
 from typing import Any
 
 from telegramify_markdown import telegramify
-from telegramify_markdown.content import ContentType, File, Photo, Text
 
 from ..handlers.content_handlers import ContentHandlerFactory
 from ..utils.bot_utils import MessageUtils, ResponseErrorHandler
 
 logger = logging.getLogger(__name__)
-
-
-class ResponseFormatter:
-    """Handles text formatting with telegramify-markdown."""
-
-    @staticmethod
-    async def format_text_with_telegramify(text: str) -> str:
-        """Format text using telegramify-markdown and escape for MarkdownV2."""
-
-        try:
-            # telegramify() returns structured content objects, not raw file objects
-            # So we don't need to handle file objects here
-
-            # Use the new telegramify() function to get structured content
-            results = await telegramify(text, max_message_length=4096)
-
-            # Process all results and combine them into a single string
-            combined_text = ""
-            for item in results:
-                if isinstance(item, Text) and item.content_type == ContentType.TEXT:
-                    # Text content - safely get text attribute
-                    if item.text:
-                        combined_text += item.text
-                elif isinstance(item, File) and item.content_type == ContentType.FILE:
-                    # File content - create a markdown representation
-                    file_name = item.file_name
-                    file_data = item.file_data
-
-                    # Only decode UTF-8 text files, skip binary files
-                    try:
-                        file_content = file_data.decode("utf-8")
-                        # Clean up common encoding artifacts
-                        file_content = file_content.replace("\\n", "\n").replace(
-                            "\\r", "\r"
-                        )
-                        file_content = file_content.replace("nxe2x94x9c", "│").replace(
-                            "nxe2x94x80", "─"
-                        )
-                        file_content = file_content.replace("nxe2x94x94", "└").replace(
-                            "nxe2x94x90", "├"
-                        )
-                        combined_text += (
-                            f"📄 **File: {file_name}**\n\n```\n{file_content}\n```\n\n"
-                        )
-                    except UnicodeDecodeError:
-                        # Skip binary files that can't be decoded as UTF-8
-                        continue
-                elif isinstance(item, Photo) and item.content_type == ContentType.PHOTO:
-                    # Photo content - just mention them
-                    file_name = item.file_name
-                    combined_text += f"🖼️ **Image: {file_name}**\n\n"
-
-            return combined_text if combined_text else text
-        except Exception as e:
-            logger.warning(f"Failed to format text with telegramify: {e}")
-            # Fall back to original text with escaping
-            from ...utils.helpers import escape_markdown_v2
-
-            return escape_markdown_v2(text)
 
 
 class ResponseSender:

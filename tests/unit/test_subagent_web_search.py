@@ -200,14 +200,6 @@ Found 5 results for "artificial intelligence":
         )
         assert is_duplicate_second
 
-        # Verify subagent namespace
-        namespace_key = agent._tracker.get_namespace_key(
-            "search_web", '{"query": "duplicate test", "num_results": 3}',
-            user_id=999, chat_id=888
-        )
-        assert f"subagent_{agent._instance_id}" in namespace_key
-        assert "999_888" in namespace_key
-
     @pytest.mark.asyncio
     async def test_subagent_citation_format(self):
         """Test that subagent generates proper citation format."""

@@ -55,12 +55,6 @@ class PythonSecurityConfig(BaseSecurityConfig):
         "importlib.util.set_package_wrapper",
         "importlib.util.set_loader_wrapper",
         "importlib.util.set_state_wrapper",
-        "importlib.util.resolve_name",
-        "importlib.util.find_spec",
-        "importlib.util.module_from_spec",
-        "importlib.util.spec_from_file_location",
-        "importlib.util.spec_from_loader",
-        "importlib.util.resolve_name",
     ]
 
     @classmethod

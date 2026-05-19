@@ -66,21 +66,6 @@ class TestBaseSecurityManager:
         
         assert result == {"allowed": False, "message": "Test blocked message"}
 
-    def test_get_security_status(self, security_manager):
-        """Test get_security_status method."""
-        status = security_manager.get_security_status()
-        
-        assert "blocked_items_count" in status
-        assert "allowed_items_count" in status
-        assert "custom_patterns_count" in status
-        assert "max_length" in status
-        assert "audit_logging_enabled" in status
-        assert "security_rules_summary" in status
-        
-        assert status["blocked_items_count"] == 3
-        assert status["allowed_items_count"] == 3
-        assert status["max_length"] == 100000
-
     @pytest.mark.asyncio
     async def test_validate_input_success(self, security_manager):
         """Test successful input validation."""
@@ -133,12 +118,6 @@ class TestBaseSecurityManager:
         
         assert result["allowed"] is False
         assert "Custom blocked pattern detected" in result["message"]
-
-    def test_reload_security_rules(self, security_manager):
-        """Test reloading security rules."""
-        # Test that reload method exists and can be called
-        security_manager.reload_security_rules()
-        # No specific assertions needed since this is mainly testing the method exists
 
     def test_inheritance(self):
         """Test that TestSecurityManager properly inherits from BaseSecurityManager."""

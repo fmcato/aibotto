@@ -91,29 +91,6 @@ class WebFetchTool:
 
         return isinstance(error, network_errors)
 
-    def _get_retry_delay_for_error(self, error: Exception, attempt: int) -> float:
-        """Calculate retry delay based on error type."""
-
-        if isinstance(error, aiohttp.ClientResponseError):
-            status_code = error.status
-
-            # Faster retry for network errors
-            if status_code in self.server_error_codes:
-                return self.retry_delay * (1.5**attempt) + random.uniform(0, 0.5)
-
-            # Rate limiting - use Retry-After if available
-            if status_code == 429:
-                retry_after = getattr(error, "headers", {}).get("Retry-After")
-                if retry_after:
-                    try:
-                        return float(retry_after)
-                    except (ValueError, TypeError):
-                        pass
-                return min(self.retry_delay * (1.5**attempt), 30.0)  # Cap at 30s
-
-        # Default exponential backoff
-        return self.retry_delay * (2**attempt) + random.uniform(0, 1)
-
     async def fetch(
         self,
         url: str,

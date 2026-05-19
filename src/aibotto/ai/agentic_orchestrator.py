@@ -8,7 +8,7 @@ from ..db.operations import DatabaseOperations
 from .agentic_loop_processor import BaseAgenticLoopProcessor, ToolExecutionInterface
 from .llm_client import LLMClient
 from .prompt_templates import SystemPrompts
-from .tool_executor import ToolExecutor
+from .tool_executor import ToolExecutionOrchestrator
 from .tool_tracker import ToolTracker
 
 logger = logging.getLogger(__name__)
@@ -24,7 +24,7 @@ class AgenticOrchestrator(BaseAgenticLoopProcessor):
             llm_client=LLMClient(),
             tracker=tracker,
         )
-        self.tool_executor = ToolExecutor(tracker=tracker)  # Share tracker instance
+        self.tool_executor = ToolExecutionOrchestrator(tracker=tracker)  # Share tracker instance
         logger.info("Initialized AgenticOrchestrator with BaseAgenticLoopProcessor")
 
     def _get_tool_definitions(self) -> list[dict[str, Any]]:

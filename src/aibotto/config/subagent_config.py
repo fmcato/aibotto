@@ -5,7 +5,7 @@ import re
 from pathlib import Path
 from typing import Any
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field
 
 
 class LLMProviderConfig(BaseModel):
@@ -152,25 +152,6 @@ class SubAgentDefinition(BaseModel):
         description="Optional max tokens for responses",
         ge=1,
     )
-
-    @field_validator("tools")
-    @classmethod
-    def validate_tools(cls, v: list[str]) -> list[str]:
-        """Validate tool names are non-empty strings.
-
-        Args:
-            v: List of tool names
-
-        Returns:
-            Validated list of tool names
-
-        Raises:
-            ValueError: If any tool name is empty
-        """
-        for tool in v:
-            if not tool or not tool.strip():
-                raise ValueError("Tool names cannot be empty")
-        return v
 
 
 def resolve_env_vars(value: str) -> str:

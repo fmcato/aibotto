@@ -286,19 +286,6 @@ class SystemPrompts:
     task. Use them wisely - each turn should provide new information, not
     repeat the same work."""
 
-    FALLBACK_RESPONSE = f"""I don't have access to the specific tools needed
-    for this request.
-
-    I can help with:
-    - Date and time queries
-    - Weather information
-    - System information
-    - File and directory operations
-    - Python 3 code execution and calculations
-    - Web content retrieval
-    - News and information gathering
-{_PYTHON3_LIMITATIONS}"""
-
     @classmethod
     def get_base_prompt(cls, max_turns: int = 10) -> list[dict[str, str]]:
         """Get the base system prompt without conversation history.
@@ -314,26 +301,6 @@ class SystemPrompts:
             {"role": "system", "content": cls.get_tool_instructions(max_turns)},
             DateTimeContext.get_current_datetime_message(),
         ]
-
-    @classmethod
-    def get_conversation_prompt(
-        cls, conversation_history: list[dict[str, str]], max_turns: int = 10
-    ) -> list[dict[str, str]]:
-        """Get the complete conversation prompt with system message.
-
-        Args:
-            conversation_history: List of previous conversation messages
-            max_turns: Maximum number of tool-calling turns allowed
-
-        Returns:
-            List of message dicts including system prompt and history
-        """
-        messages = cls.get_base_prompt(max_turns)
-
-        if conversation_history:
-            messages.extend(conversation_history)
-
-        return messages
 
 
 class ToolDescriptions:

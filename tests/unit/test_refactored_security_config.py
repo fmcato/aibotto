@@ -9,72 +9,8 @@ from unittest.mock import patch
 
 import pytest
 
-from src.aibotto.config.security_config import SecurityConfig
 from src.aibotto.config.cli_security_config import CLISecurityConfig
 from src.aibotto.config.python_security_config import PythonSecurityConfig
-
-
-class TestSecurityConfig:
-    """Test cases for SecurityConfig."""
-
-    @pytest.fixture(autouse=True)
-    def reset_config(self):
-        """Reset configuration after each test."""
-        original_values = {
-            "MAX_COMMAND_LENGTH": SecurityConfig.MAX_COMMAND_LENGTH,
-            "MAX_PYTHON_CODE_LENGTH": SecurityConfig.MAX_PYTHON_CODE_LENGTH,
-            "ALLOWED_COMMANDS": SecurityConfig.ALLOWED_COMMANDS.copy(),
-            "BLOCKED_COMMANDS": SecurityConfig.BLOCKED_COMMANDS.copy(),
-        }
-        
-        yield
-        
-        # Restore original values
-        SecurityConfig.MAX_COMMAND_LENGTH = original_values["MAX_COMMAND_LENGTH"]
-        SecurityConfig.MAX_PYTHON_CODE_LENGTH = original_values["MAX_PYTHON_CODE_LENGTH"]
-        SecurityConfig.ALLOWED_COMMANDS = original_values["ALLOWED_COMMANDS"]
-        SecurityConfig.BLOCKED_COMMANDS = original_values["BLOCKED_COMMANDS"]
-
-    def test_inheritance(self):
-        """Test that SecurityConfig properly inherits from BaseSecurityConfig."""
-        from src.aibotto.config.base_security_config import BaseSecurityConfig
-        assert issubclass(SecurityConfig, BaseSecurityConfig)
-
-    def test_get_security_rules_summary(self):
-        """Test get_security_rules_summary returns correct structure."""
-        summary = SecurityConfig.get_security_rules_summary()
-        
-        assert "max_command_length" in summary
-        assert "max_python_code_length" in summary
-        assert "allowed_commands_count" in summary
-        assert "blocked_commands_count" in summary
-        assert "custom_blocked_patterns_count" in summary
-        assert "audit_logging_enabled" in summary
-        assert "has_whitelist" in summary
-
-    def test_reload_from_file_success(self):
-        """Test reload_from_file successfully loads configuration."""
-        test_config = {
-            "MAX_COMMAND_LENGTH": 500000,
-            "MAX_PYTHON_CODE_LENGTH": 1000000,
-            "ALLOWED_COMMANDS": ["echo", "ls", "pwd"],
-            "BLOCKED_COMMANDS": ["rm -rf", "sudo", "dd"],
-        }
-        
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
-            json.dump(test_config, f)
-            config_file = f.name
-        
-        try:
-            SecurityConfig.reload_from_file(config_file)
-            
-            # Verify configuration was applied
-            assert SecurityConfig.MAX_COMMAND_LENGTH == 500000
-            assert SecurityConfig.MAX_PYTHON_CODE_LENGTH == 1000000
-            assert SecurityConfig.ALLOWED_COMMANDS == ["echo", "ls", "pwd"]
-            assert SecurityConfig.BLOCKED_COMMANDS == ["rm -rf", "sudo", "dd"]
-        finally:
-            os.unlink(config_file)
 
 
 class TestCLISecurityConfig:

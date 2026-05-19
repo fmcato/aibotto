@@ -138,10 +138,10 @@ OPERATIONAL LIMITS:
 
     def get_tool_execution_interface(self) -> ToolExecutionInterface:
         """Get the tool execution interface for this subagent."""
-        from aibotto.ai.tool_executor import ToolExecutor
+        from aibotto.ai.tool_executor import ToolExecutionOrchestrator
         from aibotto.config.settings import Config
 
-        return ToolExecutor(
+        return ToolExecutionOrchestrator(
             tracker=self.tracker,
             toolset=self._toolset,
             max_concurrent=Config.SUBAGENT_MAX_CONCURRENT_TOOLS,

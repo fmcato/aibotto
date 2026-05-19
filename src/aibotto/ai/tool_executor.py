@@ -15,7 +15,7 @@ from .tool_tracker import ToolTracker
 logger = logging.getLogger(__name__)
 
 
-class ToolExecutor:
+class ToolExecutionOrchestrator:
     """Orchestrates tool execution with logging, error handling, and optional isolation.
 
     Supports both main agent (global toolset, no concurrency limit) and

@@ -5,7 +5,7 @@ Tests only safe, read-only commands to prevent any security risks.
 
 import pytest
 
-from src.aibotto.tools.security import SecurityManager
+from src.aibotto.tools.cli_security_manager import CLISecurityManager
 
 
 class TestSafeCommands:
@@ -14,7 +14,7 @@ class TestSafeCommands:
     @pytest.fixture
     def security_manager(self):
         """Create security manager with test configuration."""
-        manager = SecurityManager()
+        manager = CLISecurityManager()
         # Override with test-specific safe commands using config
         manager.config.BLOCKED_COMMANDS = ["rm -rf", "sudo", "dd", "mkfs", "fdisk", "shutdown", "reboot", "poweroff", "halt"]
         manager.config.ALLOWED_COMMANDS = ["date", "ls", "pwd", "uname", "echo", "cat", "head", "tail", "wc", "grep"]

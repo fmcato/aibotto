@@ -4,7 +4,6 @@ Tool call tracking and deduplication functionality.
 
 import hashlib
 import logging
-from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -138,56 +137,18 @@ class ToolTracker:
 
         return False
 
-    def get_recent_tool_calls(self) -> set[str]:
-        """Get the set of tool calls from the most recent iteration."""
-        return self._recent_tool_calls.copy()
-
-    def get_call_history(self, user_id: int, chat_id: int = 0) -> list[dict[str, Any]]:
-        """Get the complete call history for a user."""
-        tracking_key = self._get_tracking_key("dummy", user_id, chat_id)
-
-        if tracking_key not in _tool_call_tracker:
-            return []
-
-        return [
-            {
-                "call_hash": call_hash,
-                "function_name": call_hash.split(":", 1)[0]
-                if ":" in call_hash
-                else "unknown",
-            }
-            for call_hash in _tool_call_tracker[tracking_key]
-        ]
-
     @classmethod
     def cleanup_old_trackers(cls, max_age_hours: int = 24) -> None:
-        """Clean up old tracking data to prevent memory leaks."""
-        # This is a placeholder for future implementation
-        # In a real system, we would track timestamps and clean old entries
-        logger.debug(f"Cleanup of old trackers called (max_age: {max_age_hours}h)")
+        """Clean up empty tracking entries to prevent memory leaks.
 
-    @classmethod
-    def get_active_tracking_keys(cls) -> list[str]:
-        """Get all currently active tracking keys."""
-        return list(_tool_call_tracker.keys())
+        Note: Full time-based cleanup would require timestamp tracking.
+        Currently only removes entries with zero calls.
 
-    @classmethod
-    def get_tracker_stats(cls) -> dict[str, int]:
-        """Get statistics about active trackers."""
-        stats = {}
-        for key, calls in _tool_call_tracker.items():
-            stats[key] = len(calls)
-        return stats
-
-    @classmethod
-    def clear_user_tracker(cls, user_id: int, chat_id: int = 0) -> None:
-        """Clear tracking data for a specific user."""
-        # Create a dummy tracker to get the key
-        dummy_tracker = ToolTracker()
-        tracking_key = dummy_tracker._get_tracking_key("dummy", user_id, chat_id)
-        if tracking_key in _tool_call_tracker:
-            del _tool_call_tracker[tracking_key]
-            logger.info(f"Cleared tracker for user {user_id}, chat {chat_id}")
+        Args:
+            max_age_hours: Reserved for future time-based cleanup
+        """
+        cls.cleanup_empty_trackers()
+        logger.info("Cleaned up empty tracking entries")
 
     @classmethod
     def cleanup_empty_trackers(cls) -> None:
@@ -226,19 +187,6 @@ class ToolTracker:
         # Also add to recent calls for this iteration
         self._recent_tool_calls.add(call_hash)
 
-    def should_prevent_retry(
-        self, function_name: str, arguments: str, user_id: int, chat_id: int = 0
-    ) -> bool:
-        """Check if a tool call should be prevented due to excessive retries."""
-        # Check if this is a duplicate without logging warnings
-        call_hash = self._generate_tool_call_hash(function_name, arguments)
-        tracking_key = self._get_tracking_key(function_name, user_id, chat_id)
-
-        if tracking_key not in _tool_call_tracker:
-            return False
-
-        return call_hash in _tool_call_tracker[tracking_key]
-
     def reset_tracking(self) -> None:
         """Reset tracking data for this tracker."""
         self._iteration_count = 0
@@ -253,26 +201,3 @@ class ToolTracker:
     def cleanup_old_entries(self, max_age_hours: int = 24) -> None:
         """Clean up old tracking entries."""
         self.cleanup_old_trackers(max_age_hours)
-
-    def get_namespace_key(
-        self, function_name: str, arguments: str, user_id: int, chat_id: int = 0
-    ) -> str:
-        """Get the namespace key for a tool call.
-
-        Args:
-            function_name: Name of the function
-            arguments: Function arguments
-            user_id: User ID
-            chat_id: Chat ID
-
-        Returns:
-            Namespace key for tracking
-        """
-        if self._instance_id:
-            # Use subagent namespace: subagent_{instance_id}::user_{user_id}_{chat_id}
-            user_key = f"{user_id}_{chat_id}" if chat_id else f"user_{user_id}"
-            return f"subagent_{self._instance_id}::{user_key}"
-        else:
-            # Use global namespace: user_{user_id}_{chat_id}
-            user_key = f"{user_id}_{chat_id}" if chat_id else f"user_{user_id}"
-            return user_key

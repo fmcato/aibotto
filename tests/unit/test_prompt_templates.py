@@ -82,27 +82,6 @@ class TestSystemPrompts:
         assert "Web search" in combined_content
         assert "Current date and time" in combined_content
 
-    def test_get_conversation_prompt_includes_history(self):
-        """Test that get_conversation_prompt includes conversation history."""
-        history = [
-            {"role": "user", "content": "Hello"},
-            {"role": "assistant", "content": "Hi there!"},
-        ]
-
-        messages = SystemPrompts.get_conversation_prompt(history)
-
-        assert len(messages) == 5
-        assert messages[3] == history[0]
-        assert messages[4] == history[1]
-
-    def test_get_conversation_prompt_empty_history(self):
-        """Test that get_conversation_prompt handles empty history."""
-        messages = SystemPrompts.get_conversation_prompt([])
-
-        assert len(messages) == 3
-        for message in messages:
-            assert message["role"] == "system"
-
 
 class TestToolDescriptions:
     """Test ToolDescriptions class."""

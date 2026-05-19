@@ -208,8 +208,3 @@ class LLMClient:
         except Exception:
             # Return None on any parsing error
             return None
-
-    async def simple_chat(self, messages: list[dict[str, str]]) -> str:
-        """Simple chat completion without tool calling."""
-        response = await self.chat_completion(messages)
-        return cast(str, response["choices"][0]["message"]["content"])
