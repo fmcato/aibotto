@@ -100,43 +100,6 @@ class ToolTracker:
         self._recent_tool_calls.clear()
         logger.debug(f"Tracker iteration incremented to {self._iteration_count}")
 
-    def is_similar_tool_call(
-        self, function_name: str, arguments: str, user_id: int, chat_id: int = 0
-    ) -> bool:
-        """Check if this tool call is similar to a previous one (same function,
-        different args)."""
-        # Check for similar function calls that might indicate retry logic issues
-        tracking_key = self._get_tracking_key(function_name, user_id, chat_id)
-
-        if tracking_key not in _tool_call_tracker:
-            return False
-
-        existing_calls = _tool_call_tracker[tracking_key]
-
-        # Check if we have calls to the same function with different arguments
-        for call_hash in existing_calls:
-            try:
-                # Parse the hash to extract function name
-                # Format: function_name:arguments_hash
-                if ":" in call_hash:
-                    existing_func_name = call_hash.split(":", 1)[0]
-                    if existing_func_name == function_name:
-                        prefix = (
-                            f"SUBAGENT ({self._instance_id})"
-                            if self._instance_id
-                            else "GLOBAL"
-                        )
-                        logger.info(
-                            f"{prefix} Similar tool call detected: {function_name} "
-                            f"(may indicate retry logic issue)"
-                        )
-                        return True
-            except Exception as e:
-                logger.debug(f"Error checking tool calls: {e}")
-                continue
-
-        return False
-
     @classmethod
     def cleanup_old_trackers(cls, max_age_hours: int = 24) -> None:
         """Clean up empty tracking entries to prevent memory leaks.

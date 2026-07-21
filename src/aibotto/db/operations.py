@@ -689,7 +689,7 @@ class DatabaseOperations:
                     (user_id, category, aspect, confidence),
                 )
 
-                if cursor.lastrowid > 0:
+                if cursor.lastrowid is not None and cursor.lastrowid > 0:
                     aspect_id = cursor.lastrowid
                 else:
                     cursor.execute(
@@ -811,14 +811,21 @@ Keep the summary focused and informative, approximately 2-4 paragraphs."""
             response = await llm_client.chat_completion(messages)
 
             # Extract summary text from response
-            summary_text = response["choices"][0]["message"]["content"]
+            choices = response.get("choices") if isinstance(response, dict) else None
+            if not choices:
+                raise ValueError("Invalid LLM response: no choices found")
+            message = choices[0].get("message") if isinstance(choices[0], dict) else None
+            content = message.get("content") if isinstance(message, dict) else None
+            if not content:
+                raise ValueError("Invalid LLM response: no content found")
+            summary_text = content
 
-            # Clear old conversation and save summary
-            await self.clear_conversation_history(user_id, chat_id)
+            # Save summary first, then clear history (avoids data loss on failure)
             await self.save_message_compat(
                 user_id, chat_id, "assistant", summary_text,
                 message_type="summary"
             )
+            await self.clear_conversation_history(user_id, chat_id)
 
             logger.info(f"Generated summary for user {user_id}, chat {chat_id}")
             return summary_text
