@@ -138,7 +138,8 @@ class BaseAgenticLoopProcessor(LLMProcessor):
             tools=self._get_tool_definitions(),
         )
 
-        if "choices" not in response or len(response["choices"]) == 0:
+        choices = response.get("choices") if isinstance(response, dict) else None
+        if not choices:
             error_msg = "Invalid response format: no choices found"
             logger.error(error_msg)
             if db_ops and hasattr(db_ops, "save_message"):

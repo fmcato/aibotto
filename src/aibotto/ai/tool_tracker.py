@@ -195,6 +195,7 @@ class ToolTracker:
 
     def reset_stateless_tracking(self) -> None:
         """Reset stateless tracking data."""
+        self._iteration_count = 0
         self._recent_tool_calls.clear()
         logger.debug("Tracker stateless tracking reset")
 
